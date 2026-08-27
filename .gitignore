@@ -1,0 +1,62 @@
+# --- Dependencies -----------------------------------------------------------
+/vendor/
+
+# composer.lock is intentionally not committed: this is a library, not an app.
+/composer.lock
+
+# --- Tool caches -----------------------------------------------------------
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan.cache/
+/.phpstan/
+/.php-cs-fixer.cache
+/.php-cs-fixer.php.cache
+/.psalm/
+/.rector.cache/
+
+# --- Test / analysis output ----------------------------------------------
+/build/
+/coverage/
+/.phpunit.coverage/
+/clover.xml
+/coverage.xml
+/junit.xml
+/.phpunit-watcher.yml
+
+# --- Generated artifacts -------------------------------------------------
+# Example scripts write their PDFs next to themselves.
+/examples/*.pdf
+# tests/golden/*.pdf and tests/fixtures/* ARE committed (reference data).
+
+# --- Local overrides ---------------------------------------------------
+/phpunit.xml.dist.local
+/phpstan.neon.local
+/.env
+/.env.local
+
+# --- Editors / IDEs --------------------------------------------------
+/.idea/
+/.vscode/
+/.fleet/
+/.zed/
+/nbproject/
+*.iml
+*.sublime-project
+*.sublime-workspace
+.phpactor.json
+
+# --- OS cruft ----------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Editor swap / backup files --------------------------------
+*.swp
+*.swo
+*~
+*.bak
+*.orig

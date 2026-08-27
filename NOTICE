@@ -1,0 +1,22 @@
+fpdf/pdf
+========
+
+This library is a from-scratch reimagining of FPDF (http://www.fpdf.org,
+author Olivier Plathey). Its high-level API and layout engine are original
+work; the low-level PDF machinery — the object writer and xref/trailer
+assembly, the standard-14 font metrics and font-embedding logic, the ToUnicode
+CMap generation, and the JPEG/PNG/GIF/WebP image decoders — was ported from
+FPDF 1.9 into typed PHP. Source-comment citations of the form `fpdf.php:NNN`
+refer to line numbers in that release.
+
+FPDF is distributed under a permissive licence (see LICENSE-FPDF.txt), which
+grants the right to use, copy, modify, distribute, sublicense and sell. This
+project as a whole is released under the MIT licence (see LICENSE).
+
+The `tools/makefont/` utility (makefont.php, ttfparser.php, *.map) is FPDF's
+offline font-definition builder, included essentially unchanged under the same
+FPDF licence.
+
+The CevicheOne font used by the examples and tests
+(examples/data/, tests/fixtures/) is licensed separately under the SIL Open
+Font License — see the accompanying *-Licence.txt files.

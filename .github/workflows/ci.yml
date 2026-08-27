@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, zlib, gd, iconv
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  structural:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, zlib, gd, iconv
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Install qpdf and poppler
+        run: sudo apt-get update && sudo apt-get install -y qpdf poppler-utils
+
+      - name: Render examples and check structure
+        run: |
+          set -e
+          for f in examples/*.php; do php "$f"; done
+          for pdf in examples/*.pdf; do
+            echo "== $pdf =="
+            qpdf --check "$pdf"
+            pdftotext -layout "$pdf" - | head -c 200
+            echo
+          done
+
+      - name: Verify golden PDFs are up to date
+        run: |
+          vendor/bin/phpunit --testsuite functional
