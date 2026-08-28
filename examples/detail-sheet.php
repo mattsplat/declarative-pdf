@@ -15,13 +15,16 @@ declare(strict_types=1);
  * the black title bar, `placeImage()` for the drawing and the nameplate,
  * `place()` for every block of text. Nothing flows page-to-page.
  *
- * Two known deltas from the original, both library gaps (see docs/roadmap.md):
+ * Two deviations from the original, both for the sake of a zero-config example:
  *   - The original embeds Proxima Nova from .otf in four cuts (Regular, Bold,
- *     Italic, Semibold). This library has no OTF/CFF support yet, so we fall
- *     back to core Helvetica and treat "semibold" as bold.
- *   - The original shrinks the legend to fit by scaling font size + spacing
- *     and re-wrapping. `place()` shrinks by scaling the rendered block, which
- *     is close but not identical.
+ *     Italic, Semibold). This example uses core Helvetica and treats "semibold"
+ *     as bold. To match the original, register the real cuts —
+ *     `$fonts->register('ProximaNova', new FontFace(600), '…-Semibold.otf.json')`
+ *     — the library embeds TrueType and OpenType/CFF fonts and resolves numeric
+ *     weights.
+ *   - The legend is placed with the default geometric shrink-to-fit. Pass
+ *     `ShrinkMode::FontSize` to `place()` to scale the point size and re-wrap
+ *     instead, the way the original's loop does.
  *
  * Drop your real drawing at examples/data/grease-interceptor.png (≈ 5:4,
  * landscape) or point DRAWING= at one. A placeholder is generated otherwise.
@@ -265,7 +268,7 @@ Document::create()
             ),
         ]);
         $p->place(DIVIDER_X - DETAIL_L_MARGIN - 150, RULE_Y + 6, 150, BAR_H, [
-            // Semibold in the original; bold here (no OTF support).
+            // Semibold in the original; bold here (see the header note).
             new Paragraph($locationLine, new StylePatch(
                 bold: true,
                 color: $white,

@@ -35,8 +35,9 @@
 /.env.local
 
 # Claude Code: share CLAUDE.md, .claude/settings.json and .claude/agents/;
-# keep each developer's personal settings local.
+# keep each developer's personal settings and scratch worktrees local.
 /.claude/settings.local.json
+/.claude/worktrees/
 
 # --- Editors / IDEs --------------------------------------------------
 /.idea/

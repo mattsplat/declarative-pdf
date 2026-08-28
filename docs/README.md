@@ -12,6 +12,8 @@
   FPDF tutorials, each next to its declarative rewrite.
 - **[Porting from FPDF](porting.md)** — `Cell` / `MultiCell` / `AddPage` /
   `Header()` / `WriteHTML` / `AddFont` → the declarative equivalent, in prose.
+- **[Comparison: FPDF / TCPDF / tc-lib-pdf](comparison.md)** — feature matrix,
+  where this library wins and loses, and which to reach for.
 - **[Architecture](architecture.md)** — the measure → paginate → render
   pipeline, the box model, and what was ported vs. rewritten.
 - **[Roadmap](roadmap.md)** — potential features, sized and prioritised
