@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Tests\Functional;
 
 use Pdf\Document;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Tests\Support\Fonts;
 use Pdf\Tests\Support\Pdf;
 use PHPUnit\Framework\TestCase;
@@ -30,7 +30,7 @@ final class TextEncodingTest extends TestCase
 
     public function test_string_width_uses_the_encoded_bytes(): void
     {
-        $metrics = Fonts::registry()->use('Helvetica', FontStyle::Regular)->metrics;
+        $metrics = Fonts::registry()->use('Helvetica', FontFace::regular())->metrics;
 
         // "é" in cp1252 is one byte 0xE9; Helvetica advance for 0xE9 is 556.
         $encoded = \Pdf\Text\Encoding::forFont('é', 'cp1252');
