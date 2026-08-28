@@ -62,8 +62,7 @@ final class Measurer
     ) {
     }
 
-
-  /**
+    /**
      * A clone that resolves styles through a font-scaled {@see StyleResolver},
      * sharing this measurer's font, image and import registries so anything it
      * measures still lands in the same resource tables.
@@ -77,7 +76,8 @@ final class Measurer
             $this->images,
             $this->imageRegistry,
             $this->importRegistry,
-    );
+        );
+    }
 
     public function fonts(): FontRegistry
     {
