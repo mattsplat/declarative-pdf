@@ -15,6 +15,12 @@ use Pdf\Exception\FontException;
  * `arial` is an alias for `helvetica`; `symbol` and `zapfdingbats` ignore the
  * requested style.
  *
+ * When the exact cut is not registered, resolution walks a ladder: the nearest
+ * registered weight in the same slope, then the nearest in the opposite slope,
+ * then — after the `arial` alias — the core font. Ties within a slope go to the
+ * lighter cut. The core families only ship 400 and 700, so a request for 600
+ * lands on the bold file.
+ *
  * A `register()`ed font wins over the alias — registering an actual "Arial"
  * embeds that file rather than falling back to bundled Helvetica.
  */
@@ -23,10 +29,16 @@ final class FontRepository
     private const CORE_FAMILIES = ['courier', 'helvetica', 'times', 'symbol', 'zapfdingbats'];
     private const STYLELESS_FAMILIES = ['symbol', 'zapfdingbats'];
 
-    /** @var array<string, FontDefinition> */
+    /** Larger than any possible weight gap, so slope always outranks weight. */
+    private const SLOPE_PENALTY = 1000;
+
+    /** @var array<string, FontDefinition> resolution key => definition */
     private array $cache = [];
 
-    /** @var array<string, string> resolution key => definition file path */
+    /** @var array<string, FontDefinition> definition file path => definition */
+    private array $loaded = [];
+
+    /** @var array<string, list<array{face: FontFace, path: string}>> family => registered cuts */
     private array $registrations = [];
 
     public function __construct(
@@ -43,42 +55,73 @@ final class FontRepository
     /** Register a custom font definition file for one cut of a family. */
     public function register(string $family, FontFace $face, string $definitionPath): void
     {
-        $this->registrations[$this->key($family, $face)] = $definitionPath;
-        $this->forgetFamily($family); // a later registration must take effect
+        $key = self::familyKey($family);
+        $cuts = array_values(array_filter(
+            $this->registrations[$key] ?? [],
+            static fn (array $cut): bool => !$cut['face']->equals($face),
+        ));
+        $cuts[] = ['face' => $face, 'path' => $definitionPath];
+        $this->registrations[$key] = $cuts;
+
+        // A new cut can change what a *neighbouring* weight resolves to, so the
+        // whole cache goes rather than one key.
+        $this->cache = [];
     }
 
     public function resolve(string $family, FontFace $face): FontDefinition
     {
-        $requested = strtolower(trim($family));
+        $family = self::familyKey($family);
 
-        // A registration for exactly what was asked wins, before any aliasing.
-        $registered = $this->registrations[$this->key($requested, $face)] ?? null;
+        return $this->cache[$family . ':' . $face->key()] ??= $this->load($this->pathFor($family, $face));
+    }
 
-        $resolvedFamily = $requested === 'arial' ? 'helvetica' : $requested;
-        $resolvedFace = in_array($resolvedFamily, self::STYLELESS_FAMILIES, true)
-            ? FontFace::regular()
-            : $face;
-
-        $cacheKey = $this->key($resolvedFamily, $resolvedFace);
-        if ($registered === null && isset($this->cache[$cacheKey])) {
-            return $this->cache[$cacheKey];
-        }
-
-        $path = $registered
-            ?? $this->registrations[$cacheKey]
-            ?? $this->corePath($resolvedFamily, $resolvedFace);
-
-        if ($path === null) {
-            throw new FontException(sprintf('Undefined font: %s %s', $requested, $face->describe()));
-        }
-
-        $definition = $this->loader->load($path);
-        $this->cache[$cacheKey] = $definition;
+    private function pathFor(string $family, FontFace $face): string
+    {
+        // A registration for the family exactly as asked wins, before any aliasing.
+        $registered = $this->registeredPath($family, $face);
         if ($registered !== null) {
-            $this->cache[$this->key($requested, $face)] = $definition;
+            return $registered;
         }
 
-        return $definition;
+        $aliased = $family === 'arial' ? 'helvetica' : $family;
+        if (in_array($aliased, self::STYLELESS_FAMILIES, true)) {
+            $face = FontFace::regular();
+        }
+
+        $path = $this->registeredPath($aliased, $face) ?? $this->corePath($aliased, $face);
+        if ($path === null) {
+            throw new FontException(sprintf('Undefined font: %s %s', $family, $face->describe()));
+        }
+
+        return $path;
+    }
+
+    /**
+     * The registered cut closest to the requested one, or null if the family
+     * has none.
+     *
+     * TODO: synthesise the missing cut rather than borrowing a neighbour —
+     * FPDF-style faux bold (text render mode 2 + a hairline stroke) and faux
+     * oblique (a sheared text matrix).
+     */
+    private function registeredPath(string $family, FontFace $face): ?string
+    {
+        $best = null;
+        $bestDistance = PHP_INT_MAX;
+        $bestWeight = PHP_INT_MAX;
+
+        foreach ($this->registrations[$family] ?? [] as $cut) {
+            $distance = abs($cut['face']->weight - $face->weight)
+                + ($cut['face']->italic === $face->italic ? 0 : self::SLOPE_PENALTY);
+
+            if ($distance < $bestDistance || ($distance === $bestDistance && $cut['face']->weight < $bestWeight)) {
+                $best = $cut['path'];
+                $bestDistance = $distance;
+                $bestWeight = $cut['face']->weight;
+            }
+        }
+
+        return $best;
     }
 
     private function corePath(string $family, FontFace $face): ?string
@@ -92,18 +135,13 @@ final class FontRepository
         return sprintf('%s/%s%s.json', $this->fontDirectory, $family, $suffix);
     }
 
-    private function forgetFamily(string $family): void
+    private function load(string $path): FontDefinition
     {
-        $prefix = strtolower(trim($family)) . ':';
-        foreach (array_keys($this->cache) as $key) {
-            if (str_starts_with($key, $prefix)) {
-                unset($this->cache[$key]);
-            }
-        }
+        return $this->loaded[$path] ??= $this->loader->load($path);
     }
 
-    private function key(string $family, FontFace $face): string
+    private static function familyKey(string $family): string
     {
-        return strtolower(trim($family)) . ':' . $face->key();
+        return strtolower(trim($family));
     }
 }

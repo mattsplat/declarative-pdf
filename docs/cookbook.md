@@ -231,6 +231,26 @@ Document::create()
 The subsetted font program is embedded with `/FontFile2`, a `/FontDescriptor`
 and a ToUnicode CMap so the text stays copy-pasteable.
 
+## Named and numeric font weights
+
+Register one definition per cut and select it with `weight` (100–900):
+
+```php
+use Pdf\Font\FontFace;
+
+$fonts->register('Inter', new FontFace(300), __DIR__ . '/fonts/Inter-Light.json');
+$fonts->register('Inter', new FontFace(400), __DIR__ . '/fonts/Inter-Regular.json');
+$fonts->register('Inter', new FontFace(600), __DIR__ . '/fonts/Inter-SemiBold.json');
+$fonts->register('Inter', new FontFace(600, italic: true), __DIR__ . '/fonts/Inter-SemiBoldItalic.json');
+
+new StylePatch(fontFamily: 'Inter', weight: 600);
+new StylePatch(fontFamily: 'Inter', bold: true);   // ≡ weight: 700 -> snaps to the 600 cut
+```
+
+An unregistered weight falls back to the nearest one in the same slope, then to
+the nearest in the other slope. The core families only carry 400 and 700, so
+`weight: 600` on Helvetica draws Helvetica-Bold.
+
 ## A house style
 
 ```php
