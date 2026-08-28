@@ -95,7 +95,8 @@ Implemented:
   `table`, …) applied between built-in defaults and the node's own patch.
 - **Embedded fonts** — `FontRepository::register()` a TrueType/Type1 `.json`
   (from the `makefont` tool); subsetted program embedded with `/FontFile2`,
-  `/FontDescriptor` and a ToUnicode CMap (tuto7).
+  `/FontDescriptor` and a ToUnicode CMap (tuto7). OpenType `.otf` with
+  PostScript (CFF) outlines embeds whole as `/FontFile3` `/Subtype /Type1C`.
 - **Inline HTML** — `Pdf\Text\Html::toInline()` / `$page->html()` for
   `b`/`i`/`u`/`s`/`sup`/`sub`/`a`/`br` (tuto6).
 - **Large-format sheets + absolute area layout** — `PageSize::arch('e')` /
@@ -158,4 +159,7 @@ All seven original FPDF tutorials are ported to `examples/`.
 ```
 php tools/makefont/makefont.php  MyFont.ttf  cp1252
 # -> MyFont.json (+ MyFont.z) ; then FontRepository::register('MyFont', $style, 'MyFont.json')
+
+php tools/makefont/makefont.php  MyFont.otf  cp1252
+# PostScript (CFF) outlines -> MyFont.json (+ MyFont.cff.z), embedded whole (no subsetting)
 ```

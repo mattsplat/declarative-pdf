@@ -141,15 +141,16 @@ Today an embedded font ships its whole glyf table. Real subsetting (keep only
 used glyphs, rebuild `loca` / `glyf` / `cmap` / `hmtx`, fix `maxp`) can cut
 attachment size 10–50×. Self-contained, heavily testable, no API change.
 
-### OpenType / CFF embedding — **L** (the `.otf` half of the XL below)
+### OpenType / CFF embedding — **done** (simple fonts)
 
-Split out because it is the concrete blocker for real brand work: `examples/detail-sheet.php`
-rebuilds a Schier cutsheet whose original embeds **Proxima Nova** from four
-`.otf` cuts; today the example falls back to core Helvetica. Just the embedding:
+`makefont` accepts `OTTO` files: the `CFF ` table is lifted out verbatim and
+embedded as `/FontFile3` `/Subtype /Type1C` under a `/Type1` font dict, 256
+glyphs, WinAnsi + `/Differences`. What is left:
 
-- CFF font programs — `/FontFile3` with `/Subtype /Type1C` (simple) — parse the
-  `CFF ` table out of an OpenType wrapper, emit `/Type1` or `/CIDFontType0`.
-- No shaping, no CID sets beyond 256 glyphs — that keeps it at **L**, not XL.
+- **CFF subsetting** — **L–XL**: rebuild the CharStrings INDEX, charset and
+  subrs. Today a cut embeds whole (40–80 KB).
+- **CID-keyed CFF / `/CIDFontType0`** — part of the XL below; the tool rejects
+  those files with a clear error.
 
 ### Named / numeric font weights — **M**
 

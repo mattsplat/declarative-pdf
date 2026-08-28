@@ -380,7 +380,9 @@ Document::create()
     ->save('custom-font.pdf');
 ```
 
-The `.json` is still produced by `php tools/makefont/makefont.php Font.ttf cp1252`.
+The `.json` is still produced by `php tools/makefont/makefont.php Font.ttf cp1252`,
+which also handles `.otf` fonts with PostScript (CFF) outlines — FPDF 1.9
+rejected those outright.
 
 ---
 

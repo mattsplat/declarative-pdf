@@ -14,7 +14,9 @@ use Pdf\Font\ToUnicodeCMap;
  * Ported from `_putfonts()` (fpdf.php:1654-1768): font-file embedding with the
  * Type1 segment splice, `/Differences` encoding objects, ToUnicode CMap
  * objects, the Core `/Type1 /WinAnsiEncoding` branch and the Type1/TrueType
- * branch with `/Widths`, `/FontDescriptor` and `/FontFile[2]`.
+ * branch with `/Widths`, `/FontDescriptor` and `/FontFile[2]`. OpenType/CFF
+ * definitions (`cff: true`) extend that branch with `/FontFile3` and a
+ * `/Subtype /Type1C` program stream.
  *
  * @phpstan-type FontFileInfo array{length1:int, length2?:int}
  */
@@ -87,8 +89,9 @@ final class FontWriter
             $compressed = str_ends_with($path, '.z');
             $length1 = $font->definition->originalSize ?? $font->definition->size1 ?? strlen($program);
             $length2 = $font->definition->size2;
+            $isCff = $font->definition->isCff;
 
-            if (!$compressed && $length2 !== null) {
+            if (!$compressed && !$isCff && $length2 !== null) {
                 // Type1: keep only the clear and encrypted segments.
                 $program = substr($program, 6, $font->definition->size1 ?? 0)
                     . substr($program, 6 + ($font->definition->size1 ?? 0) + 6, $length2);
@@ -99,9 +102,14 @@ final class FontWriter
             if ($compressed) {
                 $dict .= ' /Filter /FlateDecode';
             }
-            $dict .= ' /Length1 ' . $length1;
-            if ($length2 !== null) {
-                $dict .= ' /Length2 ' . $length2 . ' /Length3 0';
+            if ($isCff) {
+                // A bare CFF program: no segment lengths, the subtype names the format.
+                $dict .= ' /Subtype /Type1C';
+            } else {
+                $dict .= ' /Length1 ' . $length1;
+                if ($length2 !== null) {
+                    $dict .= ' /Length2 ' . $length2 . ' /Length3 0';
+                }
             }
             $this->writer->line($dict . '>>');
             $this->writer->stream($program);
@@ -150,7 +158,7 @@ final class FontWriter
         $this->writer->beginObject($fontObject);
         $this->writer->line('<</Type /Font');
         $this->writer->line('/BaseFont /' . $name);
-        $this->writer->line('/Subtype /' . $definition->type);
+        $this->writer->line('/Subtype /' . ($definition->isCff ? 'Type1' : $definition->type));
         $this->writer->line('/FirstChar 32 /LastChar 255');
         $this->writer->line('/Widths ' . $widthsObject . ' 0 R');
         $this->writer->line('/FontDescriptor ' . $descriptorObject . ' 0 R');
@@ -180,7 +188,11 @@ final class FontWriter
         }
         $path = $definition->fontFilePath();
         if ($path !== null && isset($this->fontFiles[$path])) {
-            $key = $definition->type === 'Type1' ? 'FontFile' : 'FontFile2';
+            $key = match (true) {
+                $definition->isCff => 'FontFile3',
+                $definition->type === 'Type1' => 'FontFile',
+                default => 'FontFile2',
+            };
             $descriptor .= ' /' . $key . ' ' . $this->fontFiles[$path] . ' 0 R';
         }
         $this->writer->line($descriptor . '>>');

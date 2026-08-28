@@ -282,6 +282,18 @@ Document::create()
 The subsetted font program is embedded with `/FontFile2`, a `/FontDescriptor`
 and a ToUnicode CMap so the text stays copy-pasteable.
 
+`.otf` files work the same way. Ones with TrueType outlines take the path
+above; ones with PostScript (CFF) outlines produce a `Type1` definition whose
+program is the `CFF ` table, embedded as `/FontFile3` `/Subtype /Type1C`:
+
+```
+php tools/makefont/makefont.php IBMPlexSans-Regular.otf cp1252
+# -> IBMPlexSans-Regular.json (+ IBMPlexSans-Regular.cff.z)
+```
+
+CFF programs are **not** subsetted — the whole font (40–80 KB per cut) is
+embedded.
+
 ## Named and numeric font weights
 
 Register one definition per cut and select it with `weight` (100–900):
@@ -300,7 +312,8 @@ new StylePatch(fontFamily: 'Inter', bold: true);   // ≡ weight: 700 -> snaps t
 
 An unregistered weight falls back to the nearest one in the same slope, then to
 the nearest in the other slope. The core families only carry 400 and 700, so
-`weight: 600` on Helvetica draws Helvetica-Bold.
+`weight: 600` on Helvetica draws Helvetica-Bold. A single-cut `.otf`/CFF family
+follows the same ladder.
 
 ## A house style
 
