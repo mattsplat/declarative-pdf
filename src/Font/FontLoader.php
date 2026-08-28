@@ -73,6 +73,7 @@ final class FontLoader
             size1: isset($data['size1']) ? (int) $data['size1'] : null,
             size2: isset($data['size2']) ? (int) $data['size2'] : null,
             subsetted: (bool) ($data['subsetted'] ?? false),
+            isCff: (bool) ($data['cff'] ?? false),
             sourceDirectory: $sourceDirectory,
         );
     }

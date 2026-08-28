@@ -11,6 +11,10 @@ namespace Pdf\Font;
  * (fpdf.php:1145): `type`, `name`, `up`, `ut`, `cw`, `enc`, `uv` for every
  * font, plus `desc`, `diff`, `file`, `originalSize`, `subsetted` for embedded
  * TrueType/Type1 fonts.
+ *
+ * `cff` is an extension of that schema: a `Type1` definition whose program is a
+ * bare CFF table lifted out of an OpenType (`OTTO`) file, embedded as
+ * `/FontFile3 /Type1C`.
  */
 final readonly class FontDefinition
 {
@@ -34,6 +38,7 @@ final readonly class FontDefinition
         public ?int $size1 = null,
         public ?int $size2 = null,
         public bool $subsetted = false,
+        public bool $isCff = false,
         public ?string $sourceDirectory = null,
     ) {
     }
