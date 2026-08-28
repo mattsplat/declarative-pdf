@@ -35,7 +35,7 @@ immutable tree.
 | method | notes |
 |---|---|
 | `meta(callable(MetaBuilder))` | `title` / `author` / `subject` / `keywords` / `creator` — each `MetaBuilder` method returns `$this` |
-| `page(callable(PageBuilder))` | build and append a logical page |
+| `page(callable(PageBuilder))` | append a logical page; the closure runs at `build()` / `toString()` time, once fonts are known, so it can call the measurement helpers below |
 | `addPage(Pdf\Node\Page)` | append a pre-built page |
 | `baseStyle(Pdf\Style\Style)` | document-wide defaults (default `Style::default()`) |
 | `stylesheet(Pdf\Style\Stylesheet)` | per-node-type rules |
@@ -87,6 +87,20 @@ footer(Closure(PageContext): (BlockNode | iterable<BlockNode>))
 | `columns(iterable<BlockNode>, int $count = 2, float $gutterPt = 14.0)` | `Columns` |
 | `table(iterable<TableRow>, ?ColumnWidth[] $columns = null, int $headerRows = 0, ?float $totalWidthPt = null)` | `Table` |
 | `add(BlockNode)` | any node directly |
+
+### Measurement
+
+Both return values in the page's `units()`. Only available when the page is
+built through `DocumentBuilder::page()` (a directly-constructed `PageBuilder`
+has no renderer and these throw `LayoutException`).
+
+| method | |
+|---|---|
+| `textWidth(string $text, StylePatch = new)` | advance width of one unbroken line (no wrapping, no `\n`); the patch resolves against the document base style, so the result matches the line breaker |
+| `measureBlocks(iterable<BlockNode> $blocks, float $width)` | natural stacked height of `$blocks` flowed at `$width` — size a `place()` rectangle to its content |
+
+For measuring outside the builder, `Pdf\Text\TextMeasurer` does the same in
+points — see [Inline content](#inline-content).
 
 ### Absolute areas
 
@@ -161,6 +175,19 @@ InlineSequence::fromRuns(TextRun[]) : self
 A `\n` anywhere in a run's text is also a hard line break. All text input is
 UTF-8 and is transcoded to the target font's encoding for measuring and output.
 
+### `Pdf\Text\TextMeasurer`
+
+```php
+new TextMeasurer(Pdf\Font\FontRegistry $fonts)
+TextMeasurer::withBundledFonts() : self
+->width(string $text, Pdf\Style\Style $style) : float               // points
+->widthOf(string $text, string $family, Pdf\Font\FontStyle $style, float $sizePt) : float
+```
+
+Advance width of one unbroken run, in points. Transcodes to the resolved
+font's encoding first, so the result agrees with the line breaker.
+`PageBuilder::textWidth()` wraps this and converts to the page's units.
+
 ### `Pdf\Text\Html`
 
 ```php
@@ -184,7 +211,8 @@ Every constructor argument is nullable and defaults to `null` ("inherit").
 |---|---|---|
 | `fontFamily` | `string` | e.g. `'Helvetica'`, `'Times'`, `'Courier'`, `'Symbol'`, a registered name |
 | `fontStyle` | `FontStyle` | `Regular` / `Bold` / `Italic` / `BoldItalic` |
-| `bold` / `italic` | `bool` | toggle without naming the full style |
+| `weight` | `int` | numeric cut, 100–900; wins over `bold` |
+| `bold` / `italic` | `bool` | toggle without naming the full style (`bold: true` ≡ `weight: 700`) |
 | `fontSizePt` | `float` | absolute size |
 | `fontSizeScale` | `float` | multiply the inherited size (used by sub/superscript) |
 | `color` | `Color` | text colour |
@@ -344,17 +372,35 @@ new PdfOutput(string $bytes)
 ```php
 FontRepository::withBundledFonts() : self         // the standard-14 core fonts
 new FontRepository(string $fontDirectory, FontLoader $loader = new)
-->register(string $family, FontStyle $style, string $definitionPath) : void
-->resolve(string $family, FontStyle $style) : FontDefinition
+->register(string $family, FontFace $face, string $definitionPath) : void
+->resolve(string $family, FontFace $face) : FontDefinition
 ```
 
 A `register()`ed font wins over the `arial → helvetica` alias and takes effect
 even after the family was previously resolved. Build a definition file with
 `php tools/makefont/makefont.php Font.ttf cp1252`.
 
+An unregistered cut falls back down a ladder: nearest registered weight in the
+same slope → nearest weight in the other slope → the core font. Ties go to the
+lighter cut. The core families only carry 400 and 700, so `new FontFace(600)`
+resolves to the bold file.
+
+### `Pdf\Font\FontFace`
+
+One cut of a family — a CSS/OpenType weight plus a slope.
+
+```php
+new FontFace(int $weight = 400, bool $italic = false)
+FontFace::regular() ::bold() ::italic() ::boldItalic()
+FontFace::fromLegacy(FontStyle $style) : self
+->isBold() : bool            // weight >= 600
+->equals(FontFace) : bool
+```
+
 ### `Pdf\Font\FontStyle`
 
-`Regular` / `Bold` / `Italic` / `BoldItalic`. `FontStyle::of(bool $bold, bool $italic)`.
+`Regular` / `Bold` / `Italic` / `BoldItalic` — a shorthand over `FontFace`.
+`FontStyle::of(bool $bold, bool $italic)`, `->face() : FontFace`.
 
 ---
 

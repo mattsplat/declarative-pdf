@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Tests\Unit;
 
 use Pdf\Color\Color;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Layout\LineBreaker;
 use Pdf\Layout\ResolvedRun;
 use Pdf\Layout\TextLine;
@@ -102,7 +102,7 @@ final class LineBreakerTest extends TestCase
     public function test_breaks_across_runs_of_different_styles(): void
     {
         $lines = $this->breaker->break([
-            new ResolvedRun('bold words here ', Fonts::helvetica(FontStyle::Bold), 12.0, Color::black()),
+            new ResolvedRun('bold words here ', Fonts::helvetica(FontFace::bold()), 12.0, Color::black()),
             new ResolvedRun('and regular words following', Fonts::helvetica(), 12.0, Color::black()),
         ], 90.0, 1.0);
 

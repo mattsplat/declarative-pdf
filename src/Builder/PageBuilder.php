@@ -13,6 +13,8 @@ use Pdf\Geometry\PageSize;
 use Pdf\Geometry\Rect;
 use Pdf\Geometry\ShrinkMode;
 use Pdf\Geometry\Unit;
+use Pdf\Exception\LayoutException;
+use Pdf\Layout\Measurer;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
@@ -37,10 +39,12 @@ use Pdf\Node\Spacer;
 use Pdf\Node\Table;
 use Pdf\Node\TableRow;
 use Pdf\Style\ColumnWidth;
+use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
 use Pdf\Style\TextAlign;
 use Pdf\Text\Html;
 use Pdf\Text\InlineSequence;
+use Pdf\Text\TextMeasurer;
 
 final class PageBuilder
 {
@@ -58,10 +62,18 @@ final class PageBuilder
 
     private Unit $unit = Unit::Mm;
 
-    public function __construct()
+    private readonly Style $baseStyle;
+
+    /**
+     * `$measurer` is supplied by {@see DocumentBuilder} once the renderer is
+     * known; it powers {@see self::textWidth()} / {@see self::measureBlocks()}.
+     * A directly-constructed builder has none and those two methods then throw.
+     */
+    public function __construct(private readonly ?Measurer $measurer = null, ?Style $baseStyle = null)
     {
         $this->size = PageSize::a4();
         $this->marginsPt = Edges::all(28.35);
+        $this->baseStyle = $baseStyle ?? Style::default();
     }
 
     /** The unit used by place*() coordinates (default: millimetres). */
@@ -219,6 +231,48 @@ final class PageBuilder
     public function orderedList(iterable $items, int $start = 1, StylePatch $patch = new StylePatch()): self
     {
         return $this->add(new OrderedList($items, start: $start, patch: $patch));
+    }
+
+    /**
+     * Advance width of `$text` set on one unbroken line, in the page's units.
+     *
+     * No wrapping and no `\n`: this measures a single run. `$patch` resolves
+     * against the document's base style, the same parent an inline run sees, so
+     * the result agrees with the line breaker. Use it to right-align or offset
+     * text in an absolute layout.
+     */
+    public function textWidth(string $text, StylePatch $patch = new StylePatch()): float
+    {
+        $style = $patch->applyTo($this->baseStyle);
+        $widthPt = (new TextMeasurer($this->requireMeasurer()->fonts()))->width($text, $style);
+
+        return $this->unit->fromPoints($widthPt);
+    }
+
+    /**
+     * Natural stacked height of `$blocks` laid out at `$width`, in the page's
+     * units — size a {@see self::place()} rectangle to its content, or drive a
+     * caller's own shrink-to-fit loop.
+     *
+     * `$width` is taken in the page's units; the result is returned in them.
+     *
+     * @param iterable<BlockNode> $blocks
+     */
+    public function measureBlocks(iterable $blocks, float $width): float
+    {
+        $heightPt = $this->requireMeasurer()
+            ->measureStack($blocks, $this->unit->toPoints($width), $this->baseStyle)
+            ->contentHeightPt();
+
+        return $this->unit->fromPoints($heightPt);
+    }
+
+    private function requireMeasurer(): Measurer
+    {
+        return $this->measurer ?? throw new LayoutException(
+            'textWidth() / measureBlocks() need a renderer to resolve fonts; build the page via '
+            . 'Pdf\Document::create()->page(...) instead of constructing PageBuilder directly.',
+        );
     }
 
     /**

@@ -32,7 +32,7 @@ $doc = Document::create()->page(function ($p) {
 | bold/italic mid-sentence | `InlineSequence::of('a ')->withBold('b')->withItalic('c')` |
 | underline via `SetFont('','U')` | `->withUnderline('text')` |
 | `WriteHTML()` add-on (tuto6) | `$p->html('<b>..</b> <a href="..">..</a>')` (inline tags only) |
-| `AddFont(...)` + `SetFont('Custom',...)` (tuto7) | `FontRepository::register('Custom', FontStyle::Regular, 'Custom.json')`, then `new StylePatch(fontFamily: 'Custom')` |
+| `AddFont(...)` + `SetFont('Custom',...)` (tuto7) | `FontRepository::register('Custom', FontFace::regular(), 'Custom.json')`, then `new StylePatch(fontFamily: 'Custom')` |
 | `{nb}` page-count alias | `$p->footer(fn ($ctx) => new Paragraph("Page {$ctx->pageNumber} of {$ctx->pageCount}"))` |
 | non-ASCII: `iconv`, `$isUTF8` flags | pass UTF-8; it is transcoded to the font encoding for you |
 
