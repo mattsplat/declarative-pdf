@@ -186,7 +186,21 @@ $p->place(28, 1, 6, 10, [                                    // notes column
 ```
 
 Block content placed in an area shrinks uniformly to fit the rectangle's
-height. `placeImage()` takes a `Fit` mode; `placePdf()` imports one page of an
+height. Pass `shrink: ShrinkMode::FontSize` for a text legend or note instead —
+it lowers the effective font size (hard-coded `fontSizePt` included) so the
+lines re-wrap rather than squash, then draws at 1:1:
+
+```php
+use Pdf\Geometry\ShrinkMode;
+
+$p->place(28, 1, 6, 10, [
+    new Paragraph('GENERAL NOTES', new \Pdf\Style\StylePatch(bold: true, fontSizePt: 11)),
+    new Paragraph('1. Verify all dimensions on site before fabrication.'),
+    new Paragraph('2. This drawing is diagrammatic and not to scale.'),
+], BoxAlign::TopLeft, ShrinkMode::FontSize);
+```
+
+`placeImage()` takes a `Fit` mode; `placePdf()` imports one page of an
 external PDF as a **vector Form XObject** (stays crisp at any zoom).
 
 ## Importing / reading an external PDF
