@@ -6,7 +6,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use Pdf\Document;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\StylePatch;
 
@@ -15,7 +15,7 @@ use Pdf\Style\StylePatch;
 $fonts = FontRepository::withBundledFonts();
 $fonts->register(
     'CevicheOne',
-    FontStyle::Regular,
+    FontFace::regular(),
     __DIR__ . '/data/CevicheOne-Regular.json',
 );
 

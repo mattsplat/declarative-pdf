@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Tests\Unit;
 
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use PHPUnit\Framework\TestCase;
 
 final class FontMetricsTest extends TestCase
@@ -13,7 +13,7 @@ final class FontMetricsTest extends TestCase
     public function test_string_width_matches_known_helvetica_afm_values(): void
     {
         $metrics = FontRepository::withBundledFonts()
-            ->resolve('Helvetica', FontStyle::Regular)
+            ->resolve('Helvetica', FontFace::regular())
             ->metrics();
 
         // H=722, i=222, .=278 units/1000em -> 1222 * 12 / 1000
@@ -27,8 +27,8 @@ final class FontMetricsTest extends TestCase
         $repo = FontRepository::withBundledFonts();
 
         self::assertSame(
-            $repo->resolve('Helvetica', FontStyle::Bold)->name,
-            $repo->resolve('Arial', FontStyle::Bold)->name,
+            $repo->resolve('Helvetica', FontFace::bold())->name,
+            $repo->resolve('Arial', FontFace::bold())->name,
         );
     }
 
@@ -37,8 +37,8 @@ final class FontMetricsTest extends TestCase
         $repo = FontRepository::withBundledFonts();
 
         self::assertSame(
-            $repo->resolve('Symbol', FontStyle::Regular)->name,
-            $repo->resolve('Symbol', FontStyle::BoldItalic)->name,
+            $repo->resolve('Symbol', FontFace::regular())->name,
+            $repo->resolve('Symbol', FontFace::boldItalic())->name,
         );
     }
 }

@@ -7,7 +7,7 @@ namespace Pdf\Tests\Unit;
 use Pdf\Color\Color;
 use Pdf\Document;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Layout\LineBreaker;
 use Pdf\Layout\ResolvedRun;
 use Pdf\Layout\TableLayout;
@@ -104,18 +104,18 @@ final class ReviewRegressionsTest extends TestCase
     public function test_font_repository_registration_wins_over_the_arial_alias(): void
     {
         $repo = FontRepository::withBundledFonts();
-        $repo->register('Arial', FontStyle::Regular, dirname(__DIR__) . '/fixtures/CevicheOne-Regular.json');
+        $repo->register('Arial', FontFace::regular(), dirname(__DIR__) . '/fixtures/CevicheOne-Regular.json');
 
-        self::assertSame('CevicheOne-Regular', $repo->resolve('Arial', FontStyle::Regular)->name);
+        self::assertSame('CevicheOne-Regular', $repo->resolve('Arial', FontFace::regular())->name);
     }
 
     public function test_font_repository_registration_after_first_resolve_takes_effect(): void
     {
         $repo = FontRepository::withBundledFonts();
-        self::assertSame('Helvetica', $repo->resolve('Helvetica', FontStyle::Regular)->name);
+        self::assertSame('Helvetica', $repo->resolve('Helvetica', FontFace::regular())->name);
 
-        $repo->register('Helvetica', FontStyle::Regular, dirname(__DIR__) . '/fixtures/CevicheOne-Regular.json');
-        self::assertSame('CevicheOne-Regular', $repo->resolve('Helvetica', FontStyle::Regular)->name);
+        $repo->register('Helvetica', FontFace::regular(), dirname(__DIR__) . '/fixtures/CevicheOne-Regular.json');
+        self::assertSame('CevicheOne-Regular', $repo->resolve('Helvetica', FontFace::regular())->name);
     }
 
     public function test_table_layout_never_pushes_a_column_past_its_max_clamp(): void
@@ -171,7 +171,7 @@ final class ReviewRegressionsTest extends TestCase
     {
         $lines = (new LineBreaker())->break([
             new ResolvedRun('supercalifragilistic', Fonts::helvetica(), 12.0, Color::black()),
-            new ResolvedRun('expialidocious', Fonts::helvetica(FontStyle::Bold), 12.0, Color::black()),
+            new ResolvedRun('expialidocious', Fonts::helvetica(FontFace::bold()), 12.0, Color::black()),
         ], 90.0, 1.2);
 
         // The joined word gets split at a character, not shown as two words on

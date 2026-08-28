@@ -214,12 +214,12 @@ php tools/makefont/makefont.php Inter-Regular.ttf cp1252
 
 ```php
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\StylePatch;
 
 $fonts = FontRepository::withBundledFonts();
-$fonts->register('Inter', FontStyle::Regular, __DIR__ . '/fonts/Inter-Regular.json');
+$fonts->register('Inter', FontFace::regular(), __DIR__ . '/fonts/Inter-Regular.json');
 
 Document::create()
     ->using(new DocumentRenderer($fonts))

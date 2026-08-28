@@ -18,7 +18,7 @@ final class StyleResolverTest extends TestCase
         $base = Style::default()->resetBlockProperties();
         $base16 = new Style(
             $base->fontFamily,
-            $base->fontStyle,
+            $base->fontFace,
             16.0,
             $base->color,
             $base->align,
