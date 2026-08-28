@@ -189,6 +189,43 @@ Block content placed in an area shrinks uniformly to fit the rectangle's
 height. `placeImage()` takes a `Fit` mode; `placePdf()` imports one page of an
 external PDF as a **vector Form XObject** (stays crisp at any zoom).
 
+## Measuring text and blocks for absolute layout
+
+`textWidth()` and `measureBlocks()` let a `page()` closure position content
+against real metrics — right-align a string, or size a `place()` rectangle to
+its content. Both return the page's `units()`; the closure runs at render time,
+so the fonts (including any registered with `using()`) are known.
+
+```php
+use Pdf\Geometry\Unit;
+use Pdf\Node\Paragraph;
+use Pdf\Style\StylePatch;
+
+Document::create()->page(function ($p) {
+    $p->units(Unit::In);
+
+    $title = 'DETAIL';
+    $p->place(1, 1, 6, 0.4, [new Paragraph($title, new StylePatch(bold: true, fontSizePt: 14))]);
+
+    // Start the next label just past the title.
+    $x = 1 + $p->textWidth($title, new StylePatch(bold: true, fontSizePt: 14)) + 0.1;
+    $p->place($x, 1, 3, 0.4, [new Paragraph('(revised)', new StylePatch(fontSizePt: 9))]);
+
+    // Size a note box to exactly the height its copy needs.
+    $notes = [new Paragraph('1. Verify all dimensions on site.')];
+    $p->place(1, 2, 4, $p->measureBlocks($notes, 4), $notes);
+})->save('sheet.pdf');
+```
+
+```php
+use Pdf\Font\FontStyle;
+use Pdf\Text\TextMeasurer;
+
+$pt = TextMeasurer::withBundledFonts()->widthOf('DETAIL', 'Helvetica', FontStyle::Bold, 14.0);
+```
+
+`TextMeasurer` does the width half in points, with no builder.
+
 ## Importing / reading an external PDF
 
 ```php
