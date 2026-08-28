@@ -240,19 +240,47 @@ final class PageBuilder
         return $this;
     }
 
-    /** Place a raster image in an absolute rectangle with a fit mode. */
+    /**
+     * Place a raster image in an absolute rectangle with a fit mode. The source
+     * may be a filesystem path, an `http(s)://` URL, or a `data:` URI.
+     */
     public function placeImage(
         float $x,
         float $y,
         float $width,
         float $height,
-        string $path,
+        string $source,
         Fit $fit = Fit::Contain,
         BoxAlign $align = BoxAlign::Center,
     ): self {
-        $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new Picture($path), $fit, $align);
+        $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new Picture($source), $fit, $align);
 
         return $this;
+    }
+
+    /**
+     * Place a raster image already held in memory (e.g. fetched by the caller).
+     * The bytes are carried inline as a `data:` URI, so prefer {@see placeImage}
+     * with a path for anything large.
+     */
+    public function placeImageData(
+        float $x,
+        float $y,
+        float $width,
+        float $height,
+        string $bytes,
+        Fit $fit = Fit::Contain,
+        BoxAlign $align = BoxAlign::Center,
+    ): self {
+        return $this->placeImage(
+            $x,
+            $y,
+            $width,
+            $height,
+            'data:;base64,' . base64_encode($bytes),
+            $fit,
+            $align,
+        );
     }
 
     /**

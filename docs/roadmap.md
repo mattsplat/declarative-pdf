@@ -1,0 +1,467 @@
+# Potential features
+
+Where the library could go next. Ordered loosely by how well each fits the
+current architecture. Effort is a rough T-shirt size: **S** ≈ a day, **M** ≈ a
+few days, **L** ≈ a week+, **XL** ≈ a project of its own.
+
+Status today (Phases 1–5): typed writer, core + embedded fonts, style
+resolution, greedy line breaking, box-model pagination (split / keep-together /
+widow-orphan / keep-with-next), headers/footers, images (JPEG/PNG/GIF/WebP with
+SMask), internal + external links, multi-column blocks, auto-sized tables with
+repeating headers, UTF-8 encoding, inline decorations, inline HTML, named
+stylesheets, large-format sheets, absolute area placement, and a pure-PHP
+single-page PDF importer emitting vector Form XObjects.
+
+A worked implementation plan for the font + measurement cluster (OTF/CFF
+embedding, named weights, `place()` shrink-to-fit, `textWidth` /
+`measureBlocks`) is in [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md).
+
+---
+
+## Interactive forms & JavaScript
+
+> A dedicated feature-by-feature breakdown — conditional forms, calculators,
+> configurators, quizzes, signatures, layers, 3D, dynamic tables, the event
+> model — with difficulty **and viewer-reach** ratings is in
+> [`interactive-pdf-feasibility.md`](interactive-pdf-feasibility.md).
+
+### AcroForm fields — **L**
+
+Native PDF form fields. New `Node` types placed in block flow *or* via
+`$page->place()`:
+
+| Node | PDF field type | Notes |
+|---|---|---|
+| `TextField` | `/Tx` | single- / multi-line, max length, comb, password |
+| `Checkbox` | `/Btn` | on/off, export value |
+| `RadioGroup` / `RadioOption` | `/Btn` | shared field name, per-option export value |
+| `Dropdown` | `/Ch` combo | editable or fixed list |
+| `ListBox` | `/Ch` list | single / multi select |
+| `PushButton` | `/Btn` | triggers an action (submit / reset / JS) |
+| `SignatureField` | `/Sig` | empty placeholder; signing is separate — see below |
+
+What it touches:
+
+- `/AcroForm` dict in the catalog: `/Fields`, `/DR` (a default resource dict
+  with at least one font), `/DA` (default appearance string), `/NeedAppearances`.
+- Each field is a widget annotation (`/Subtype /Widget`) emitted on its page —
+  this reuses the existing per-page annotation path in `DocumentRenderer`
+  (`writeAnnotation()` already writes `/Annots`; widgets slot in beside links).
+- **Appearance streams.** Two options:
+  1. `/NeedAppearances true` and let the viewer draw the fields. Trivial to
+     emit, but Preview / pdf.js / Chrome render inconsistently and some printers
+     drop the field contents.
+  2. Generate `/AP /N` appearance XObjects ourselves — draw the border, the
+     background, and the value text with the box model we already have. Correct
+     everywhere, ~half the work of this line item. **Recommended.**
+- Field flags (`/Ff`): required, read-only, multiline, do-not-scroll, comb, etc.
+- `/AcroForm /CO` calculation-order array (only matters once JS calculations
+  exist).
+
+This is self-contained and does **not** require JavaScript — a fillable,
+saveable form works with appearance streams alone.
+
+### Document & field JavaScript — **M** (on top of AcroForm)
+
+- **Document-level JS**: `/Names /JavaScript` name tree in the catalog; each
+  entry is `<< /S /JavaScript /JS (…) >>`. Runs on open. Good for defining
+  shared functions.
+- **Field actions** (`/AA` additional-actions dict on a widget/field):
+  - `/K` keystroke, `/F` format, `/V` validate, `/C` calculate
+  - `/A` primary action (e.g. a button that runs `this.print()` or submits)
+- **API shape**: `new TextField(name: 'total', calculate: Js::sum('qty', 'price'))`
+  or raw `Js::raw('event.value = …')`. A small `Pdf\Interactive\Js` helper with
+  a few canned recipes (sum, product, average, validate-range, format-currency)
+  covering 90% of real use, plus a raw escape hatch.
+
+**Honest caveats — read before committing to JS:**
+
+- **Viewer support is the whole story.** Adobe Acrobat / Reader run PDF
+  JavaScript fully. Chrome (pdfium), macOS Preview, and Firefox's pdf.js run
+  little to none — calculated and validated fields simply won't update there.
+  If the audience opens PDFs in a browser, JS calculations are invisible to
+  them.
+- Many enterprises disable PDF JavaScript by policy (it has a long history of
+  being a malware vector). Content that *depends* on it will silently misbehave.
+- It complicates accessibility and long-term archival (PDF/A forbids JS
+  entirely).
+
+**Recommendation:** build AcroForm fields with self-generated appearance
+streams first — that delivers fillable/printable/saveable forms that work in
+every viewer. Add the JavaScript layer as an opt-in on top for the
+Acrobat-centric workflows that need live calculations, and document the viewer
+limitation prominently.
+
+### Form submission & FDF/XFDF — **S**
+
+Once fields exist: `SubmitButton(url: …, format: Fdf|Xfdf|Html|Pdf)` →
+`/A << /S /SubmitForm /F (url) /Flags n >>`. Also `ResetButton`. Reading form
+data back (parsing a filled FDF/XFDF) is a separate small parser.
+
+---
+
+## Vector drawing
+
+### Drawing primitives — **M**
+
+A `Canvas`-level drawing API for authoring linework (the plan's top "not yet
+implemented" item). `ContentStream` already emits `re` / `l` / `m` / fill /
+stroke for borders and rules — this exposes it as a first-class node.
+
+- `Path` node: `moveTo` / `lineTo` / `curveTo` (cubic Bézier `c`) / `close`,
+  fill rule (nonzero / even-odd), stroke width, cap, join, miter, dash array.
+- Convenience shapes: `Line`, `Rectangle` (rounded via Béziers), `Ellipse`,
+  `Polygon`, `Polyline`.
+- Fills: solid `Color` today; gradients (`/Shading` type 2 axial / type 3
+  radial) is a **M** add-on.
+- Clipping paths (`W` / `W*`).
+- Placed in block flow (intrinsic size = bounding box) or absolutely via
+  `$page->place()`.
+
+### Charts / sparklines — **M** (needs drawing primitives)
+
+Not core, but a thin `Pdf\Chart` built on the path API: bar, line, pie,
+sparkline. Deterministic, no external deps.
+
+### Transparency & blend modes — **S**
+
+`/ExtGState` with `/CA` / `/ca` (stroke / fill alpha) and `/BM` (blend mode).
+Wire an `opacity` field through `StylePatch` and the placement API. The image
+path already builds SMasks; this is the general case.
+
+---
+
+## Text & typography
+
+### Font subsetting for embedded TrueType — **L**
+
+Today an embedded font ships its whole glyf table. Real subsetting (keep only
+used glyphs, rebuild `loca` / `glyf` / `cmap` / `hmtx`, fix `maxp`) can cut
+attachment size 10–50×. Self-contained, heavily testable, no API change.
+
+### OpenType / CFF embedding — **L** (the `.otf` half of the XL below)
+
+Split out because it is the concrete blocker for real brand work: `examples/detail-sheet.php`
+rebuilds a Schier cutsheet whose original embeds **Proxima Nova** from four
+`.otf` cuts; today the example falls back to core Helvetica. Just the embedding:
+
+- CFF font programs — `/FontFile3` with `/Subtype /Type1C` (simple) — parse the
+  `CFF ` table out of an OpenType wrapper, emit `/Type1` or `/CIDFontType0`.
+- No shaping, no CID sets beyond 256 glyphs — that keeps it at **L**, not XL.
+
+### Named / numeric font weights — **M**
+
+`FontStyle` is a 4-value enum (Regular / Bold / Italic / BoldItalic). Real
+families ship Light / Semibold / Black / etc. — the detail sheet needs Semibold
+as a distinct cut and has to alias it as a separate family today. Add a
+`weight: 100–900` (or free-form named styles) to `FontStyle` / `StylePatch` and
+let `FontRepository` resolve `(family, weight, italic)`.
+
+### OpenType shaping & complex scripts — **XL**
+
+- CID-keyed `/Type0` composite fonts — required for CJK and any script needing
+  >256 glyphs.
+- Ligatures, kerning (`GPOS` / `GSUB`), contextual forms.
+- Right-to-left (Arabic / Hebrew) and complex scripts (Indic) — bidi
+  reordering, the Unicode bidi algorithm, mark positioning.
+
+This is where a dependency (HarfBuzz via FFI, or a pure-PHP shaper) becomes
+worth considering. Very large.
+
+### Typographic polish — **M**
+
+- Hyphenation (Liang's algorithm + language pattern files) at line breaking.
+- Non-greedy line breaking (Knuth–Plass / "best fit") as an opt-in — the
+  current engine is deliberately greedy; KP would need paragraph-level
+  optimisation and pushes back on pagination.
+- Small caps, letter-spacing (`Tc`) and word-spacing controls on `StylePatch`.
+- Tab stops / leader dots.
+- Drop caps.
+- Baseline grid alignment.
+
+### Footnotes, endnotes, margin notes — **L**
+
+Genuinely new layout machinery: a footnote reserves space at the bottom of the
+*page it lands on*, which feeds back into pagination (a two-way constraint the
+current one-pass splitter doesn't have). Endnotes are easier (collected, emitted
+at the end). Margin notes need a side band in the page geometry.
+
+### Running headers from content — **M**
+
+"Section title in the header, updated per page" (like a dictionary's guide
+words). The header closure gets `$ctx->pageCount` today; add
+`$ctx->runningHeading` populated from the last heading that started at or before
+the top of the page. Needs a marks-collection pass after pagination.
+
+### Table of contents — **M**
+
+`TableOfContents` node: after layout, walk the heading marks (page + y already
+known for anchors) and emit a generated list with leader dots and real page
+numbers, each entry an internal link. Depends on the anchor-resolution pass that
+already exists.
+
+---
+
+## Document structure & metadata
+
+### Outlines / bookmarks — **S**
+
+`/Outlines` tree in the catalog pointing at `Anchor` destinations. API:
+`$doc->bookmark('Chapter 1', anchor: 'ch1')` or auto-generated from headings
+(`->bookmarksFromHeadings(maxLevel: 3)`). The anchor→(page, y) resolution is
+already done for internal links; this reuses it directly. **Low-hanging fruit.**
+
+### XMP metadata — **S**
+
+An XMP packet (`/Metadata` stream, `/Type /Metadata /Subtype /XML`) mirroring
+the Info dict plus Dublin Core. Required for PDF/A and generally expected by
+DAM systems.
+
+### Tagged PDF / PDF/UA (accessibility) — **XL**
+
+A structure tree (`/StructTreeRoot`, `/MarkInfo /Marked true`), marked-content
+operators (`BDC` / `EMC`) around every text run and figure, `/Alt` text on
+images, reading order, `/Lang`. This is a large cross-cutting change — every
+render path emits marked content and registers a structure element. High value
+for government / enterprise / EU-accessibility-law contexts.
+
+### PDF/A & PDF/X conformance — **L** (needs XMP + tagging + color)
+
+- PDF/A-1b/2b/3b: no JS, no encryption, all fonts embedded, XMP present,
+  OutputIntent with an ICC profile, `/ID` in the trailer.
+- PDF/X for print: CMYK / spot color, OutputIntent, trim/bleed boxes.
+- A conformance *checker* mode that fails the render if a rule is violated.
+
+### Optional content (layers) — **M**
+
+`/OCProperties` + `/OC` on content groups. Toggle-able layers (e.g. blueprint
+annotations, multi-language overlays). Fits the placement API well.
+
+### File attachments / embedded files — **S**
+
+`/EmbeddedFiles` name tree + `/Filespec`. Attach source data, a spreadsheet,
+etc. PDF/A-3 allows this. Also `FileAttachment` annotations (a pin icon on the
+page).
+
+### Page labels — **S**
+
+`/PageLabels` number tree — roman numerals for front matter, then arabic, etc.
+Currently pages are just 1..N.
+
+### Article threads, page transitions, viewer prefs — **S each**
+
+Small catalog-level extras: `/PageLayout`, `/PageMode`, `/ViewerPreferences`
+(hide toolbar, fit window, print scaling), `/Trans` slideshow transitions,
+`/Threads` for magazine-style article flow.
+
+---
+
+## Annotations (non-link)
+
+### Markup annotations — **M**
+
+`/Text` (sticky note), `/Highlight` / `/Underline` / `/StrikeOut` / `/Squiggly`,
+`/Square` / `/Circle`, `/Line`, `/Polygon` / `/PolyLine`, `/Ink` (freehand),
+`/FreeText` (text box on the page), `/Stamp`. Each needs an appearance stream.
+Useful for generated review copies / redline documents.
+
+### Redaction — **L**
+
+`/Redact` annotations *plus* actually removing the underlying content (text,
+images) from the content stream — not just drawing a black box over it. The
+"draw a box" version is **S** and dangerous (data still there); real redaction
+needs content-stream surgery.
+
+---
+
+## Security
+
+### Encryption — **L**
+
+- RC4 (40/128-bit) and AES (128/256-bit, `/V 5 /R 6`) standard security
+  handler. Owner / user passwords, permission flags (print, copy, modify,
+  annotate).
+- Also enables *reading* encrypted source PDFs in the importer (currently
+  rejected outright).
+- Public-key (certificate) encryption is a further **M**.
+
+### Digital signatures — **XL**
+
+`/Sig` field with a PKCS#7 / CMS signature, `/ByteRange`, incremental-update
+save so the signed bytes stay stable. Needs a crypto backend (`openssl` /
+`ext-sodium`), timestamp authority (RFC 3161) support for LTV, and
+PAdES-baseline profiles for EU compliance. Visible signature appearance is easy;
+the cryptography and the byte-exact incremental save are the hard part.
+
+---
+
+## Import / merge
+
+### Multi-page & full-document import — **L**
+
+Today the importer pulls **one page as a Form XObject**. Extend to:
+
+- Import a page *range* or a whole document in one call.
+- `$doc->append('other.pdf')` / `->prepend()` / `->insertAfter(page: 3, …)` —
+  true page-level merge where imported pages become real pages, not XObjects
+  stamped onto new ones.
+- Carry over: outlines (remapped), internal links, page labels, form fields,
+  annotations, named destinations.
+- Deduplicate shared resources (fonts, images) across merged documents.
+
+This is the plan's "shell out to qpdf" item done natively. The parser
+(`Pdf\Import\PdfReader`) already handles xref streams, object streams and
+`/Prev` chains, so the reading half is mostly there.
+
+### Stamping / watermarks / n-up — **M**
+
+- `$page->stamp('DRAFT', opacity: 0.2, rotate: 45)` — text or image overlay /
+  underlay on imported or generated pages.
+- N-up: place 2 / 4 / 8 source pages per sheet (booklet imposition, proof
+  sheets).
+- Page resize / crop / rotate on import.
+
+### Split / extract — **S**
+
+`Pdf::split('in.pdf')` → per-page files; `extract(pages: [2,5,7])`. Mostly
+importer plumbing.
+
+---
+
+## Images & color
+
+### CMYK & spot color — **M**
+
+`Color::cmyk()` and `Color::spot(name, tint)` (Separation color space).
+`ContentStream` color ops currently emit `g` / `rg` only — add `k` and
+`/SepName cs`. Prerequisite for PDF/X.
+
+### ICC color management — **M**
+
+`/ICCBased` color spaces, embed input profiles on images, `/OutputIntent`.
+Pairs with PDF/A / PDF/X.
+
+### More image formats — **S–M**
+
+- TIFF (multipage, LZW / PackBits / G4 fax).
+- BMP.
+- AVIF / JPEG 2000 (`/JPXDecode` — some viewer support).
+- SVG → rasterise, or better, → native vector via the drawing primitives (**L**,
+  needs an SVG path parser).
+
+### Image reuse & downsampling — **S**
+
+Deduplicate identical images (hash the decoded bytes) so a logo in a repeating
+header is embedded once. Optional DPI ceiling that downsamples on the way in.
+
+---
+
+## Layout engine
+
+### `place()` shrink-to-fit by font size — **M**
+
+`place()` currently fits over-tall content by scaling the rendered block with a
+`cm` transform (geometry — the text gets literally smaller *and* thinner).
+Detail sheets and cutsheets instead want "reduce the point size and re-flow":
+`examples/detail-sheet.php`'s source does exactly this for its legend (a 0.9×
+loop on size + spacing until it fits). Add a `ShrinkMode::FontSize` /
+`place(..., shrink: …)` that re-measures at each step.
+
+### Public measurement helpers — **S**
+
+`FontMetrics::stringWidth` and the box model's `contentHeightPt()` exist
+internally; nothing on the builder exposes them. Absolute-layout code needs:
+
+- `$doc->textWidth($string, $style): float` — the original detail builder
+  positions the project name at `x = titleX + widthOf("DETAIL" + "OO")` and
+  right-aligns the location string by measuring it.
+- `$doc->measureBlocks(iterable $blocks, float $widthPt): float` — so a caller
+  can size a `place()` rectangle to its content, or run its own shrink loop
+  (the original measures the legend before drawing to pick a font scale).
+
+Both in the page's `units()`.
+
+### Absolutely / relatively positioned blocks in flow — **M**
+
+`position: absolute | relative` on a block within normal flow (float out, offset
+from normal position). Currently absolute placement is only via the separate
+`$page->place()` area API.
+
+### Floats & text wrap around images — **L**
+
+`float: left | right` with subsequent text flowing around the float's box. The
+line breaker would need per-line available-width that varies with y. Genuinely
+new.
+
+### CSS-grid-style / flex regions — **L**
+
+Beyond `Columns`: a real 2-D region layout (named areas, spanning). Big.
+
+### Bleed / trim / crop boxes — **S**
+
+`/BleedBox` / `/TrimBox` / `/ArtBox` on the page dict, plus crop-mark
+generation. Needed for professional print. Small on its own.
+
+### Widow/orphan & keep across nested structures — **M**
+
+The constraint pass exists for paragraphs; extend keep-together / keep-with-next
+to work reliably through arbitrarily nested containers, lists and table row
+groups (the plan flags "keep-together at scale").
+
+---
+
+## Tooling & developer experience
+
+### Stylesheet class selectors — **S**
+
+The plan's last "not yet implemented" item: `->class('lead')` on a node,
+`(new Stylesheet())->class('lead', $patch)`. `StyleResolver` already has the
+hook point between inheritance and inline patch.
+
+### Markdown → document — **M**
+
+`Pdf\Markdown::toDocument()` — a CommonMark front-end producing the node tree
+(headings, paragraphs, lists, tables, code blocks, blockquotes, images, links).
+The inline-HTML helper is a partial precedent.
+
+### Templating / data binding — **M**
+
+A `Template` that takes a document tree with placeholders + a data array /
+collection and produces N documents (mail merge). Or a Twig/Blade bridge.
+
+### Streaming / incremental output — **L**
+
+Emit the PDF page-by-page to a stream instead of buffering the whole document —
+matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
+"layout everything, then render" design; needs a bounded look-ahead mode.
+
+### Diagnostics — **S**
+
+- A "layout overlay" debug mode drawing box edges, baselines, margins, break
+  points.
+- `qpdf --check` style structural self-validation.
+- Warnings surfaced as a collectable list rather than exceptions (overflow,
+  clamped table, missing glyph).
+
+### Performance — **M**
+
+- Cache `FontMetrics::stringWidth` per (font, size, string) run.
+- Reuse measured boxes across the two pagination passes instead of remeasuring.
+- Profile the line breaker on large documents; the item model added allocations.
+
+---
+
+## Suggested near-term order
+
+1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
+2. **Stylesheet class selectors** (S) — closes the last plan gap.
+3. **Drawing primitives** (M) — unblocks charts, watermarks, better tables.
+4. **OpenType/CFF embedding + named weights** (L + M) — the blocker for
+   brand-font work; see `examples/detail-sheet.php`.
+5. **AcroForm fields with generated appearance streams** (L) — the big one from
+   this request; works in every viewer without JavaScript.
+6. **Document / field JavaScript** (M) — opt-in layer on top of #5 for Acrobat
+   workflows, with the viewer-support caveat documented.
+7. **Font subsetting** (L) — shrinks every embedded-font document.
+8. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+   needs it.

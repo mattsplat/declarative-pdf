@@ -10,7 +10,8 @@
     },
     "suggest": {
         "ext-gd": "Needed to decode GIF and WebP images",
-        "ext-iconv": "Faster text encoding conversion"
+        "ext-iconv": "Faster text encoding conversion",
+        "ext-curl": "Fallback for fetching image URLs when allow_url_fopen is disabled"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",

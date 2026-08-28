@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(composer test)",
+      "Bash(composer stan)",
+      "Bash(composer test:*)",
+      "Bash(composer validate:*)",
+      "Bash(composer dump-autoload:*)",
+      "Bash(vendor/bin/phpunit:*)",
+      "Bash(vendor/bin/phpstan:*)",
+      "Bash(php examples/:*)",
+      "Bash(php -l:*)",
+      "Bash(pdftotext:*)",
+      "Bash(qpdf --check:*)",
+      "Bash(qpdf --json:*)"
+    ],
+    "deny": []
+  }
+}

@@ -34,6 +34,10 @@
 /.env
 /.env.local
 
+# Claude Code: share CLAUDE.md, .claude/settings.json and .claude/agents/;
+# keep each developer's personal settings local.
+/.claude/settings.local.json
+
 # --- Editors / IDEs --------------------------------------------------
 /.idea/
 /.vscode/

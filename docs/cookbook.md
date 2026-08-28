@@ -152,6 +152,18 @@ $p->paragraph(\Pdf\Text\InlineSequence::of('See the icon ')
 
 PNG transparency becomes a soft mask; WebP transparency is preserved.
 
+Any image source — `image()`, `placeImage()`, `withImage()` — also accepts an
+`http(s)://` URL or a `data:` URI (no Composer dependency; the fetch uses the
+streams layer, falling back to `ext-curl` if `allow_url_fopen` is off). Pass a
+URL only when you trust it, and note the fetch runs during layout:
+
+```php
+$p->placeImage(0, 0, 60, 20, 'https://cdn.example.com/nameplate.png');
+
+// bytes you already hold (fetched yourself, generated, pulled from a blob store)
+$p->placeImageData(0, 0, 60, 20, $pngBytes);
+```
+
 ## Large-format sheets laid out in areas
 
 Work in inches, position content in explicit rectangles.

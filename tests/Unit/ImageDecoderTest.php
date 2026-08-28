@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Unit;
 
+use Pdf\Exception\ImageException;
 use Pdf\Image\ImageFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -59,5 +60,46 @@ final class ImageDecoderTest extends TestCase
             $factory->fromPath($this->fixture('bar.jpg')),
             $factory->fromPath($this->fixture('bar.jpg')),
         );
+    }
+
+    public function test_decodes_a_base64_data_uri(): void
+    {
+        $bytes = (string) file_get_contents($this->fixture('dot-rgba.png'));
+        $uri = 'data:image/png;base64,' . base64_encode($bytes);
+
+        $image = (new ImageFactory())->fromPath($uri);
+
+        self::assertSame(20, $image->widthPx);
+        self::assertSame(16, $image->heightPx);
+        self::assertTrue($image->hasAlpha());
+    }
+
+    public function test_data_uri_type_is_sniffed_from_content_not_the_label(): void
+    {
+        $bytes = (string) file_get_contents($this->fixture('bar.jpg'));
+        // Deliberately mislabel a JPEG as PNG; the content sniff must win.
+        $uri = 'data:image/png;base64,' . base64_encode($bytes);
+
+        self::assertSame('DCTDecode', (new ImageFactory())->fromPath($uri)->filter);
+    }
+
+    public function test_data_uris_cache_by_content(): void
+    {
+        $factory = new ImageFactory();
+        $uri = 'data:;base64,' . base64_encode((string) file_get_contents($this->fixture('square.gif')));
+
+        self::assertSame($factory->fromPath($uri), $factory->fromPath($uri));
+    }
+
+    public function test_rejects_a_malformed_data_uri(): void
+    {
+        $this->expectException(ImageException::class);
+        (new ImageFactory())->fromPath('data:image/png;base64');
+    }
+
+    public function test_rejects_a_malformed_url_without_touching_the_network(): void
+    {
+        $this->expectException(ImageException::class);
+        (new ImageFactory())->fromPath('https://');
     }
 }

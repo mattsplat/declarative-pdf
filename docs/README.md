@@ -13,3 +13,8 @@
   `Header()` / `WriteHTML` / `AddFont` → the declarative equivalent, in prose.
 - **[Architecture](architecture.md)** — the measure → paginate → render
   pipeline, the box model, and what was ported vs. rewritten.
+- **[Roadmap](roadmap.md)** — potential features, sized and prioritised
+  (forms, JavaScript, drawing, subsetting, tagged PDF, native merge, …).
+- **[Interactive PDF feasibility](interactive-pdf-feasibility.md)** — the
+  forms / JS / layers / signatures / 3D wishlist analysed for difficulty and,
+  crucially, for which viewers the behaviour actually reaches.

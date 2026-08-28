@@ -50,6 +50,21 @@ final class AreaPlacementTest extends TestCase
         self::assertMatchesRegularExpression('/q 200\.00 0 0 100\.00 100\.00 [\d.]+ cm \/I1 Do Q/', $content);
     }
 
+    public function test_place_image_data_carries_bytes_inline(): void
+    {
+        $bytes = (string) file_get_contents($this->fixture('bar.jpg'));
+
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->size(PageSize::a4())->units(Unit::Pt)
+                ->placeImageData(100, 100, 200, 200, $bytes, Fit::Contain, BoxAlign::Center))
+            ->toString();
+
+        // Same placement as the on-disk equivalent: 24x12 -> 2:1, Contain in 200 -> 200x100.
+        self::assertMatchesRegularExpression('/q 200\.00 0 0 100\.00 100\.00 [\d.]+ cm \/I1 Do Q/', Pdf::contentText($pdf));
+    }
+
     public function test_cover_fit_clips_the_image(): void
     {
         $pdf = Document::create()

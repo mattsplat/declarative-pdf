@@ -80,7 +80,7 @@ footer(Closure(PageContext): (BlockNode | iterable<BlockNode>))
 | `rule(float $thicknessPt = 0.5, ?Color = null)` | `Rule` |
 | `pageBreak()` | `PageBreak` |
 | `anchor(string $name)` | `Anchor` (internal-link target) |
-| `image(string $path, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` |
+| `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI |
 | `container(iterable<BlockNode>, StylePatch = new)` | `Container` (padding/border/background via the patch) |
 | `bulletList(iterable<ListItem\|string>, StylePatch = new)` | `BulletList` |
 | `orderedList(iterable<ListItem\|string>, int $start = 1, StylePatch = new)` | `OrderedList` |
@@ -96,7 +96,8 @@ sheet** of the logical page, on top of the flow content.
 | method | |
 |---|---|
 | `place(float $x, $y, $w, $h, iterable<BlockNode>, BoxAlign = TopLeft)` | block content; flows at width `w`, shrinks uniformly to fit height `h` |
-| `placeImage(float $x, $y, $w, $h, string $path, Fit = Contain, BoxAlign = Center)` | a raster image |
+| `placeImage(float $x, $y, $w, $h, string $source, Fit = Contain, BoxAlign = Center)` | a raster image; `source` is a path, an `http(s)://` URL, or a `data:` URI |
+| `placeImageData(float $x, $y, $w, $h, string $bytes, Fit = Contain, BoxAlign = Center)` | a raster image already in memory (carried inline as a `data:` URI — use `placeImage` with a path for large images) |
 | `placePdf(float $x, $y, $w, $h, string $path, int $page = 1, Fit = Contain, BoxAlign = Center)` | one page of an external PDF as a vector Form XObject |
 | `frame(float $x, $y, $w, $h, Border = new, ?Color $background = null)` | a bordered / filled rectangle |
 
@@ -120,7 +121,7 @@ sheet** of the logical page, on top of the flow content.
 | `OrderedList` | `(iterable<ListItem\|string> $items, int $start = 1, string $suffix = ".", float $gutterPt = 22, float $itemSpacingPt = 3, StylePatch)` |
 | `ListItem` | `(string\|InlineSequence\|iterable<BlockNode> $content, StylePatch)` |
 | `Columns` | `(iterable<BlockNode> $children, int $count = 2, float $gutterPt = 14, StylePatch)` |
-| `ImageBlock` | `(string $path, ?float $widthPt = null, ?float $heightPt = null, TextAlign = Left, float $dpi = 96, StylePatch)` — or `ImageBlock::of(string, ?float $w, ?float $h, Unit = Mm, TextAlign = Left)` |
+| `ImageBlock` | `(string $path, ?float $widthPt = null, ?float $heightPt = null, TextAlign = Left, float $dpi = 96, StylePatch)` — or `ImageBlock::of(string, ?float $w, ?float $h, Unit = Mm, TextAlign = Left)`. `$path` may be a filesystem path, an `http(s)://` URL, or a `data:` URI |
 | `Table` | `(iterable<TableRow> $rows, ?ColumnWidth[] $columns = null, ?float $totalWidthPt = null, int $headerRows = 0, bool $repeatHeader = true, float $borderWidthPt = 0.5, Color $borderColor = black, Edges $cellPaddingPt = 3/4/3/4, ?Color $headerBackground = null, StylePatch)` |
 | `TableRow` | `(iterable<TableCell\|string\|InlineSequence> $cells)` |
 | `TableCell` | `(string\|InlineSequence\|iterable<BlockNode> $content, int $colspan = 1, VerticalAlign = Top, StylePatch, ?Color $background = null)` |

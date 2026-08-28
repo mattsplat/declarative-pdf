@@ -67,6 +67,8 @@ Implemented:
 - **Images** — JPEG, PNG (incl. palette, colour-key and full alpha → soft
   mask), GIF and WebP (both via in-memory PNG re-encode; the WebP path fixes
   FPDF's alpha-losing JPEG conversion). Ported from `_parse*` / `_putimage`.
+  Sources may be a path, an `http(s)://` URL, or a `data:` URI (URL fetch is
+  dependency-free — streams, with an `ext-curl` fallback).
 - **Links** — inline `withLink()` runs targeting a URI or an `#anchor`;
   `Anchor` nodes resolved to `/Dest` after layout; `/Annots` per page. Ported
   from `AddLink` / `SetLink` / `Link` / `_putlinks`.
@@ -115,11 +117,14 @@ Implemented:
 - [Porting from FPDF](docs/porting.md) — the concept mapping in prose
 - [Architecture](docs/architecture.md) — the pipeline
 
-Not yet implemented:
+Not yet implemented (see [`docs/roadmap.md`](docs/roadmap.md) for the full list,
+sized and prioritised):
 
+- interactive forms (AcroForm) and embedded JavaScript
 - vector drawing primitives (paths / arcs / dashes) for authoring linework
 - full document-to-document PDF merge (bookmarks, links, forms) — shell out to
   `qpdf` for that; the built-in importer is single-page-as-XObject
+- outlines / bookmarks, tagged PDF / PDF-A, font subsetting, encryption
 - import from encrypted PDFs
 - stylesheet *class* selectors (per-node `StylePatch` covers the same need today)
 
@@ -127,9 +132,9 @@ Not yet implemented:
 
 ```
 composer install
-composer test        # phpunit  (129 tests)
+composer test        # phpunit  (135 tests)
 composer stan        # phpstan  (level 6)
-php examples/hello.php  # also: report media table styled html custom-font sheet
+php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
 ```
 
