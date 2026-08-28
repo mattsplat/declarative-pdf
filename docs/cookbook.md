@@ -231,6 +231,19 @@ Document::create()
 The subsetted font program is embedded with `/FontFile2`, a `/FontDescriptor`
 and a ToUnicode CMap so the text stays copy-pasteable.
 
+`.otf` files work the same way. Ones with TrueType outlines take the path
+above; ones with PostScript (CFF) outlines produce a `Type1` definition whose
+program is the `CFF ` table, embedded as `/FontFile3` `/Subtype /Type1C`:
+
+```
+php tools/makefont/makefont.php IBMPlexSans-Regular.otf cp1252
+# -> IBMPlexSans-Regular.json (+ IBMPlexSans-Regular.cff.z)
+```
+
+CFF programs are **not** subsetted — the whole font (40–80 KB per cut) is
+embedded. Register one cut per `FontStyle`; there is no automatic fallback from
+a missing bold to the regular file.
+
 ## A house style
 
 ```php

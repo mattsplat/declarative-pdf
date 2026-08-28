@@ -341,6 +341,16 @@ A `register()`ed font wins over the `arial → helvetica` alias and takes effect
 even after the family was previously resolved. Build a definition file with
 `php tools/makefont/makefont.php Font.ttf cp1252`.
 
+`.ttf` and `.otf` are both accepted:
+
+| Source | Definition | Embedded as |
+|---|---|---|
+| `.ttf` / `.otf` with TrueType outlines | `type: TrueType`, `subsetted: true` | `/FontFile2`, subsetted |
+| `.otf` with PostScript (CFF) outlines | `type: Type1`, `cff: true`, `size1` | `/FontFile3` `/Subtype /Type1C`, whole font |
+
+CFF fonts are limited to 256 glyphs (WinAnsi + `/Differences`) and are not
+subsetted; CID-keyed CFF and CFF2 (variable) fonts are rejected by the tool.
+
 ### `Pdf\Font\FontStyle`
 
 `Regular` / `Bold` / `Italic` / `BoldItalic`. `FontStyle::of(bool $bold, bool $italic)`.
