@@ -15,11 +15,15 @@ use Pdf\Exception\FontException;
  * `arial` is an alias for `helvetica`; `symbol` and `zapfdingbats` ignore the
  * requested style.
  *
- * When the exact cut is not registered, resolution walks a ladder: the nearest
- * registered weight in the same slope, then the nearest in the opposite slope,
- * then — after the `arial` alias — the core font. Ties within a slope go to the
- * lighter cut. The core families only ship 400 and 700, so a request for 600
- * lands on the bold file.
+ * Resolution order for a cut: the exact registered cut, then the bundled file
+ * if the family is a core one, then the nearest registered cut — nearest weight
+ * in the same slope, else nearest in the opposite slope, ties to the lighter.
+ * A core family ships every cut, so registering one cut of it overrides that
+ * cut alone and leaves the other three bundled. A family with no core fallback
+ * and no registered cut at all is an error.
+ *
+ * The core families only ship 400 and 700 per slope; a request for 600 or more
+ * lands on the bold file, as in CSS.
  *
  * A `register()`ed font wins over the alias — registering an actual "Arial"
  * embeds that file rather than falling back to bundled Helvetica.
@@ -38,7 +42,7 @@ final class FontRepository
     /** @var array<string, FontDefinition> definition file path => definition */
     private array $loaded = [];
 
-    /** @var array<string, list<array{face: FontFace, path: string}>> family => registered cuts */
+    /** @var array<string, array<string, array{face: FontFace, path: string}>> family => face key => cut */
     private array $registrations = [];
 
     public function __construct(
@@ -55,13 +59,7 @@ final class FontRepository
     /** Register a custom font definition file for one cut of a family. */
     public function register(string $family, FontFace $face, string $definitionPath): void
     {
-        $key = self::familyKey($family);
-        $cuts = array_values(array_filter(
-            $this->registrations[$key] ?? [],
-            static fn (array $cut): bool => !$cut['face']->equals($face),
-        ));
-        $cuts[] = ['face' => $face, 'path' => $definitionPath];
-        $this->registrations[$key] = $cuts;
+        $this->registrations[self::familyKey($family)][$face->key()] = ['face' => $face, 'path' => $definitionPath];
 
         // A new cut can change what a *neighbouring* weight resolves to, so the
         // whole cache goes rather than one key.
@@ -77,23 +75,36 @@ final class FontRepository
 
     private function pathFor(string $family, FontFace $face): string
     {
-        // A registration for the family exactly as asked wins, before any aliasing.
-        $registered = $this->registeredPath($family, $face);
-        if ($registered !== null) {
-            return $registered;
-        }
-
         $aliased = $family === 'arial' ? 'helvetica' : $family;
-        if (in_array($aliased, self::STYLELESS_FAMILIES, true)) {
-            $face = FontFace::regular();
+        $wanted = in_array($aliased, self::STYLELESS_FAMILIES, true) ? FontFace::regular() : $face;
+
+        // A registration for the family exactly as asked wins, before any aliasing.
+        $exact = $this->registeredCut($family, $face);
+        if ($exact === null && ($aliased !== $family || $wanted !== $face)) {
+            $exact = $this->registeredCut($aliased, $wanted);
+        }
+        if ($exact !== null) {
+            return $exact;
         }
 
-        $path = $this->registeredPath($aliased, $face) ?? $this->corePath($aliased, $face);
-        if ($path === null) {
+        // Before the fuzzy search: a core family has a bundled file for every
+        // cut, and overriding one of them must not shadow the other three.
+        $core = $this->corePath($aliased, $wanted);
+        if ($core !== null) {
+            return $core;
+        }
+
+        $nearest = $this->nearestCut($aliased, $wanted);
+        if ($nearest === null) {
             throw new FontException(sprintf('Undefined font: %s %s', $family, $face->describe()));
         }
 
-        return $path;
+        return $nearest;
+    }
+
+    private function registeredCut(string $family, FontFace $face): ?string
+    {
+        return $this->registrations[$family][$face->key()]['path'] ?? null;
     }
 
     /**
@@ -104,7 +115,7 @@ final class FontRepository
      * FPDF-style faux bold (text render mode 2 + a hairline stroke) and faux
      * oblique (a sheared text matrix).
      */
-    private function registeredPath(string $family, FontFace $face): ?string
+    private function nearestCut(string $family, FontFace $face): ?string
     {
         $best = null;
         $bestDistance = PHP_INT_MAX;

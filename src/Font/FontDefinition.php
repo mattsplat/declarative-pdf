@@ -50,6 +50,16 @@ final readonly class FontDefinition
             : $this->file;
     }
 
+    /**
+     * Identity of the underlying font program: two definitions sharing it are
+     * the same file and may share one PDF font resource. Core fonts carry no
+     * file, but their PostScript name is unique per definition.
+     */
+    public function identity(): string
+    {
+        return $this->name . '|' . ($this->fontFilePath() ?? '');
+    }
+
     public function isCore(): bool
     {
         return $this->type === 'Core';

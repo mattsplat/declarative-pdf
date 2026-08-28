@@ -248,8 +248,13 @@ new StylePatch(fontFamily: 'Inter', bold: true);   // ≡ weight: 700 -> snaps t
 ```
 
 An unregistered weight falls back to the nearest one in the same slope, then to
-the nearest in the other slope. The core families only carry 400 and 700, so
-`weight: 600` on Helvetica draws Helvetica-Bold.
+the nearest in the other slope.
+
+The core families (Helvetica, Times, Courier, …) are the exception: they ship a
+file for every cut, so registering one cut of a core family overrides that cut
+alone — `register('Helvetica', new FontFace(400), …)` re-skins body text and
+still leaves headings on bundled Helvetica-Bold. They only carry 400 and 700 per
+slope, so `weight: 600` on Helvetica draws Helvetica-Bold.
 
 ## A house style
 

@@ -21,12 +21,16 @@ final class FontRegistry
     {
     }
 
+    /**
+     * Interned on the *resolved* definition, not the request: two weights that
+     * fall back to the same file share one `/F{index}` rather than embedding
+     * the font program twice.
+     */
     public function use(string $family, FontFace $face): ResolvedFont
     {
         $definition = $this->repository->resolve($family, $face);
-        $key = $family . ':' . $face->key();
 
-        return $this->used[$key] ??= new ResolvedFont(
+        return $this->used[$definition->identity()] ??= new ResolvedFont(
             index: count($this->used) + 1,
             definition: $definition,
             metrics: $definition->metrics(),
