@@ -1,8 +1,12 @@
-# declarative-pdf vs. FPDF, TCPDF, tc-lib-pdf
+# declarative-pdf vs. FPDF, TCPDF, tc-lib-pdf, PDFBlocks
 
 An honest read on where this library sits. Short version: it competes on the
 **layout engine**, not on PDF-feature coverage — and for anything that needs
 signatures, forms, encryption, CMYK or CJK, the others win today.
+
+The PHP libraries (FPDF / TCPDF / tc-lib-pdf) are the direct lineage.
+[PDFBlocks](#pdfblocks-swift) is covered separately at the end — it's the same
+*idea* (declarative tree → layout engine → PDF) in a different ecosystem.
 
 ## What each one is
 
@@ -133,6 +137,97 @@ coordinates is no more concise than FPDF's `Rect()` / `SetXY()` / `Cell()`.
 | A tiny dependency for simple documents, or an existing FPDF codebase | **FPDF** |
 | Merge / stamp / import existing PDFs at scale | FPDI + FPDF, or shell out to `qpdf` |
 | Pixel-exact designed one-pagers (cutsheets, labels) | any of them — it's manual coordinates regardless |
+| SwiftUI-style DSL, on-device on macOS / iOS, with gradients + vector graphics | **[PDFBlocks](#pdfblocks-swift)** (Swift; not for servers) |
+
+## PDFBlocks (Swift) {#pdfblocks-swift}
+
+[dkyowell/PDFBlocks](https://github.com/dkyowell/PDFBlocks) (MIT, v0.2.4 beta) is
+the closest thing to a sibling: a **SwiftUI-inspired declarative layout engine
+for PDF**. Same core idea as declarative-pdf — you declare a tree of blocks and
+the engine handles positioning and pagination — but a very different set of
+trade-offs because of what it's built on.
+
+### The architectural fork
+
+| | PDFBlocks | declarative-pdf |
+|---|---|---|
+| Renders via | Apple **CoreGraphics** PDF context + **CoreText** | a hand-written PDF byte writer (ported from FPDF) |
+| Runs on | macOS / iOS only | any host with PHP 8.3 (Linux servers, CI, containers) |
+| Gets "for free" from the platform | text shaping, kerning, ligatures, font embedding + subsetting, vector paths, gradients, rotation, opacity, blend | nothing — every one is hand-built or absent |
+| Byte-deterministic output | no (CG stamps time / version) | yes (a design goal; golden-file tested) |
+| Automated tests | none yet — "Unit tests" is a *long-term* roadmap goal | 185 tests + golden PDFs |
+
+PDFBlocks trades **portability and reproducibility** for **typography and
+drawing polish**; declarative-pdf trades the reverse.
+
+### Syntax — PDFBlocks is the more faithful SwiftUI clone
+
+```swift
+// PDFBlocks — result builders + chained modifiers
+struct Report: Block {
+    var body: some Block {
+        VStack {
+            PageNumberReader { p in Text("Page \(p.pageNo)").bold() }
+            Table(customers) {
+                TableColumn("Last Name", value: \.lastName, width: 20)
+                TableColumn("City",      value: \.city,     width: 25)
+                TableColumn("DOB", value: \.dob, format: .mmddyy, width: 10, alignment: .trailing)
+            } groups: {
+                TableGroup(on: \.state, order: <) { _, s in Text(s).bold(); TableColumnTitles() }
+                  footer: { rows, s in Text("\(rows.count) records") }
+            }
+        }
+        .font(.system(size: 8))
+    }
+}
+let data = Report().render()
+```
+
+```php
+// declarative-pdf — fluent builder + StylePatch bags; you build every cell
+$rows = [new TableRow([new TableCell('Last Name'), new TableCell('City'), new TableCell('DOB')])];
+foreach ($customers as $c) {
+    $rows[] = new TableRow([
+        new TableCell($c->lastName),
+        new TableCell($c->city),
+        new TableCell($c->dob->format('m/d/y'), patch: new StylePatch(align: TextAlign::Right)),
+    ]);
+}
+Document::create()->page(fn ($p) => $p
+    ->header(fn ($ctx) => new Paragraph("Page {$ctx->pageNumber}", new StylePatch(bold: true)))
+    ->table($rows, headerRows: 1))->save('report.pdf');
+```
+
+PDFBlocks' `Table` is genuinely ahead for reports: type-safe `KeyPath` columns,
+per-type formatters, and **automatic data grouping** with computed group
+headers/footers (`rows.count` in the footer). declarative-pdf's table is
+hand-assembled, but gives explicit column-width control and the same cross-page
+row-split + repeating-header behaviour. Both do multi-column (`Columns`),
+header/footer repetition, and an optional (2×-cost) total page count.
+
+### Feature deltas
+
+**PDFBlocks has, declarative-pdf doesn't:** vector shapes (Capsule / Circle /
+Ellipse / Rectangle / RoundedRectangle / Line / Shape), linear + radial
+gradients, `rotationEffect` / `scaleEffect` / `opacity` / `offset` on any block,
+text stroke/fill, real kerning, `ZStack` / `VGrid`, `.environment`-style value
+propagation, and instant Xcode-Preview rendering while you type.
+
+**declarative-pdf has, PDFBlocks doesn't (PDFBlocks roadmap items marked ⏳):**
+internal + external links ⏳, clickable regions ⏳, justified text ⏳,
+single-page PDF import, images from URL / `data:` URIs, byte-deterministic
+output, and a real test suite.
+
+**Neither has:** AcroForms, JavaScript, encryption, digital signatures,
+bookmarks/outlines, tagged PDF/PDF-A. Both explicitly punt **barcodes and
+charts** to "render it as an image."
+
+### When PDFBlocks is the right call
+
+Apple-platform app that generates reports/invoices on-device or on a Mac, wants
+SwiftUI-grade ergonomics, and needs gradients / vector graphics / good
+typography. It cannot run on a Linux server, and its output isn't reproducible —
+if either matters, it's out.
 
 ## Roadmap context
 
