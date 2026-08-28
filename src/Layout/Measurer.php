@@ -62,6 +62,11 @@ final class Measurer
     ) {
     }
 
+    public function fonts(): FontRegistry
+    {
+        return $this->fonts;
+    }
+
     public function imageRegistry(): ImageRegistry
     {
         return $this->imageRegistry;
