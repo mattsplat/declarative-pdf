@@ -413,7 +413,7 @@ final class DocumentRenderer
     {
         $rect = $area->rectPt;
         $contentHeight = max($area->blocksNaturalHeightPt, 0.0);
-        $scale = ($contentHeight > 0.0 && $contentHeight > $rect->height)
+        $scale = ($area->blocksGeometricShrink && $contentHeight > 0.0 && $contentHeight > $rect->height)
             ? $rect->height / $contentHeight
             : 1.0;
 

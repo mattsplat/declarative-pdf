@@ -62,6 +62,23 @@ final class Measurer
     ) {
     }
 
+    /**
+     * A clone that resolves styles through a font-scaled {@see StyleResolver},
+     * sharing this measurer's font, image and import registries so anything it
+     * measures still lands in the same resource tables.
+     */
+    public function withFontScale(float $scale): self
+    {
+        return new self(
+            $this->styles->withFontScale($scale),
+            $this->fonts,
+            $this->breaker,
+            $this->images,
+            $this->imageRegistry,
+            $this->importRegistry,
+        );
+    }
+
     public function fonts(): FontRegistry
     {
         return $this->fonts;
