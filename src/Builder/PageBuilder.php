@@ -11,6 +11,7 @@ use Pdf\Geometry\Fit;
 use Pdf\Geometry\Orientation;
 use Pdf\Geometry\PageSize;
 use Pdf\Geometry\Rect;
+use Pdf\Geometry\ShrinkMode;
 use Pdf\Geometry\Unit;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
@@ -222,8 +223,9 @@ final class PageBuilder
 
     /**
      * Place block content in an absolute rectangle (coordinates in the page's
-     * units). Content flows within the width and is scaled down to fit the
-     * height if necessary.
+     * units). Content flows within the width; when it is taller than the area,
+     * `$shrink` decides how it is fitted — a uniform geometric scale (the
+     * default), a smaller effective font size that re-wraps, or not at all.
      *
      * @param iterable<BlockNode> $blocks
      */
@@ -234,8 +236,13 @@ final class PageBuilder
         float $height,
         iterable $blocks,
         BoxAlign $align = BoxAlign::TopLeft,
+        ShrinkMode $shrink = ShrinkMode::Scale,
     ): self {
-        $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new Blocks($blocks), align: $align);
+        $this->placements[] = new Placement(
+            $this->rect($x, $y, $width, $height),
+            new Blocks($blocks, $shrink),
+            align: $align,
+        );
 
         return $this;
     }
