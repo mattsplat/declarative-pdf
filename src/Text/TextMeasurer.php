@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Pdf\Text;
 
+use Pdf\Font\FontFace;
 use Pdf\Font\FontRegistry;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
 use Pdf\Style\Style;
 
 /**
@@ -31,13 +31,13 @@ final readonly class TextMeasurer
     /** Width in points of `$text` set on one line (no wrapping, no `\n`) in `$style`. */
     public function width(string $text, Style $style): float
     {
-        return $this->widthOf($text, $style->fontFamily, $style->fontStyle, $style->fontSizePt);
+        return $this->widthOf($text, $style->fontFamily, $style->fontFace, $style->fontSizePt);
     }
 
-    /** Width in points of `$text` set from an explicit family / style / size. */
-    public function widthOf(string $text, string $fontFamily, FontStyle $fontStyle, float $fontSizePt): float
+    /** Width in points of `$text` set from an explicit family / face / size. */
+    public function widthOf(string $text, string $fontFamily, FontFace $fontFace, float $fontSizePt): float
     {
-        $font = $this->fonts->use($fontFamily, $fontStyle);
+        $font = $this->fonts->use($fontFamily, $fontFace);
         $encoded = Encoding::forFont($text, $font->definition->encoding);
 
         return $font->metrics->stringWidth($encoded, $fontSizePt);
