@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Pdf\Layout;
 
 use Pdf\Exception\LayoutException;
+use Pdf\Geometry\BoxAlign;
+use Pdf\Geometry\Rect;
+use Pdf\Geometry\ShrinkMode;
 use Pdf\Layout\Box\StackBox;
 use Pdf\Node\BlockNode;
 use Pdf\Node\Document;
@@ -14,6 +17,7 @@ use Pdf\Node\Placement\Frame;
 use Pdf\Node\Placement\PdfPage;
 use Pdf\Node\Placement\Picture;
 use Pdf\Style\Style;
+use Pdf\Style\StylePatch;
 
 /**
  * Flows each logical {@see Page} across as many physical sheets as its content
@@ -222,8 +226,7 @@ final class Paginator
             }
 
             if ($content instanceof Blocks) {
-                $stack = $this->measurer->measureStack($content->blocks, max(0.0, $rect->width), $pageStyle);
-                $areas[] = PlacedArea::forBlocks($rect, $placement->align, $stack);
+                $areas[] = $this->placeBlocks($rect, $placement->align, $content, $pageStyle);
                 continue;
             }
 
@@ -257,6 +260,65 @@ final class Paginator
         }
 
         return $areas;
+    }
+
+    /**
+     * Measure a placed {@see Blocks} area, applying its {@see ShrinkMode}:
+     * `Scale` / `None` emit the natural stack (the renderer handles or skips
+     * the geometric shrink); `FontSize` re-flows at a smaller effective font
+     * size, falling back to `Scale` only if the 0.5 floor still overflows.
+     */
+    private function placeBlocks(Rect $rect, BoxAlign $align, Blocks $content, Style $pageStyle): PlacedArea
+    {
+        $widthPt = max(0.0, $rect->width);
+        $stack = $this->measurer->measureStack($content->blocks, $widthPt, $pageStyle);
+        $geometricShrink = $content->shrink !== ShrinkMode::None;
+
+        if ($content->shrink !== ShrinkMode::FontSize
+            || $rect->height <= 0.0
+            || $stack->contentHeightPt() <= $rect->height
+        ) {
+            return PlacedArea::forBlocks($rect, $align, $stack, $geometricShrink);
+        }
+
+        $fitted = $this->fitByFontSize($content->blocks, $widthPt, $rect->height, $pageStyle);
+
+        return PlacedArea::forBlocks($rect, $align, $fitted ?? $stack, true);
+    }
+
+    /**
+     * Binary-search a font-size factor in [0.5, 1.0] (six iterations, ~0.8%
+     * precision) that makes the stack fit $targetHeightPt. Returns the fitted
+     * stack, or null when even the 0.5 floor overflows.
+     *
+     * @param list<BlockNode> $blocks
+     */
+    private function fitByFontSize(array $blocks, float $widthPt, float $targetHeightPt, Style $pageStyle): ?StackBox
+    {
+        $lo = 0.5;
+        $hi = 1.0;
+        for ($i = 0; $i < 6; $i++) {
+            $mid = ($lo + $hi) / 2.0;
+            if ($this->measureScaled($blocks, $widthPt, $pageStyle, $mid)->contentHeightPt() <= $targetHeightPt) {
+                $lo = $mid;
+            } else {
+                $hi = $mid;
+            }
+        }
+
+        $fitted = $this->measureScaled($blocks, $widthPt, $pageStyle, $lo);
+
+        return $fitted->contentHeightPt() <= $targetHeightPt ? $fitted : null;
+    }
+
+    /**
+     * @param list<BlockNode> $blocks
+     */
+    private function measureScaled(array $blocks, float $widthPt, Style $pageStyle, float $factor): StackBox
+    {
+        $scaledParent = (new StylePatch(fontSizePt: $pageStyle->fontSizePt * $factor))->applyTo($pageStyle);
+
+        return $this->measurer->withFontScale($factor)->measureStack($blocks, $widthPt, $scaledParent);
     }
 
     /**

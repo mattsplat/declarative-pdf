@@ -8,11 +8,14 @@ use Pdf\Document;
 use Pdf\Geometry\BoxAlign;
 use Pdf\Geometry\Fit;
 use Pdf\Geometry\PageSize;
+use Pdf\Geometry\ShrinkMode;
 use Pdf\Geometry\Unit;
 use Pdf\Node\Paragraph;
 use Pdf\Style\Border;
+use Pdf\Style\StylePatch;
 use Pdf\Tests\Support\Golden;
 use Pdf\Tests\Support\Pdf;
+use Pdf\Text\InlineSequence;
 use PHPUnit\Framework\TestCase;
 
 final class AreaPlacementTest extends TestCase
@@ -94,6 +97,93 @@ final class AreaPlacementTest extends TestCase
         self::assertMatchesRegularExpression('/q 0\.[0-9]{3,4} 0 0 0\.[0-9]{3,4} [\d.]+ [\d.]+ cm/', $content);
         self::assertStringContainsString('(one) Tj', $content);
         self::assertStringContainsString('(four) Tj', $content);
+    }
+
+    public function test_font_size_shrink_mode_reflows_at_scale_one(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->units(Unit::Pt)
+                // ~61pt of text (4 lines + spacing) into a 44pt area -> ~0.7x font.
+                ->place(0, 0, 300, 44, [
+                    new Paragraph("one\ntwo\nthree\nfour"),
+                ], BoxAlign::TopLeft, ShrinkMode::FontSize))
+            ->toString();
+
+        $content = Pdf::contentText($pdf);
+
+        // Drawn at 1:1 — no geometric scale wrap.
+        self::assertStringContainsString('q 1.0000 0 0 1.0000', $content);
+        self::assertDoesNotMatchRegularExpression('/q 0\.\d+ 0 0 0\.\d+ /', $content);
+
+        // Effective font size dropped from 12pt into the ~7-9pt band.
+        $sizes = self::fontSizes($content);
+        self::assertNotEmpty($sizes);
+        self::assertLessThan(10.0, max($sizes));
+        self::assertGreaterThan(6.0, min($sizes));
+
+        self::assertStringContainsString('(one) Tj', $content);
+        self::assertStringContainsString('(four) Tj', $content);
+    }
+
+    public function test_font_size_shrink_mode_also_shrinks_a_hard_coded_inline_size(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->units(Unit::Pt)
+                ->place(0, 0, 300, 20, [
+                    new Paragraph(InlineSequence::of('')->withRun('BIG', new StylePatch(fontSizePt: 20.0))),
+                ], BoxAlign::TopLeft, ShrinkMode::FontSize))
+            ->toString();
+
+        $content = Pdf::contentText($pdf);
+
+        self::assertStringContainsString('q 1.0000 0 0 1.0000', $content);
+        // The hard-coded 20pt run must have come down with everything else.
+        self::assertLessThan(19.0, max(self::fontSizes($content)));
+    }
+
+    public function test_font_size_shrink_mode_respects_the_half_floor_and_falls_back_to_scale(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->units(Unit::Pt)
+                // Far too tall for 0.5x to rescue -> geometric scale takes over.
+                ->place(0, 0, 300, 8, [
+                    new Paragraph("one\ntwo\nthree\nfour"),
+                ], BoxAlign::TopLeft, ShrinkMode::FontSize))
+            ->toString();
+
+        $content = Pdf::contentText($pdf);
+        self::assertMatchesRegularExpression('/q 0\.\d+ 0 0 0\.\d+ [\d.]+ [\d.]+ cm/', $content);
+    }
+
+    public function test_none_shrink_mode_leaves_content_at_natural_size(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->units(Unit::Pt)
+                ->place(0, 0, 300, 8, [
+                    new Paragraph("one\ntwo\nthree\nfour"),
+                ], BoxAlign::TopLeft, ShrinkMode::None))
+            ->toString();
+
+        $content = Pdf::contentText($pdf);
+        self::assertStringContainsString('q 1.0000 0 0 1.0000', $content);
+        self::assertDoesNotMatchRegularExpression('/q 0\.\d+ 0 0 0\.\d+ /', $content);
+        self::assertStringContainsString('(four) Tj', $content);
+    }
+
+    /** @return list<float> every font size set with a `Tf` operator */
+    private static function fontSizes(string $content): array
+    {
+        preg_match_all('/\/F\d+ (\d+\.\d+) Tf/', $content, $m);
+
+        return array_map('floatval', $m[1]);
     }
 
     public function test_frame_draws_a_border_rectangle(): void
