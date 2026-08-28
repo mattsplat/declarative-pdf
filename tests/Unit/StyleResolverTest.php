@@ -7,6 +7,7 @@ namespace Pdf\Tests\Unit;
 use Pdf\Node\Heading;
 use Pdf\Node\Paragraph;
 use Pdf\Style\Style;
+use Pdf\Style\StylePatch;
 use Pdf\Style\StyleResolver;
 use PHPUnit\Framework\TestCase;
 
@@ -48,5 +49,53 @@ final class StyleResolverTest extends TestCase
         $p = (new StyleResolver())->resolveBlock(new Paragraph('x'), Style::default());
 
         self::assertSame(6.0, $p->spaceAfterPt);
+    }
+
+    public function test_font_scale_shrinks_a_hard_coded_block_size(): void
+    {
+        $p = (new StyleResolver())->withFontScale(0.5)->resolveBlock(
+            new Paragraph('x', new StylePatch(fontSizePt: 10.0)),
+            Style::default(),
+        );
+
+        self::assertSame(5.0, $p->fontSizePt);
+    }
+
+    public function test_font_scale_shrinks_a_hard_coded_inline_size(): void
+    {
+        $inline = (new StyleResolver())->withFontScale(0.5)->resolveInline(
+            new StylePatch(fontSizePt: 9.0),
+            Style::default(),
+        );
+
+        self::assertSame(4.5, $inline->fontSizePt);
+    }
+
+    public function test_font_scale_does_not_double_apply_to_an_inherited_size(): void
+    {
+        // The caller pre-scales the parent (as the Paginator does); a block with
+        // no size of its own must simply inherit it, not scale it again.
+        $parent = (new StylePatch(fontSizePt: 6.0))->applyTo(Style::default());
+        $p = (new StyleResolver())->withFontScale(0.5)->resolveBlock(new Paragraph('x'), $parent);
+
+        self::assertSame(6.0, $p->fontSizePt);
+    }
+
+    public function test_without_a_font_scale_hard_coded_sizes_are_untouched(): void
+    {
+        $p = (new StyleResolver())->resolveBlock(
+            new Paragraph('x', new StylePatch(fontSizePt: 10.0)),
+            Style::default(),
+        );
+
+        self::assertSame(10.0, $p->fontSizePt);
+    }
+
+    public function test_font_scale_compounds_across_clones(): void
+    {
+        $resolver = (new StyleResolver())->withFontScale(0.5)->withFontScale(0.5);
+        $p = $resolver->resolveInline(new StylePatch(fontSizePt: 8.0), Style::default());
+
+        self::assertSame(2.0, $p->fontSizePt);
     }
 }
