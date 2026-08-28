@@ -9,8 +9,10 @@ resolution, greedy line breaking, box-model pagination (split / keep-together /
 widow-orphan / keep-with-next), headers/footers, images (JPEG/PNG/GIF/WebP with
 SMask), internal + external links, multi-column blocks, auto-sized tables with
 repeating headers, UTF-8 encoding, inline decorations, inline HTML, named
-stylesheets, large-format sheets, absolute area placement, and a pure-PHP
-single-page PDF importer emitting vector Form XObjects.
+stylesheets, large-format sheets, absolute area placement, public text / block
+measurement helpers (`PageBuilder::textWidth()` / `measureBlocks()`,
+`Pdf\Text\TextMeasurer`), and a pure-PHP single-page PDF importer emitting
+vector Form XObjects.
 
 A worked implementation plan for the font + measurement cluster (OTF/CFF
 embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -366,20 +368,6 @@ Detail sheets and cutsheets instead want "reduce the point size and re-flow":
 `examples/detail-sheet.php`'s source does exactly this for its legend (a 0.9×
 loop on size + spacing until it fits). Add a `ShrinkMode::FontSize` /
 `place(..., shrink: …)` that re-measures at each step.
-
-### Public measurement helpers — **S**
-
-`FontMetrics::stringWidth` and the box model's `contentHeightPt()` exist
-internally; nothing on the builder exposes them. Absolute-layout code needs:
-
-- `$doc->textWidth($string, $style): float` — the original detail builder
-  positions the project name at `x = titleX + widthOf("DETAIL" + "OO")` and
-  right-aligns the location string by measuring it.
-- `$doc->measureBlocks(iterable $blocks, float $widthPt): float` — so a caller
-  can size a `place()` rectangle to its content, or run its own shrink loop
-  (the original measures the legend before drawing to pick a font scale).
-
-Both in the page's `units()`.
 
 ### Absolutely / relatively positioned blocks in flow — **M**
 

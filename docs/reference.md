@@ -35,7 +35,7 @@ immutable tree.
 | method | notes |
 |---|---|
 | `meta(callable(MetaBuilder))` | `title` / `author` / `subject` / `keywords` / `creator` — each `MetaBuilder` method returns `$this` |
-| `page(callable(PageBuilder))` | build and append a logical page |
+| `page(callable(PageBuilder))` | append a logical page; the closure runs at `build()` / `toString()` time, once fonts are known, so it can call the measurement helpers below |
 | `addPage(Pdf\Node\Page)` | append a pre-built page |
 | `baseStyle(Pdf\Style\Style)` | document-wide defaults (default `Style::default()`) |
 | `stylesheet(Pdf\Style\Stylesheet)` | per-node-type rules |
@@ -87,6 +87,20 @@ footer(Closure(PageContext): (BlockNode | iterable<BlockNode>))
 | `columns(iterable<BlockNode>, int $count = 2, float $gutterPt = 14.0)` | `Columns` |
 | `table(iterable<TableRow>, ?ColumnWidth[] $columns = null, int $headerRows = 0, ?float $totalWidthPt = null)` | `Table` |
 | `add(BlockNode)` | any node directly |
+
+### Measurement
+
+Both return values in the page's `units()`. Only available when the page is
+built through `DocumentBuilder::page()` (a directly-constructed `PageBuilder`
+has no renderer and these throw `LayoutException`).
+
+| method | |
+|---|---|
+| `textWidth(string $text, StylePatch = new)` | advance width of one unbroken line (no wrapping, no `\n`); the patch resolves against the document base style, so the result matches the line breaker |
+| `measureBlocks(iterable<BlockNode> $blocks, float $width)` | natural stacked height of `$blocks` flowed at `$width` — size a `place()` rectangle to its content |
+
+For measuring outside the builder, `Pdf\Text\TextMeasurer` does the same in
+points — see [Inline content](#inline-content).
 
 ### Absolute areas
 
@@ -160,6 +174,19 @@ InlineSequence::fromRuns(TextRun[]) : self
 
 A `\n` anywhere in a run's text is also a hard line break. All text input is
 UTF-8 and is transcoded to the target font's encoding for measuring and output.
+
+### `Pdf\Text\TextMeasurer`
+
+```php
+new TextMeasurer(Pdf\Font\FontRegistry $fonts)
+TextMeasurer::withBundledFonts() : self
+->width(string $text, Pdf\Style\Style $style) : float               // points
+->widthOf(string $text, string $family, Pdf\Font\FontStyle $style, float $sizePt) : float
+```
+
+Advance width of one unbroken run, in points. Transcodes to the resolved
+font's encoding first, so the result agrees with the line breaker.
+`PageBuilder::textWidth()` wraps this and converts to the page's units.
 
 ### `Pdf\Text\Html`
 
