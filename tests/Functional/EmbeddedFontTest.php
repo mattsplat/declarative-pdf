@@ -6,7 +6,7 @@ namespace Pdf\Tests\Functional;
 
 use Pdf\Document;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\StylePatch;
 use Pdf\Support\FixedClock;
@@ -19,7 +19,7 @@ final class EmbeddedFontTest extends TestCase
         $fonts = FontRepository::withBundledFonts();
         $fonts->register(
             'CevicheOne',
-            FontStyle::Regular,
+            FontFace::regular(),
             dirname(__DIR__) . '/fixtures/CevicheOne-Regular.json',
         );
 

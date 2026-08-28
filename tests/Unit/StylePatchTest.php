@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Unit;
 
+use Pdf\Font\FontFace;
 use Pdf\Font\FontStyle;
 use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
@@ -12,6 +13,37 @@ use PHPUnit\Framework\TestCase;
 
 final class StylePatchTest extends TestCase
 {
+    public function test_the_bold_shorthand_resolves_to_weight_700(): void
+    {
+        $bold = (new StylePatch(bold: true))->applyTo(Style::default());
+        $weighted = (new StylePatch(weight: 700))->applyTo(Style::default());
+
+        self::assertEquals($weighted, $bold);
+        self::assertTrue($bold->fontFace->equals(FontFace::bold()));
+    }
+
+    public function test_an_explicit_weight_wins_over_the_bold_shorthand(): void
+    {
+        $out = (new StylePatch(weight: 300, bold: true))->applyTo(Style::default());
+
+        self::assertSame(300, $out->fontFace->weight);
+    }
+
+    public function test_italic_alone_keeps_the_inherited_weight(): void
+    {
+        $base = (new StylePatch(weight: 600))->applyTo(Style::default());
+        $out = (new StylePatch(italic: true))->applyTo($base);
+
+        self::assertTrue($out->fontFace->equals(new FontFace(600, true)));
+    }
+
+    public function test_the_legacy_font_style_field_still_selects_a_cut(): void
+    {
+        $out = (new StylePatch(fontStyle: FontStyle::BoldItalic))->applyTo(Style::default());
+
+        self::assertTrue($out->fontFace->equals(new FontFace(700, true)));
+    }
+
     public function test_font_size_scale_multiplies_the_inherited_size(): void
     {
         $base = Style::default(); // 12pt
