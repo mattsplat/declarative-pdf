@@ -160,7 +160,136 @@ trade-offs because of what it's built on.
 PDFBlocks trades **portability and reproducibility** for **typography and
 drawing polish**; declarative-pdf trades the reverse.
 
-### Syntax — PDFBlocks is the more faithful SwiftUI clone
+### Syntax, construct by construct
+
+The core difference: PDFBlocks decorates **nodes with chained modifiers**
+(`Text("x").bold().padding(8)`) assembled by Swift **result builders**;
+declarative-pdf passes a **`StylePatch` value object** to a node and builds
+children as **PHP arrays / closures**. PDFBlocks reads like SwiftUI;
+declarative-pdf reads like a builder API.
+
+#### Minimal document
+
+```swift
+// PDFBlocks
+struct Doc: Block {
+    var body: some Block {
+        Text("Hello, world.").padding(.in(1))
+    }
+}
+let data = Doc().render()                       // -> Data
+```
+```php
+// declarative-pdf
+Document::create()
+    ->page(fn ($p) => $p->paragraph('Hello, world.'))
+    ->save('out.pdf');                          // or ->toString() for bytes
+```
+
+#### Styled text
+
+```swift
+Text("Warning")
+    .font(.system(size: 14)).bold()
+    .foregroundColor(.red)
+    .padding(.bottom, 12)
+```
+```php
+new Paragraph('Warning', new StylePatch(
+    bold: true, fontSizePt: 14,
+    color: Color::rgb(200, 0, 0), spaceAfterPt: 12,
+));
+```
+
+#### Mixed inline runs
+
+```swift
+// PDFBlocks: concatenate Text; modifiers per fragment
+Text("Plain ") + Text("bold").bold() + Text(" tail")
+```
+```php
+InlineSequence::of('Plain ')->withBold('bold')->withRun(' tail')
+```
+
+#### Page setup
+
+```swift
+Page(size: .letter, margins: .in(1)) { … }
+Page(size: .a4, margins: .mm(24)) { … }         // pages may differ in one doc
+```
+```php
+$p->size(PageSize::letter())->margin(1, Unit::In);
+$p->size(PageSize::a4())->landscape()->margins(new Edges(24, 24, 24, 24));  // pt
+```
+
+#### Layout / nesting
+
+```swift
+VStack(spacing: 8) {
+    Text("Title").bold()
+    HStack(spacing: .flex) { Text("left"); Text("right") }
+    Columns(count: 2, spacing: 36, wrap: true) { Text(longText) }
+}
+```
+```php
+$p->container([
+    new Paragraph('Title', new StylePatch(bold: true)),
+    // no HStack; use a 1-row Table or place() for side-by-side
+    new Columns([new Paragraph($longText)], count: 2, gutterPt: 36),
+], new StylePatch(/* padding / border / background here */));
+```
+
+#### Header + page number
+
+```swift
+VStack {
+    PageNumberReader(computePageCount: true) { p in
+        if p.pageNo > 0 { Text("Page \(p.pageNo) of \(p.pageCount)") }
+    }
+    Columns(count: 2, wrap: true) { Text(body) }   // first wrap block = the flow
+}
+```
+```php
+$p->header(fn (PageContext $c) => $c->pageNumber > 1
+    ? new Paragraph("Page {$c->pageNumber} of {$c->pageCount}")
+    : []);                                       // nothing on page 1
+$p->columns([new Paragraph($body)], count: 2);
+```
+
+*(PDFBlocks expresses headers structurally — wrap the flow block in a `VStack`,
+and surrounding content repeats. declarative-pdf has explicit `header()` /
+`footer()` callbacks.)*
+
+#### Image
+
+```swift
+Image("logo").frame(width: .in(2))              // resizable, aspect-locked
+```
+```php
+$p->image('logo.png', width: 50);               // mm; or Unit-qualified
+$p->placeImage(0, 0, 144, 96, 'https://…/logo.png', Fit::Contain);  // absolute
+```
+
+#### Reusable component
+
+```swift
+struct Callout: Block {                          // just another Block
+    let text: String
+    var body: some Block {
+        Text(text).padding(8).background(Color.yellow)
+    }
+}
+// use: Callout(text: "Note")
+```
+```php
+// a plain function returning nodes, or a small class
+function callout(string $text): Container {
+    return new Container([new Paragraph($text)],
+        new StylePatch(paddingPt: Edges::all(8), background: Color::rgb(255, 245, 150)));
+}
+```
+
+### The `Table` — where they diverge most
 
 ```swift
 // PDFBlocks — result builders + chained modifiers
