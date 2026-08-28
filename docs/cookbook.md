@@ -251,12 +251,12 @@ php tools/makefont/makefont.php Inter-Regular.ttf cp1252
 
 ```php
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\StylePatch;
 
 $fonts = FontRepository::withBundledFonts();
-$fonts->register('Inter', FontStyle::Regular, __DIR__ . '/fonts/Inter-Regular.json');
+$fonts->register('Inter', FontFace::regular(), __DIR__ . '/fonts/Inter-Regular.json');
 
 Document::create()
     ->using(new DocumentRenderer($fonts))
@@ -267,6 +267,26 @@ Document::create()
 
 The subsetted font program is embedded with `/FontFile2`, a `/FontDescriptor`
 and a ToUnicode CMap so the text stays copy-pasteable.
+
+## Named and numeric font weights
+
+Register one definition per cut and select it with `weight` (100–900):
+
+```php
+use Pdf\Font\FontFace;
+
+$fonts->register('Inter', new FontFace(300), __DIR__ . '/fonts/Inter-Light.json');
+$fonts->register('Inter', new FontFace(400), __DIR__ . '/fonts/Inter-Regular.json');
+$fonts->register('Inter', new FontFace(600), __DIR__ . '/fonts/Inter-SemiBold.json');
+$fonts->register('Inter', new FontFace(600, italic: true), __DIR__ . '/fonts/Inter-SemiBoldItalic.json');
+
+new StylePatch(fontFamily: 'Inter', weight: 600);
+new StylePatch(fontFamily: 'Inter', bold: true);   // ≡ weight: 700 -> snaps to the 600 cut
+```
+
+An unregistered weight falls back to the nearest one in the same slope, then to
+the nearest in the other slope. The core families only carry 400 and 700, so
+`weight: 600` on Helvetica draws Helvetica-Bold.
 
 ## A house style
 

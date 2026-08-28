@@ -21,10 +21,10 @@ final class FontRegistry
     {
     }
 
-    public function use(string $family, FontStyle $style): ResolvedFont
+    public function use(string $family, FontFace $face): ResolvedFont
     {
-        $definition = $this->repository->resolve($family, $style);
-        $key = $family . ':' . $style->name;
+        $definition = $this->repository->resolve($family, $face);
+        $key = $family . ':' . $face->key();
 
         return $this->used[$key] ??= new ResolvedFont(
             index: count($this->used) + 1,
