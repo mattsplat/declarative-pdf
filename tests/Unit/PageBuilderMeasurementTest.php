@@ -8,7 +8,7 @@ use Pdf\Builder\PageBuilder;
 use Pdf\Document;
 use Pdf\Exception\LayoutException;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Geometry\Unit;
 use Pdf\Node\Paragraph;
 use Pdf\Render\DocumentRenderer;
@@ -94,7 +94,7 @@ final class PageBuilderMeasurementTest extends TestCase
         $fonts = FontRepository::withBundledFonts();
         $fonts->register(
             'CevicheOne',
-            FontStyle::Regular,
+            FontFace::regular(),
             dirname(__DIR__) . '/fixtures/CevicheOne-Regular.json',
         );
         $renderer = new DocumentRenderer($fonts);
@@ -107,7 +107,7 @@ final class PageBuilderMeasurementTest extends TestCase
             $renderer,
         );
 
-        $definition = $fonts->resolve('CevicheOne', FontStyle::Regular);
+        $definition = $fonts->resolve('CevicheOne', FontFace::regular());
         $expected = $definition->metrics()->stringWidth(
             Encoding::forFont('Enjoy', $definition->encoding),
             40.0,
@@ -116,7 +116,7 @@ final class PageBuilderMeasurementTest extends TestCase
         self::assertEqualsWithDelta($expected, $measured, 1e-9);
         self::assertNotEqualsWithDelta(
             FontRepository::withBundledFonts()
-                ->resolve('Helvetica', FontStyle::Regular)
+                ->resolve('Helvetica', FontFace::regular())
                 ->metrics()
                 ->stringWidth('Enjoy', 40.0),
             $measured,

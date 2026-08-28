@@ -181,7 +181,7 @@ UTF-8 and is transcoded to the target font's encoding for measuring and output.
 new TextMeasurer(Pdf\Font\FontRegistry $fonts)
 TextMeasurer::withBundledFonts() : self
 ->width(string $text, Pdf\Style\Style $style) : float               // points
-->widthOf(string $text, string $family, Pdf\Font\FontStyle $style, float $sizePt) : float
+->widthOf(string $text, string $family, Pdf\Font\FontFace $face, float $sizePt) : float
 ```
 
 Advance width of one unbroken run, in points. Transcodes to the resolved
