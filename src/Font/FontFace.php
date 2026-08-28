@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Pdf\Font;
 
+use Pdf\Exception\FontException;
+
 /**
  * One cut of a font family: a numeric weight plus a slope.
  *
@@ -14,10 +16,25 @@ namespace Pdf\Font;
  */
 final readonly class FontFace
 {
+    /** CSS Fonts 4's `font-weight` range. */
+    public const MIN_WEIGHT = 1;
+    public const MAX_WEIGHT = 1000;
+
     public function __construct(
         public int $weight = 400,
         public bool $italic = false,
     ) {
+        // {@see FontRepository} ranks a slope mismatch above any weight gap by
+        // penalising it more than the widest possible one, so the range has to
+        // hold for that ordering to hold.
+        if ($weight < self::MIN_WEIGHT || $weight > self::MAX_WEIGHT) {
+            throw new FontException(sprintf(
+                'Font weight must be between %d and %d, got %d.',
+                self::MIN_WEIGHT,
+                self::MAX_WEIGHT,
+                $weight,
+            ));
+        }
     }
 
     public static function regular(): self

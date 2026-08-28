@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Unit;
 
+use Pdf\Exception\FontException;
 use Pdf\Font\FontFace;
+use Pdf\Font\FontRegistry;
 use Pdf\Font\FontRepository;
 use Pdf\Font\FontStyle;
 use PHPUnit\Framework\TestCase;
@@ -120,5 +122,69 @@ final class FontFaceTest extends TestCase
 
         $repo->register('Brand', new FontFace(600), $this->definition('courier.json'));
         self::assertSame('Courier', $repo->resolve('Brand', new FontFace(600))->name);
+    }
+
+    public function test_overriding_one_cut_of_a_core_family_leaves_the_others_bundled(): void
+    {
+        $repo = FontRepository::withBundledFonts();
+        $repo->register('Helvetica', new FontFace(400), $this->definition('courier.json'));
+
+        self::assertSame('Courier', $repo->resolve('Helvetica', new FontFace(400))->name);
+        self::assertSame('Helvetica-Bold', $repo->resolve('Helvetica', FontFace::bold())->name);
+        self::assertSame('Helvetica-Oblique', $repo->resolve('Helvetica', FontFace::italic())->name);
+    }
+
+    public function test_a_non_core_family_snaps_a_bold_request_onto_its_only_cut(): void
+    {
+        $repo = FontRepository::withBundledFonts();
+        $repo->register('Brand', new FontFace(400), $this->definition('helvetica.json'));
+
+        self::assertSame('Helvetica', $repo->resolve('Brand', FontFace::bold())->name);
+    }
+
+    public function test_a_family_with_no_cut_and_no_core_fallback_throws(): void
+    {
+        $this->expectException(FontException::class);
+        $this->expectExceptionMessage('Undefined font: brand 700');
+
+        FontRepository::withBundledFonts()->resolve('Brand', FontFace::bold());
+    }
+
+    public function test_weights_outside_the_css_range_are_rejected(): void
+    {
+        self::assertSame(1, (new FontFace(FontFace::MIN_WEIGHT))->weight);
+        self::assertSame(1000, (new FontFace(FontFace::MAX_WEIGHT))->weight);
+
+        $this->expectException(FontException::class);
+        new FontFace(2000);
+    }
+
+    public function test_a_zero_weight_is_rejected(): void
+    {
+        $this->expectException(FontException::class);
+        new FontFace(0);
+    }
+
+    public function test_two_weights_resolving_to_one_file_share_a_font_resource(): void
+    {
+        $repo = FontRepository::withBundledFonts();
+        $repo->register('Brand', new FontFace(400), $this->definition('helvetica.json'));
+        $registry = new FontRegistry($repo);
+
+        $regular = $registry->use('Brand', new FontFace(400));
+        $medium = $registry->use('Brand', new FontFace(500));
+
+        self::assertSame($regular, $medium);
+        self::assertCount(1, $registry->used());
+    }
+
+    public function test_distinct_files_still_get_distinct_font_resources(): void
+    {
+        $registry = new FontRegistry(FontRepository::withBundledFonts());
+        $registry->use('Helvetica', FontFace::regular());
+        $registry->use('Helvetica', FontFace::bold());
+
+        self::assertCount(2, $registry->used());
+        self::assertSame([1, 2], array_map(static fn ($font): int => $font->index, $registry->used()));
     }
 }

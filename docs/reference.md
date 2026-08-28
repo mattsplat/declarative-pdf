@@ -390,17 +390,22 @@ even after the family was previously resolved. Build a definition file with
 CFF fonts are limited to 256 glyphs (WinAnsi + `/Differences`) and are not
 subsetted; CID-keyed CFF and CFF2 (variable) fonts are rejected by the tool.
 
-An unregistered cut falls back down a ladder: nearest registered weight in the
-same slope → nearest weight in the other slope → the core font. Ties go to the
-lighter cut. The core families only carry 400 and 700, so `new FontFace(600)`
-resolves to the bold file.
+A cut resolves in this order: the exact registered cut → the bundled file, for
+a core family → the nearest registered cut (nearest weight in the same slope,
+else nearest in the other slope; ties to the lighter). Registering one cut of a
+core family therefore overrides that cut only and leaves the rest bundled. A
+family with neither a core fallback nor any registered cut raises a
+`FontException`.
+
+The core families only carry 400 and 700 per slope, so `new FontFace(600)`
+resolves to the bold file. Weights outside 1–1000 are rejected.
 
 ### `Pdf\Font\FontFace`
 
 One cut of a family — a CSS/OpenType weight plus a slope.
 
 ```php
-new FontFace(int $weight = 400, bool $italic = false)
+new FontFace(int $weight = 400, bool $italic = false)   // weight 1..1000
 FontFace::regular() ::bold() ::italic() ::boldItalic()
 FontFace::fromLegacy(FontStyle $style) : self
 ->isBold() : bool            // weight >= 600
