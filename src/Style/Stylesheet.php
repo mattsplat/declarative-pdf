@@ -60,6 +60,7 @@ final class Stylesheet
         return new StylePatch(
             fontFamily: $over->fontFamily ?? $base->fontFamily,
             fontStyle: $over->fontStyle ?? $base->fontStyle,
+            weight: $over->weight ?? $base->weight,
             bold: $over->bold ?? $base->bold,
             italic: $over->italic ?? $base->italic,
             fontSizePt: $over->fontSizePt ?? $base->fontSizePt,
