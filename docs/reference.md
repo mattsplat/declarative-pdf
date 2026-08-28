@@ -95,7 +95,7 @@ sheet** of the logical page, on top of the flow content.
 
 | method | |
 |---|---|
-| `place(float $x, $y, $w, $h, iterable<BlockNode>, BoxAlign = TopLeft)` | block content; flows at width `w`, shrinks uniformly to fit height `h` |
+| `place(float $x, $y, $w, $h, iterable<BlockNode>, BoxAlign = TopLeft, ShrinkMode = Scale)` | block content; flows at width `w`, fitted to height `h` per `ShrinkMode` |
 | `placeImage(float $x, $y, $w, $h, string $source, Fit = Contain, BoxAlign = Center)` | a raster image; `source` is a path, an `http(s)://` URL, or a `data:` URI |
 | `placeImageData(float $x, $y, $w, $h, string $bytes, Fit = Contain, BoxAlign = Center)` | a raster image already in memory (carried inline as a `data:` URI — use `placeImage` with a path for large images) |
 | `placePdf(float $x, $y, $w, $h, string $path, int $page = 1, Fit = Contain, BoxAlign = Center)` | one page of an external PDF as a vector Form XObject |
@@ -294,6 +294,17 @@ Edges::all(float)   Edges::symmetric(float $vertical, $horizontal)   Edges::zero
 `Fit` — `Contain` (scale to fit, keep aspect) · `Cover` (scale to fill, clip) ·
 `Stretch` (fill both axes) · `ActualSize` (no scaling, clip) · `FitWidth` ·
 `FitHeight`.
+
+### `Pdf\Geometry\ShrinkMode`
+
+How `place()` fits block content taller than its area:
+
+`Scale` (default) — scale the rendered content down geometrically; strokes thin
+out and the column under-fills its width. `FontSize` — lower the effective font
+size (binary search in `[0.5, 1.0]`) so lines re-wrap and re-flow, then draw at
+1:1; hard-coded `StylePatch(fontSizePt: …)` sizes shrink too. Falls back to
+`Scale` if the 0.5 floor still overflows. `None` — leave content at natural
+size; taller content spills past the area.
 
 ---
 
