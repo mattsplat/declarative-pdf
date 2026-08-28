@@ -6,7 +6,7 @@ namespace Pdf\Tests\Functional;
 
 use Pdf\Document;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\StylePatch;
 use Pdf\Support\FixedClock;
@@ -27,7 +27,7 @@ final class OpenTypeCffFontTest extends TestCase
         $fonts = FontRepository::withBundledFonts();
         $fonts->register(
             'IBMPlexSans',
-            FontStyle::Regular,
+            FontFace::regular(),
             dirname(__DIR__) . '/fixtures/IBMPlexSans-Regular.json',
         );
 
@@ -95,7 +95,7 @@ final class OpenTypeCffFontTest extends TestCase
 
     public function test_widths_come_from_the_font_definition(): void
     {
-        $metrics = $this->fonts()->resolve('IBMPlexSans', FontStyle::Regular)->metrics();
+        $metrics = $this->fonts()->resolve('IBMPlexSans', FontFace::regular())->metrics();
 
         self::assertEqualsWithDelta(
             self::HAMBURGEFONSTIV * 24.0 / 1000,

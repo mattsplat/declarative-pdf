@@ -27,8 +27,24 @@ final class StyleResolver
     /** Font-size multipliers for h1..h6, relative to the base size. */
     private const HEADING_SCALE = [1 => 2.0, 2 => 1.5, 3 => 1.17, 4 => 1.0, 5 => 0.83, 6 => 0.75];
 
-    public function __construct(private readonly ?Stylesheet $stylesheet = null)
+    public function __construct(
+        private readonly ?Stylesheet $stylesheet = null,
+        /** Multiplier applied to every hard-coded `fontSizePt` a patch introduces. */
+        private readonly float $fontScale = 1.0,
+    ) {
+    }
+
+    /**
+     * A clone whose resolved styles have every hard-coded `fontSizePt` from a
+     * patch multiplied by $scale. Inherited sizes already shrink through the
+     * (pre-scaled) parent style; this is what catches an absolute override such
+     * as `StylePatch(fontSizePt: 9)` that the parent chain would ignore. Used
+     * by {@see \Pdf\Node\Placement\Blocks} shrink-to-fit; the shared resolver is
+     * never mutated.
+     */
+    public function withFontScale(float $scale): self
     {
+        return new self($this->stylesheet, $this->fontScale * $scale);
     }
 
     public function resolveBlock(BlockNode $node, Style $parent): Style
@@ -42,10 +58,13 @@ final class StyleResolver
         }
 
         if ($this->stylesheet !== null) {
-            $style = $this->stylesheet->patchFor(...$this->selectorsFor($node))->applyTo($style);
+            $sheetPatch = $this->stylesheet->patchFor(...$this->selectorsFor($node));
+            $style = $this->scaleFixedFontSize($sheetPatch, $sheetPatch->applyTo($style));
         }
 
-        return $node->patch()->applyTo($style);
+        $patch = $node->patch();
+
+        return $this->scaleFixedFontSize($patch, $patch->applyTo($style));
     }
 
     /** @return list<string> */
@@ -64,7 +83,21 @@ final class StyleResolver
     /** Resolve an inline run's style on top of its block's resolved style. */
     public function resolveInline(StylePatch $patch, Style $block): Style
     {
-        return $patch->applyTo($block);
+        return $this->scaleFixedFontSize($patch, $patch->applyTo($block));
+    }
+
+    /**
+     * When a font scale is in effect, re-apply it to a size the patch pinned
+     * absolutely (`fontSizePt: 9`) — the parent chain carries the scale for
+     * inherited and relatively-scaled sizes, but not for a hard-coded one.
+     */
+    private function scaleFixedFontSize(StylePatch $patch, Style $resolved): Style
+    {
+        if ($this->fontScale === 1.0 || $patch->fontSizePt === null) {
+            return $resolved;
+        }
+
+        return (new StylePatch(fontSizePt: $resolved->fontSizePt * $this->fontScale))->applyTo($resolved);
     }
 
     private function headingDefaults(int $level, float $baseSizePt): StylePatch

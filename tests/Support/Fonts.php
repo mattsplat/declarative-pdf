@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Support;
 
+use Pdf\Font\FontFace;
 use Pdf\Font\FontRegistry;
 use Pdf\Font\FontRepository;
-use Pdf\Font\FontStyle;
 use Pdf\Font\ResolvedFont;
 
 final class Fonts
@@ -16,8 +16,8 @@ final class Fonts
         return new FontRegistry(FontRepository::withBundledFonts());
     }
 
-    public static function helvetica(FontStyle $style = FontStyle::Regular): ResolvedFont
+    public static function helvetica(FontFace $face = new FontFace()): ResolvedFont
     {
-        return self::registry()->use('Helvetica', $style);
+        return self::registry()->use('Helvetica', $face);
     }
 }
