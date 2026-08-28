@@ -15,6 +15,7 @@ use Pdf\Layout\Measurer;
 use Pdf\Layout\Paginator;
 use Pdf\Layout\PhysicalPage;
 use Pdf\Node\Document;
+use Pdf\Style\Stylesheet;
 use Pdf\Style\StyleResolver;
 use Pdf\Support\Clock;
 use Pdf\Support\SystemClock;
@@ -43,10 +44,25 @@ final class DocumentRenderer
         return new self(FontRepository::withBundledFonts());
     }
 
+    /**
+     * A {@see Measurer} backed by this renderer's fonts — used by the builder to
+     * answer measurement queries (`PageBuilder::textWidth()` &c.) before the
+     * document tree is rendered.
+     */
+    public function newMeasurer(?Stylesheet $stylesheet = null): Measurer
+    {
+        return new Measurer(
+            new StyleResolver($stylesheet),
+            new FontRegistry($this->fontRepository),
+            new LineBreaker(),
+            new ImageFactory(),
+        );
+    }
+
     public function render(Document $document): string
     {
-        $fonts = new FontRegistry($this->fontRepository);
-        $measurer = new Measurer(new StyleResolver($document->stylesheet), $fonts, new LineBreaker(), new ImageFactory());
+        $measurer = $this->newMeasurer($document->stylesheet);
+        $fonts = $measurer->fonts();
         $paginator = new Paginator($measurer);
 
         $pages = $paginator->paginate($document);
