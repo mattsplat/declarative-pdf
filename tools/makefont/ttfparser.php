@@ -19,6 +19,8 @@ class TTFParser
 	protected $subsettedGlyphs;
 	public $chars;
 	public $glyphs;
+	public $isCFF;
+	public $cff;
 	public $unitsPerEm;
 	public $xMin, $yMin, $xMax, $yMax;
 	public $postScriptName;
@@ -52,8 +54,13 @@ class TTFParser
 		$this->ParseHhea();
 		$this->ParseMaxp();
 		$this->ParseHmtx();
-		$this->ParseLoca();
-		$this->ParseGlyf();
+		if($this->isCFF)
+			$this->ParseCFF();
+		else
+		{
+			$this->ParseLoca();
+			$this->ParseGlyf();
+		}
 		$this->ParseCmap();
 		$this->ParseName();
 		$this->ParseOS2();
@@ -63,9 +70,9 @@ class TTFParser
 	function ParseOffsetTable()
 	{
 		$version = $this->Read(4);
-		if($version=='OTTO')
-			$this->Error('OpenType fonts based on PostScript outlines are not supported');
-		if($version!="\x00\x01\x00\x00")
+		// OTTO marks PostScript (CFF) outlines: no glyf/loca, the CFF table embeds whole.
+		$this->isCFF = ($version=='OTTO');
+		if(!$this->isCFF && $version!="\x00\x01\x00\x00")
 			$this->Error('Unrecognized file format');
 		$numTables = $this->ReadUShort();
 		$this->Skip(3*2); // searchRange, entrySelector, rangeShift
@@ -189,6 +196,101 @@ class TTFParser
 				}
 			}
 		}
+	}
+
+	function ParseCFF()
+	{
+		// The whole table becomes the embedded font program (a bare CFF, /Subtype /Type1C).
+		if(!isset($this->tables['CFF ']) && isset($this->tables['CFF2']))
+			$this->Error('CFF2 (OpenType variable) fonts are not supported');
+		$this->Seek('CFF ');
+		$this->cff = $this->Read($this->tables['CFF ']['length']);
+		if(strlen($this->cff)<4)
+			$this->Error('CFF table is truncated');
+		$major = ord($this->cff[0]);
+		if($major!=1)
+			$this->Error('Unsupported CFF version: '.$major.' (CFF2 / variable fonts are not supported)');
+		$pos = ord($this->cff[2]); // hdrSize
+		list($names, $pos) = $this->ReadCFFIndex($this->cff, $pos); // Name INDEX
+		list($topDicts) = $this->ReadCFFIndex($this->cff, $pos);
+		if(!isset($topDicts[0]))
+			$this->Error('CFF Top DICT INDEX is empty');
+		if(count($names)>1 || count($topDicts)>1)
+			$this->Error('CFF font collections are not supported');
+		if($this->IsCIDKeyed($topDicts[0]))
+			$this->Error('CID-keyed CFF fonts are not supported (they need a Type0 composite font)');
+	}
+
+	function ReadCFFIndex($data, $pos)
+	{
+		// CFF INDEX: count, offSize, count+1 offsets, then the concatenated elements.
+		if($pos+2>strlen($data))
+			$this->Error('CFF INDEX is truncated');
+		$count = (ord($data[$pos])<<8) + ord($data[$pos+1]);
+		$pos += 2;
+		if($count==0)
+			return array(array(), $pos);
+		$offSize = ord($data[$pos++]);
+		if($offSize<1 || $offSize>4)
+			$this->Error('Invalid CFF INDEX offset size: '.$offSize);
+		$offsets = array();
+		for($i=0;$i<=$count;$i++)
+		{
+			$v = 0;
+			for($j=0;$j<$offSize;$j++)
+				$v = ($v<<8) + ord($data[$pos++]);
+			$offsets[] = $v;
+		}
+		$base = $pos - 1;
+		$elements = array();
+		for($i=0;$i<$count;$i++)
+			$elements[] = substr($data, $base+$offsets[$i], $offsets[$i+1]-$offsets[$i]);
+		return array($elements, $base+$offsets[$count]);
+	}
+
+	function IsCIDKeyed($dict)
+	{
+		// A CID-keyed font carries the ROS operator (12 30) in its Top DICT.
+		$n = strlen($dict);
+		$i = 0;
+		while($i<$n)
+		{
+			$b = ord($dict[$i]);
+			if($b<=21)
+			{
+				// Operator
+				if($b==12)
+				{
+					if($i+1<$n && ord($dict[$i+1])==30)
+						return true;
+					$i += 2;
+				}
+				else
+					$i++;
+			}
+			elseif($b==28)
+				$i += 3;
+			elseif($b==29)
+				$i += 5;
+			elseif($b==30)
+			{
+				// Real number: packed nibbles terminated by 0xF
+				$i++;
+				while($i<$n)
+				{
+					$byte = ord($dict[$i++]);
+					if((($byte>>4)&0x0F)==0x0F || ($byte&0x0F)==0x0F)
+						break;
+				}
+			}
+			elseif($b>=32 && $b<=246)
+				$i++;
+			elseif($b>=247 && $b<=254)
+				$i += 2;
+			else
+				$this->Error('Invalid byte in CFF Top DICT: '.$b);
+		}
+		return false;
 	}
 
 	function ParseCmap()
@@ -354,6 +456,8 @@ class TTFParser
 
 	function Subset($chars)
 	{
+		if($this->isCFF)
+			$this->Error('Subsetting is not supported for CFF-based OpenType fonts');
 		$this->subsettedGlyphs = array();
 		$this->AddGlyph(0);
 		$this->subsettedChars = array();

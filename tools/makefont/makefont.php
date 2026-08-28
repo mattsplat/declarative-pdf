@@ -86,7 +86,7 @@ function LoadMap($enc)
 
 function GetInfoFromTrueType($file, $embed, $subset, $map)
 {
-	// Extract information from a TrueType font
+	// Extract information from a TrueType or OpenType/CFF font
 	try
 	{
 		$ttf = new TTFParser($file);
@@ -96,11 +96,18 @@ function GetInfoFromTrueType($file, $embed, $subset, $map)
 	{
 		Error($e->getMessage());
 	}
+	$info['CFF'] = $ttf->isCFF;
 	if($embed)
 	{
 		if(!$ttf->embeddable)
 			Error('Font license does not allow embedding');
-		if($subset)
+		if($ttf->isCFF)
+		{
+			// The CFF table is a complete font program; embed it verbatim (no subsetting).
+			$info['Data'] = $ttf->cff;
+			$info['Size1'] = strlen($ttf->cff);
+		}
+		elseif($subset)
 		{
 			$chars = array();
 			foreach($map as $v)
@@ -337,6 +344,8 @@ function GetUnicodeMapping($map)
 function MakeDefinitionFile($file, $type, $enc, $embed, $subset, $map, $info)
 {
 	$data['type'] = $type;
+	if(!empty($info['CFF']))
+		$data['cff'] = true;
 	$data['name'] = $info['FontName'];
 	$data['desc'] = GetFontDescriptor($info);
 	$data['up'] = $info['UnderlinePosition'];
@@ -350,7 +359,13 @@ function MakeDefinitionFile($file, $type, $enc, $embed, $subset, $map, $info)
 	if($embed)
 	{
 		$data['file'] = $info['File'];
-		if($type=='Type1')
+		if(!empty($info['CFF']))
+		{
+			// A bare CFF has no clear/encrypted/zero segment split, hence no size2.
+			$data['size1'] = $info['Size1'];
+			$data['originalsize'] = $info['OriginalSize'];
+		}
+		elseif($type=='Type1')
 		{
 			$data['size1'] = $info['Size1'];
 			$data['size2'] = $info['Size2'];
@@ -389,15 +404,33 @@ function MakeFont($fontfile, $enc='cp1252', $embed=true, $subset=true)
 		$info = GetInfoFromTrueType($fontfile, $embed, $subset, $map);
 	else
 		$info = GetInfoFromType1($fontfile, $embed, $map);
+	if(!empty($info['CFF']))
+	{
+		// PostScript outlines: a Type1 font dict with a /FontFile3 /Type1C program.
+		$type = 'Type1';
+		if($subset)
+		{
+			$subset = false;
+			Notice('Subsetting is not supported for CFF-based OpenType fonts; embedding the whole font');
+		}
+	}
 	$filename = pathinfo($fontfile, PATHINFO_FILENAME);
 	if($embed)
 	{
 		if(function_exists('gzcompress'))
 		{
-			$file = $filename.'.z';
+			$file = $filename.(!empty($info['CFF']) ? '.cff.z' : '.z');
 			SaveToFile($file, gzcompress($info['Data']));
 			$info['File'] = $file;
 			Message('Font file compressed: '.$file);
+		}
+		elseif(!empty($info['CFF']))
+		{
+			// The program is the CFF table, not the .otf container, so it must still be written out.
+			$file = $filename.'.cff';
+			SaveToFile($file, $info['Data']);
+			$info['File'] = $file;
+			Notice('Font file could not be compressed (zlib extension not available)');
 		}
 		else
 		{
