@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Unit;
 
-use Pdf\Font\FontStyle;
 use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
 use Pdf\Style\Stylesheet;

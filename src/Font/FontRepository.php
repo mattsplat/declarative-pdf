@@ -7,7 +7,7 @@ namespace Pdf\Font;
 use Pdf\Exception\FontException;
 
 /**
- * Resolves a (family, style) pair to a {@see FontDefinition}, loading and
+ * Resolves a (family, face) pair to a {@see FontDefinition}, loading and
  * caching definition files on demand.
  *
  * Replaces FPDF's `FPDF_FONTPATH` constant (fpdf.php:105) with an injected
@@ -40,59 +40,70 @@ final class FontRepository
         return new self(dirname(__DIR__, 2) . '/resources/fonts');
     }
 
-    /** Register a custom font definition file for a family/style. */
-    public function register(string $family, FontStyle $style, string $definitionPath): void
+    /** Register a custom font definition file for one cut of a family. */
+    public function register(string $family, FontFace $face, string $definitionPath): void
     {
-        $key = $this->key($family, $style);
-        $this->registrations[$key] = $definitionPath;
-        unset($this->cache[$key]); // a later registration must take effect
+        $this->registrations[$this->key($family, $face)] = $definitionPath;
+        $this->forgetFamily($family); // a later registration must take effect
     }
 
-    public function resolve(string $family, FontStyle $style): FontDefinition
+    public function resolve(string $family, FontFace $face): FontDefinition
     {
         $requested = strtolower(trim($family));
 
         // A registration for exactly what was asked wins, before any aliasing.
-        $registered = $this->registrations[$this->key($requested, $style)] ?? null;
+        $registered = $this->registrations[$this->key($requested, $face)] ?? null;
 
         $resolvedFamily = $requested === 'arial' ? 'helvetica' : $requested;
-        $resolvedStyle = in_array($resolvedFamily, self::STYLELESS_FAMILIES, true)
-            ? FontStyle::Regular
-            : $style;
+        $resolvedFace = in_array($resolvedFamily, self::STYLELESS_FAMILIES, true)
+            ? FontFace::regular()
+            : $face;
 
-        $cacheKey = $this->key($resolvedFamily, $resolvedStyle);
+        $cacheKey = $this->key($resolvedFamily, $resolvedFace);
         if ($registered === null && isset($this->cache[$cacheKey])) {
             return $this->cache[$cacheKey];
         }
 
         $path = $registered
             ?? $this->registrations[$cacheKey]
-            ?? $this->corePath($resolvedFamily, $resolvedStyle);
+            ?? $this->corePath($resolvedFamily, $resolvedFace);
 
         if ($path === null) {
-            throw new FontException(sprintf('Undefined font: %s %s', $requested, $style->name));
+            throw new FontException(sprintf('Undefined font: %s %s', $requested, $face->describe()));
         }
 
         $definition = $this->loader->load($path);
         $this->cache[$cacheKey] = $definition;
         if ($registered !== null) {
-            $this->cache[$this->key($requested, $style)] = $definition;
+            $this->cache[$this->key($requested, $face)] = $definition;
         }
 
         return $definition;
     }
 
-    private function corePath(string $family, FontStyle $style): ?string
+    private function corePath(string $family, FontFace $face): ?string
     {
         if (!in_array($family, self::CORE_FAMILIES, true)) {
             return null;
         }
 
-        return sprintf('%s/%s%s.json', $this->fontDirectory, $family, $style->fileSuffix());
+        $suffix = FontStyle::of($face->isBold(), $face->italic)->fileSuffix();
+
+        return sprintf('%s/%s%s.json', $this->fontDirectory, $family, $suffix);
     }
 
-    private function key(string $family, FontStyle $style): string
+    private function forgetFamily(string $family): void
     {
-        return strtolower(trim($family)) . ':' . $style->name;
+        $prefix = strtolower(trim($family)) . ':';
+        foreach (array_keys($this->cache) as $key) {
+            if (str_starts_with($key, $prefix)) {
+                unset($this->cache[$key]);
+            }
+        }
+    }
+
+    private function key(string $family, FontFace $face): string
+    {
+        return strtolower(trim($family)) . ':' . $face->key();
     }
 }

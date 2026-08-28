@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Style;
 
 use Pdf\Color\Color;
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Geometry\Edges;
 
 /**
@@ -14,7 +14,7 @@ use Pdf\Geometry\Edges;
  * `default()` mirrors FPDF's initial state: Helvetica, regular, 12 pt
  * (fpdf.php:95), black text, left aligned.
  *
- * Inheriting properties: font family/style/size, colour, line height,
+ * Inheriting properties: font family/face/size, colour, line height,
  * alignment. Non-inheriting (per-block): spacing, padding, border, background,
  * and the pagination hints. {@see self::resetBlockProperties()} clears the
  * latter group before a child block resolves its own.
@@ -23,7 +23,7 @@ final readonly class Style
 {
     public function __construct(
         public string $fontFamily,
-        public FontStyle $fontStyle,
+        public FontFace $fontFace,
         public float $fontSizePt,
         public Color $color,
         public TextAlign $align,
@@ -51,7 +51,7 @@ final readonly class Style
     {
         return new self(
             fontFamily: 'Helvetica',
-            fontStyle: FontStyle::Regular,
+            fontFace: FontFace::regular(),
             fontSizePt: 12.0,
             color: Color::black(),
             align: TextAlign::Left,
@@ -72,7 +72,7 @@ final readonly class Style
     {
         return new self(
             fontFamily: $this->fontFamily,
-            fontStyle: $this->fontStyle,
+            fontFace: $this->fontFace,
             fontSizePt: $this->fontSizePt,
             color: $this->color,
             align: $this->align,

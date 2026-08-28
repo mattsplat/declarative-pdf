@@ -162,7 +162,7 @@ final class Measurer
     private function measureList(BulletList|OrderedList $node, float $widthPt, Style $parentStyle): ContainerBox
     {
         $style = $this->styles->resolveBlock($node, $parentStyle);
-        $markerFont = $this->fonts->use($style->fontFamily, $style->fontStyle);
+        $markerFont = $this->fonts->use($style->fontFamily, $style->fontFace);
         $gutter = $node->gutterPt;
         $itemSpacing = $node->itemSpacingPt;
 
@@ -356,7 +356,7 @@ final class Measurer
         $runs = [];
         foreach ($sequence->runs as $run) {
             $runStyle = $this->styles->resolveInline($run->patch, $blockStyle);
-            $font = $this->fonts->use($runStyle->fontFamily, $runStyle->fontStyle);
+            $font = $this->fonts->use($runStyle->fontFamily, $runStyle->fontFace);
 
             if ($run->isImage()) {
                 $runs[] = $this->resolveInlineImage($run, $runStyle, $font);
@@ -427,7 +427,7 @@ final class Measurer
     private function breakRuns(array $runs, Style $blockStyle, float $widthPt): array
     {
         if ($runs === []) {
-            $this->fonts->use($blockStyle->fontFamily, $blockStyle->fontStyle);
+            $this->fonts->use($blockStyle->fontFamily, $blockStyle->fontFace);
             $height = $blockStyle->lineHeightPt();
 
             return [new TextLine([], 0.0, $height, 0.5 * $height + 0.3 * $blockStyle->fontSizePt, 0, true)];
