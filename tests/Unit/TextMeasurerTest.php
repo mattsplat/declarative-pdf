@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Unit;
 
-use Pdf\Font\FontStyle;
+use Pdf\Font\FontFace;
 use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
 use Pdf\Text\TextMeasurer;
@@ -19,14 +19,14 @@ final class TextMeasurerTest extends TestCase
         // helvetica.json advances: D722 E667 T611 A667 I278 L556 = 3501 /1000em
         self::assertEqualsWithDelta(
             35.01,
-            $measurer->widthOf('DETAIL', 'Helvetica', FontStyle::Regular, 10.0),
+            $measurer->widthOf('DETAIL', 'Helvetica', FontFace::regular(), 10.0),
             1e-9,
         );
 
         // helveticab.json advances: D722 E667 T611 A722 I278 L611 = 3611 /1000em
         self::assertEqualsWithDelta(
             36.11,
-            $measurer->widthOf('DETAIL', 'Helvetica', FontStyle::Bold, 10.0),
+            $measurer->widthOf('DETAIL', 'Helvetica', FontFace::bold(), 10.0),
             1e-9,
         );
     }
