@@ -366,12 +366,12 @@ $pdf->Output();
 
 ```php
 use Pdf\Document;
-use Pdf\Font\{FontRepository, FontStyle};
+use Pdf\Font\{FontFace, FontRepository};
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\StylePatch;
 
 $fonts = FontRepository::withBundledFonts();
-$fonts->register('CevicheOne', FontStyle::Regular, 'CevicheOne-Regular.json');
+$fonts->register('CevicheOne', FontFace::regular(), 'CevicheOne-Regular.json');
 
 Document::create()
     ->using(new DocumentRenderer($fonts))

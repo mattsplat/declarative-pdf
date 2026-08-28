@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Pdf\Font;
 
 /**
- * The four selectable weights/slopes of a font family.
+ * The four classic weights/slopes of a font family — a convenience shorthand
+ * over {@see FontFace}, which is what the layout engine and the repository
+ * actually key on.
  *
  * The file-suffix mapping ('', 'b', 'i', 'bi') mirrors FPDF's default font
  * file naming in `AddFont()` (fpdf.php:448) and the `IB` -> `BI` normalisation
@@ -26,6 +28,11 @@ enum FontStyle
             self::Italic => 'i',
             self::BoldItalic => 'bi',
         };
+    }
+
+    public function face(): FontFace
+    {
+        return FontFace::fromLegacy($this);
     }
 
     public function isBold(): bool
