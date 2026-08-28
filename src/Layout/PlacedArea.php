@@ -24,6 +24,8 @@ final readonly class PlacedArea
         public BoxAlign $align,
         public ?StackBox $blocks = null,
         public float $blocksNaturalHeightPt = 0.0,
+        /** False disables the renderer's geometric shrink (ShrinkMode::None). */
+        public bool $blocksGeometricShrink = true,
         public ?int $imageIndex = null,
         public float $sourceWidthPt = 0.0,
         public float $sourceHeightPt = 0.0,
@@ -34,9 +36,16 @@ final readonly class PlacedArea
     ) {
     }
 
-    public static function forBlocks(Rect $rect, BoxAlign $align, StackBox $blocks): self
+    public static function forBlocks(Rect $rect, BoxAlign $align, StackBox $blocks, bool $geometricShrink = true): self
     {
-        return new self($rect, Fit::Contain, $align, blocks: $blocks, blocksNaturalHeightPt: $blocks->contentHeightPt());
+        return new self(
+            $rect,
+            Fit::Contain,
+            $align,
+            blocks: $blocks,
+            blocksNaturalHeightPt: $blocks->contentHeightPt(),
+            blocksGeometricShrink: $geometricShrink,
+        );
     }
 
     public static function forImage(
