@@ -14,13 +14,18 @@ use Pdf\Style\Stylesheet;
 
 /**
  * Fluent entry point for building a document tree and rendering it.
+ *
+ * Page configurator closures are stored, not run eagerly: each one is invoked
+ * from {@see self::build()} / {@see self::toString()}, once the renderer (hence
+ * the fonts) is known, so a closure can measure text and blocks
+ * (`PageBuilder::textWidth()`, `PageBuilder::measureBlocks()`) as it builds.
  */
 final class DocumentBuilder
 {
     private Meta $meta;
 
-    /** @var list<Page> */
-    private array $pages = [];
+    /** @var list<Page|(callable(PageBuilder): mixed)> */
+    private array $pageSources = [];
 
     private ?Style $baseStyle = null;
 
@@ -46,16 +51,14 @@ final class DocumentBuilder
     /** @param callable(PageBuilder): mixed $configure */
     public function page(callable $configure): self
     {
-        $builder = new PageBuilder();
-        $configure($builder);
-        $this->pages[] = $builder->build();
+        $this->pageSources[] = $configure;
 
         return $this;
     }
 
     public function addPage(Page $page): self
     {
-        $this->pages[] = $page;
+        $this->pageSources[] = $page;
 
         return $this;
     }
@@ -83,12 +86,14 @@ final class DocumentBuilder
 
     public function build(): Document
     {
-        return new Document($this->pages, $this->meta, $this->baseStyle, $this->stylesheet);
+        return $this->buildWith($this->renderer ?? DocumentRenderer::default());
     }
 
     public function toString(): string
     {
-        return ($this->renderer ?? DocumentRenderer::default())->render($this->build());
+        $renderer = $this->renderer ?? DocumentRenderer::default();
+
+        return $renderer->render($this->buildWith($renderer));
     }
 
     public function output(): PdfOutput
@@ -99,5 +104,32 @@ final class DocumentBuilder
     public function save(string $path): void
     {
         $this->output()->save($path);
+    }
+
+    private function buildWith(DocumentRenderer $renderer): Document
+    {
+        return new Document($this->resolvePages($renderer), $this->meta, $this->baseStyle, $this->stylesheet);
+    }
+
+    /** @return list<Page> */
+    private function resolvePages(DocumentRenderer $renderer): array
+    {
+        $measurer = $renderer->newMeasurer($this->stylesheet);
+        $baseStyle = $this->baseStyle ?? Style::default();
+
+        $pages = [];
+        foreach ($this->pageSources as $source) {
+            if ($source instanceof Page) {
+                $pages[] = $source;
+
+                continue;
+            }
+
+            $builder = new PageBuilder($measurer, $baseStyle);
+            $source($builder);
+            $pages[] = $builder->build();
+        }
+
+        return $pages;
     }
 }
