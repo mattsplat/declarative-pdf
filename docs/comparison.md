@@ -160,179 +160,19 @@ trade-offs because of what it's built on.
 PDFBlocks trades **portability and reproducibility** for **typography and
 drawing polish**; declarative-pdf trades the reverse.
 
-### Syntax, construct by construct
+### Syntax
 
-The core difference: PDFBlocks decorates **nodes with chained modifiers**
-(`Text("x").bold().padding(8)`) assembled by Swift **result builders**;
-declarative-pdf passes a **`StylePatch` value object** to a node and builds
-children as **PHP arrays / closures**. PDFBlocks reads like SwiftUI;
-declarative-pdf reads like a builder API.
+PDFBlocks decorates **nodes with chained modifiers** (`Text("x").bold().padding(8)`)
+assembled by Swift **result builders**; declarative-pdf passes a **`StylePatch`
+value object** to a node and builds children as **PHP arrays / closures**.
+PDFBlocks reads like SwiftUI; declarative-pdf reads like a builder API — and its
+`Table` is hand-assembled per cell where PDFBlocks' takes type-safe `KeyPath`
+columns with automatic data grouping.
 
-#### Minimal document
-
-```swift
-// PDFBlocks
-struct Doc: Block {
-    var body: some Block {
-        Text("Hello, world.").padding(.in(1))
-    }
-}
-let data = Doc().render()                       // -> Data
-```
-```php
-// declarative-pdf
-Document::create()
-    ->page(fn ($p) => $p->paragraph('Hello, world.'))
-    ->save('out.pdf');                          // or ->toString() for bytes
-```
-
-#### Styled text
-
-```swift
-Text("Warning")
-    .font(.system(size: 14)).bold()
-    .foregroundColor(.red)
-    .padding(.bottom, 12)
-```
-```php
-new Paragraph('Warning', new StylePatch(
-    bold: true, fontSizePt: 14,
-    color: Color::rgb(200, 0, 0), spaceAfterPt: 12,
-));
-```
-
-#### Mixed inline runs
-
-```swift
-// PDFBlocks: concatenate Text; modifiers per fragment
-Text("Plain ") + Text("bold").bold() + Text(" tail")
-```
-```php
-InlineSequence::of('Plain ')->withBold('bold')->withRun(' tail')
-```
-
-#### Page setup
-
-```swift
-Page(size: .letter, margins: .in(1)) { … }
-Page(size: .a4, margins: .mm(24)) { … }         // pages may differ in one doc
-```
-```php
-$p->size(PageSize::letter())->margin(1, Unit::In);
-$p->size(PageSize::a4())->landscape()->margins(new Edges(24, 24, 24, 24));  // pt
-```
-
-#### Layout / nesting
-
-```swift
-VStack(spacing: 8) {
-    Text("Title").bold()
-    HStack(spacing: .flex) { Text("left"); Text("right") }
-    Columns(count: 2, spacing: 36, wrap: true) { Text(longText) }
-}
-```
-```php
-$p->container([
-    new Paragraph('Title', new StylePatch(bold: true)),
-    // no HStack; use a 1-row Table or place() for side-by-side
-    new Columns([new Paragraph($longText)], count: 2, gutterPt: 36),
-], new StylePatch(/* padding / border / background here */));
-```
-
-#### Header + page number
-
-```swift
-VStack {
-    PageNumberReader(computePageCount: true) { p in
-        if p.pageNo > 0 { Text("Page \(p.pageNo) of \(p.pageCount)") }
-    }
-    Columns(count: 2, wrap: true) { Text(body) }   // first wrap block = the flow
-}
-```
-```php
-$p->header(fn (PageContext $c) => $c->pageNumber > 1
-    ? new Paragraph("Page {$c->pageNumber} of {$c->pageCount}")
-    : []);                                       // nothing on page 1
-$p->columns([new Paragraph($body)], count: 2);
-```
-
-*(PDFBlocks expresses headers structurally — wrap the flow block in a `VStack`,
-and surrounding content repeats. declarative-pdf has explicit `header()` /
-`footer()` callbacks.)*
-
-#### Image
-
-```swift
-Image("logo").frame(width: .in(2))              // resizable, aspect-locked
-```
-```php
-$p->image('logo.png', width: 50);               // mm; or Unit-qualified
-$p->placeImage(0, 0, 144, 96, 'https://…/logo.png', Fit::Contain);  // absolute
-```
-
-#### Reusable component
-
-```swift
-struct Callout: Block {                          // just another Block
-    let text: String
-    var body: some Block {
-        Text(text).padding(8).background(Color.yellow)
-    }
-}
-// use: Callout(text: "Note")
-```
-```php
-// a plain function returning nodes, or a small class
-function callout(string $text): Container {
-    return new Container([new Paragraph($text)],
-        new StylePatch(paddingPt: Edges::all(8), background: Color::rgb(255, 245, 150)));
-}
-```
-
-### The `Table` — where they diverge most
-
-```swift
-// PDFBlocks — result builders + chained modifiers
-struct Report: Block {
-    var body: some Block {
-        VStack {
-            PageNumberReader { p in Text("Page \(p.pageNo)").bold() }
-            Table(customers) {
-                TableColumn("Last Name", value: \.lastName, width: 20)
-                TableColumn("City",      value: \.city,     width: 25)
-                TableColumn("DOB", value: \.dob, format: .mmddyy, width: 10, alignment: .trailing)
-            } groups: {
-                TableGroup(on: \.state, order: <) { _, s in Text(s).bold(); TableColumnTitles() }
-                  footer: { rows, s in Text("\(rows.count) records") }
-            }
-        }
-        .font(.system(size: 8))
-    }
-}
-let data = Report().render()
-```
-
-```php
-// declarative-pdf — fluent builder + StylePatch bags; you build every cell
-$rows = [new TableRow([new TableCell('Last Name'), new TableCell('City'), new TableCell('DOB')])];
-foreach ($customers as $c) {
-    $rows[] = new TableRow([
-        new TableCell($c->lastName),
-        new TableCell($c->city),
-        new TableCell($c->dob->format('m/d/y'), patch: new StylePatch(align: TextAlign::Right)),
-    ]);
-}
-Document::create()->page(fn ($p) => $p
-    ->header(fn ($ctx) => new Paragraph("Page {$ctx->pageNumber}", new StylePatch(bold: true)))
-    ->table($rows, headerRows: 1))->save('report.pdf');
-```
-
-PDFBlocks' `Table` is genuinely ahead for reports: type-safe `KeyPath` columns,
-per-type formatters, and **automatic data grouping** with computed group
-headers/footers (`rows.count` in the footer). declarative-pdf's table is
-hand-assembled, but gives explicit column-width control and the same cross-page
-row-split + repeating-header behaviour. Both do multi-column (`Columns`),
-header/footer repetition, and an optional (2×-cost) total page count.
+A full construct-by-construct side-by-side — hello world, styled/inline text,
+page setup, stacks, headers, columns, images, the `Table`, reusable components,
+vector drawing — is in
+[`pdfblocks-vs-declarative.md`](pdfblocks-vs-declarative.md).
 
 ### Feature deltas
 

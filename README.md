@@ -116,7 +116,8 @@ Implemented:
 - [API reference](docs/reference.md) — every method, node, option, enum
 - [FPDF vs. declarative](docs/fpdf-vs-declarative.md) — the 7 tutorials, side by side
 - [Porting from FPDF](docs/porting.md) — the concept mapping in prose
-- [Comparison vs. FPDF / TCPDF / tc-lib-pdf](docs/comparison.md) — feature matrix, trade-offs
+- [Comparison vs. FPDF / TCPDF / tc-lib-pdf / PDFBlocks](docs/comparison.md) — feature matrix, trade-offs
+- [PDFBlocks vs. this library](docs/pdfblocks-vs-declarative.md) — Swift SwiftUI-style PDF, syntax side by side
 - [Architecture](docs/architecture.md) — the pipeline
 
 Not yet implemented (see [`docs/roadmap.md`](docs/roadmap.md) for the full list,
