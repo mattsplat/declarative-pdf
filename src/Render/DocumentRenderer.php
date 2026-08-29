@@ -15,7 +15,9 @@ use Pdf\Layout\Measurer;
 use Pdf\Layout\Paginator;
 use Pdf\Layout\PhysicalPage;
 use Pdf\Node\Document;
+use Pdf\Node\Watermark;
 use Pdf\Style\Stylesheet;
+use Pdf\Text\Encoding;
 use Pdf\Style\StyleResolver;
 use Pdf\Support\Clock;
 use Pdf\Support\SystemClock;
@@ -78,18 +80,41 @@ final class DocumentRenderer
         $images = $measurer->imageRegistry();
         $imports = $measurer->importRegistry();
 
+        // --- Watermarks: intern their fonts, tally distinct translucencies ---
+        /** @var array<string, int> $watermarkGs  gs resource name => opacity in permille */
+        $watermarkGs = [];
+        foreach ($pages as $page) {
+            if ($page->watermark === null) {
+                continue;
+            }
+            $fonts->use($page->watermark->fontFamily, $page->watermark->fontFace);
+            $name = $this->watermarkGsName($page->watermark);
+            if ($name !== null) {
+                $watermarkGs[$name] ??= (int) round($this->watermarkOpacity($page->watermark) * 1000);
+            }
+        }
+
         // --- Pass A: render content streams, collect links + anchors ---
         /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered */
         $rendered = [];
         foreach ($pages as $page) {
             $stream = new ContentStream($page->geometry);
             $content = $page->geometry->contentBox();
+
+            if ($page->watermark !== null && !$page->watermark->overlay) {
+                $this->renderWatermark($stream, $page->geometry, $page->watermark, $fonts);
+            }
+
             $page->header?->render($stream, $content->x, $page->headerTopPt, $content->width);
             $page->body->render($stream, $content->x, $page->bodyTopPt, $content->width);
             $page->footer?->render($stream, $content->x, $page->footerTopPt, $content->width);
 
             foreach ($page->areas as $area) {
                 $this->renderArea($stream, $page->geometry, $area);
+            }
+
+            if ($page->watermark !== null && $page->watermark->overlay) {
+                $this->renderWatermark($stream, $page->geometry, $page->watermark, $fonts);
             }
 
             $rendered[] = [
@@ -183,6 +208,16 @@ final class DocumentRenderer
         (new ImageWriter($writer))->write($images->used());
         (new FormXObjectWriter($writer))->write($imports->used());
 
+        // ExtGState objects for translucent watermarks.
+        /** @var array<string, int> $gsObjects  gs name => object number */
+        $gsObjects = [];
+        foreach ($watermarkGs as $name => $permille) {
+            $object = $writer->beginObject();
+            $writer->line(sprintf('<</Type /ExtGState /ca %.3F /CA %.3F>>', $permille / 1000, $permille / 1000));
+            $writer->endObject();
+            $gsObjects[$name] = $object;
+        }
+
         // Resource dictionary (object 2).
         $writer->beginObject(2);
         $writer->line('<<');
@@ -200,6 +235,13 @@ final class DocumentRenderer
             $writer->line('/Import' . $import->index . ' ' . $import->objectNumber . ' 0 R');
         }
         $writer->line('>>');
+        if ($gsObjects !== []) {
+            $writer->line('/ExtGState <<');
+            foreach ($gsObjects as $name => $object) {
+                $writer->line('/' . $name . ' ' . $object . ' 0 R');
+            }
+            $writer->line('>>');
+        }
         $writer->line('>>');
         $writer->endObject();
 
@@ -446,6 +488,64 @@ final class DocumentRenderer
         foreach ($sub->collectedAnchors() as $anchor) {
             $stream->anchor($anchor->name, $originYTop + $scale * $anchor->yTopPt);
         }
+    }
+
+    private function renderWatermark(
+        ContentStream $stream,
+        PageGeometry $geometry,
+        Watermark $watermark,
+        FontRegistry $fonts,
+    ): void {
+        $font = $fonts->use($watermark->fontFamily, $watermark->fontFace);
+        $encoded = Encoding::forFont($watermark->text, $font->definition->encoding);
+        if (trim($encoded) === '') {
+            return;
+        }
+
+        $w = $geometry->widthPt();
+        $h = $geometry->heightPt();
+
+        $unitWidth = $font->metrics->stringWidth($encoded, 1.0);   // advance at 1 pt
+        $size = $watermark->fontSizePt
+            ?? ($unitWidth > 0.0 ? 0.85 * sqrt($w * $w + $h * $h) / $unitWidth : 24.0);
+        $textWidth = $unitWidth * $size;
+
+        $theta = deg2rad($watermark->angleDeg);
+        $gs = '';
+        $gsName = $this->watermarkGsName($watermark);
+        if ($gsName !== null) {
+            $gs = '/' . $gsName . ' gs ';
+        }
+
+        // Rotate about the page centre, then draw the string centred on that origin.
+        $stream->raw(sprintf(
+            'q %.5F %.5F %.5F %.5F %.2F %.2F cm %s%s BT /F%d %.2F Tf %.2F %.2F Td (%s) Tj ET Q',
+            cos($theta),
+            sin($theta),
+            -sin($theta),
+            cos($theta),
+            $w / 2,
+            $h / 2,
+            $gs,
+            $watermark->color->textOp(),
+            $font->index,
+            $size,
+            -$textWidth / 2,
+            -$size * 0.3,
+            PdfString::escape($encoded),
+        ));
+    }
+
+    private function watermarkOpacity(Watermark $watermark): float
+    {
+        return max(0.0, min(1.0, $watermark->opacity));
+    }
+
+    private function watermarkGsName(Watermark $watermark): ?string
+    {
+        $opacity = $this->watermarkOpacity($watermark);
+
+        return $opacity < 1.0 ? 'GSwm' . (int) round($opacity * 1000) : null;
     }
 
     private function sameSize(PageGeometry $a, PageGeometry $b): bool

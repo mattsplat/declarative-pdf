@@ -11,10 +11,11 @@ widow-orphan / keep-with-next), headers/footers, images (JPEG/PNG/GIF/WebP with
 SMask, from a path / URL / `data:` URI), internal + external links, multi-column
 blocks, auto-sized tables with repeating headers, UTF-8 encoding, inline
 decorations, inline HTML, named stylesheets, large-format sheets, absolute area
-placement (`place()` with `ShrinkMode` geometric or font-size fit), public
-text / block measurement helpers (`PageBuilder::textWidth()` / `measureBlocks()`,
-`Pdf\Text\TextMeasurer`), reusable `Component` nodes, and a pure-PHP single-page
-PDF importer emitting vector Form XObjects.
+placement (`place()` with `ShrinkMode` geometric or font-size fit), page-number
+and watermark helpers, public text / block measurement helpers
+(`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
+reusable `Component` nodes, and a pure-PHP single-page PDF importer emitting
+vector Form XObjects.
 
 The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
 OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /

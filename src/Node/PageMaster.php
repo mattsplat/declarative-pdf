@@ -40,6 +40,7 @@ final readonly class PageMaster
         public Edges $marginsPt = new Edges(28.35, 28.35, 28.35, 28.35),
         ?\Closure $header = null,
         ?\Closure $footer = null,
+        public ?Watermark $watermark = null,
     ) {
         $this->header = $header;
         $this->footer = $footer;
@@ -56,12 +57,17 @@ final readonly class PageMaster
 
     public function withHeader(\Closure $header): self
     {
-        return new self($this->size, $this->orientation, $this->marginsPt, $header, $this->footer);
+        return new self($this->size, $this->orientation, $this->marginsPt, $header, $this->footer, $this->watermark);
     }
 
     public function withFooter(\Closure $footer): self
     {
-        return new self($this->size, $this->orientation, $this->marginsPt, $this->header, $footer);
+        return new self($this->size, $this->orientation, $this->marginsPt, $this->header, $footer, $this->watermark);
+    }
+
+    public function withWatermark(Watermark $watermark): self
+    {
+        return new self($this->size, $this->orientation, $this->marginsPt, $this->header, $this->footer, $watermark);
     }
 
     public function geometry(): PageGeometry

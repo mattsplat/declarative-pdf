@@ -6,6 +6,7 @@ namespace Pdf\Layout;
 
 use Pdf\Geometry\PageGeometry;
 use Pdf\Layout\Box\StackBox;
+use Pdf\Node\Watermark;
 
 /**
  * One rendered sheet: geometry plus positioned body / header / footer boxes.
@@ -25,6 +26,7 @@ final readonly class PhysicalPage
         public float $footerTopPt,
         public bool $bodyOverflowed,
         public array $areas = [],
+        public ?Watermark $watermark = null,
     ) {
     }
 }

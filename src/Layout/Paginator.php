@@ -90,6 +90,7 @@ final class Paginator
                     bodyOverflowed: $entry['overflow'][$slot],
                     // Placements go on the first physical sheet of the logical page.
                     areas: $slot === 0 ? $this->resolveAreas($page, $pageStyle) : [],
+                    watermark: $page->master->watermark,
                 );
             }
         }

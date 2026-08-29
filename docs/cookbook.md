@@ -24,7 +24,40 @@ $p->footer(fn (PageContext $c) => new Paragraph(
 
 The band's measured height is reserved out of the content area automatically.
 
-## Multi-page flow and page breaks
+For a plain page number, `pageNumbers()` is the shorthand — `{n}` is the
+current page, `{N}` the total:
+
+```php
+$p->pageNumbers();                                  // "Page 1 of 12", centred footer
+$p->pageNumbers('{n} / {N}', align: TextAlign::Right, inHeader: true);
+
+Document::create()->pageNumbers()->page(...)->...;  // on every page
+```
+
+## Watermarks
+
+`watermark()` stamps a word across every sheet — rotated, centred on the whole
+page, translucent, over the content:
+
+```php
+$p->watermark('DRAFT');
+
+use Pdf\Node\Watermark;
+use Pdf\Color\Color;
+
+$p->watermark(new Watermark(
+    'CONFIDENTIAL',
+    color: Color::rgb(180, 30, 30),
+    opacity: 0.10,        // < 1 emits an /ExtGState
+    angleDeg: 45,
+    overlay: false,       // behind the content instead of over it
+));
+
+Document::create()->watermark('DRAFT')->page(...)->...;  // whole document
+```
+
+The font size auto-fits the page diagonal unless you pass `fontSizePt`. A page
+may override the document watermark with its own `watermark()`.
 
 Content paginates on its own. Force a break with `pageBreak()`; keep a block
 whole with `keepTogether`; keep a heading with the block after it (the default
