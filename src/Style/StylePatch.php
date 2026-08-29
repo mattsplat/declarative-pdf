@@ -42,6 +42,12 @@ final readonly class StylePatch
         public ?bool $keepTogether = null,
         public ?int $orphans = null,
         public ?int $widows = null,
+        /**
+         * Space-separated {@see Stylesheet} class-rule names (`'lead callout'`)
+         * this block opts into. A selector, not a style: {@see self::applyTo()}
+         * never reads it. Block-level — ignored on an inline run.
+         */
+        public ?string $class = null,
     ) {
     }
 
@@ -50,7 +56,12 @@ final readonly class StylePatch
         return new self();
     }
 
-    /** True when this patch overrides nothing — every field is `null`. */
+    /**
+     * True when this patch overrides nothing — every field is `null`, `class`
+     * included. A class-only patch is *not* empty: it must survive as a node's
+     * `patch()` so {@see Measurer::measureComponent()} wraps the body in the
+     * implicit Container that carries the selector.
+     */
     public function isEmpty(): bool
     {
         foreach (get_object_vars($this) as $value) {

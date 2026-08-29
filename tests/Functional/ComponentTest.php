@@ -14,6 +14,7 @@ use Pdf\Node\Paragraph;
 use Pdf\Node\Rule;
 use Pdf\Style\Border;
 use Pdf\Style\StylePatch;
+use Pdf\Style\Stylesheet;
 use Pdf\Tests\Support\DemoCallout;
 use Pdf\Tests\Support\DemoCard;
 use Pdf\Tests\Support\Pdf;
@@ -96,6 +97,36 @@ final class ComponentTest extends TestCase
                 ->paragraph('alpha', new StylePatch(bold: true))
                 ->paragraph('beta')
                 ->paragraph('after'))
+            ->toString();
+
+        self::assertSame($viaHand, $viaComponent);
+    }
+
+    public function test_a_class_only_component_patch_still_wraps_the_body_and_applies_the_rule(): void
+    {
+        $renderer = Pdf::deterministicRenderer();
+
+        $boxed = new StylePatch(paddingPt: Edges::all(6), border: Border::uniform(0.5, Color::gray(180)));
+        $sheet = (new Stylesheet())->class('boxed', $boxed);
+
+        $component = new readonly class extends Component {
+            public function body(): BlockNode
+            {
+                return new Paragraph('framed');
+            }
+
+            public function patch(): StylePatch
+            {
+                return new StylePatch(class: 'boxed');
+            }
+        };
+
+        $viaComponent = Document::create()->using($renderer)->stylesheet($sheet)
+            ->page(fn ($p) => $p->component($component))
+            ->toString();
+
+        $viaHand = Document::create()->using($renderer)->stylesheet($sheet)
+            ->page(fn ($p) => $p->container([new Paragraph('framed')], $boxed))
             ->toString();
 
         self::assertSame($viaHand, $viaComponent);
