@@ -74,11 +74,55 @@ a `/ResetForm`. Both work in Acrobat, Foxit and most desktop viewers **without
 JavaScript**. `SubmitFormat` picks the wire format: `Fdf` (default), `Xfdf`,
 `Html`, `Pdf`.
 
+## JavaScript actions — Acrobat only
+
+`Pdf\Interactive\Js` builds field and document scripts. **PDF JavaScript runs
+only in Adobe Acrobat / Reader (and mostly Foxit)** — Chrome/pdfium, macOS
+Preview and Firefox pdf.js run little or none, many organisations disable it by
+policy, and PDF/A forbids it. Build the form so it is complete and usable with
+every computed field left blank; the script layer is a bonus.
+
+```php
+use Pdf\Interactive\Js;
+use Pdf\Node\{TextField, PushButton};
+
+$p->field(new TextField(name: 'qty', label: 'Qty', value: '0', format: Js::formatNumber(0)));
+$p->field(new TextField(name: 'price', label: 'Unit price', value: '0', format: Js::formatCurrency()));
+$p->field(new TextField(
+    name: 'total',
+    label: 'Line total',
+    readOnly: true,
+    calculate: Js::product('qty', 'price'),  // event.value = qty * price
+    format: Js::formatCurrency(),
+    validate: Js::validateRange(0.0, null, 'Total cannot be negative.'),
+));
+
+$p->field(PushButton::action('recalc', 'Recalculate', Js::raw('this.calculateNow();')));
+```
+
+| Recipe | Produces |
+|---|---|
+| `Js::sum(...names)` / `product` / `average` / `minimum` / `maximum` | `AFSimple_Calculate` over the named fields |
+| `Js::formatCurrency(dec, symbol, before)` | `AFNumber_Format` + a matching `AFNumber_Keystroke` filter |
+| `Js::formatNumber(dec)` / `Js::formatPercent(dec)` | `AF*_Format` + keystroke |
+| `Js::validateRange(min, max, message?)` | a `parseFloat` bounds check that sets `event.rc` |
+| `Js::raw(source)` | verbatim JavaScript |
+
+A `format` recipe that carries a keystroke filter is applied as the field's
+`/K` action automatically unless you pass `keystroke:` yourself. Any field with
+a `calculate` action is added to `/AcroForm /CO` in the order the fields appear.
+
+Document-level functions:
+
+```php
+Document::create()
+    ->script('helpers', 'function fmt(v) { return util.printf("%,2.2f", v); }')
+    ->page(...);
+```
+
+They become a sorted `/Names /JavaScript` name tree and run when the file opens.
+
 ## Viewer support
 
 Fillable / printable / saveable forms with self-drawn appearances reach
-essentially every viewer. The **JavaScript layer** (calculated totals, format
-and validation actions — see the roadmap) is opt-in on top and only runs in
-Adobe Acrobat / Reader and mostly Foxit; Chrome, Preview and pdf.js run little
-or none of it, many enterprises disable PDF JavaScript by policy, and PDF/A
-forbids it. Design calculators to degrade to an inert but complete form.
+essentially every viewer. The JavaScript layer above is opt-in and Acrobat-only.

@@ -34,6 +34,7 @@ final readonly class FieldSpec
         public ButtonKind $buttonKind = ButtonKind::Push,
         public ?string $submitUrl = null,
         public SubmitFormat $submitFormat = SubmitFormat::Fdf,
+        public FieldActions $actions = new FieldActions(),
     ) {
     }
 

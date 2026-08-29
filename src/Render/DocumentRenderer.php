@@ -240,6 +240,9 @@ final class DocumentRenderer
         // Interactive form objects, at the numbers reserved during planning.
         $acroFormObject = $acroForm->write($fonts);
 
+        // Document-level JavaScript name tree.
+        $namesObject = $this->writeNames($writer, $document);
+
         // ExtGState objects for translucent watermarks.
         /** @var array<string, int> $gsObjects  gs name => object number */
         $gsObjects = [];
@@ -298,6 +301,9 @@ final class DocumentRenderer
         }
         if ($acroFormObject !== null) {
             $writer->line('/AcroForm ' . $acroFormObject . ' 0 R');
+        }
+        if ($namesObject !== null) {
+            $writer->line('/Names ' . $namesObject . ' 0 R');
         }
         $writer->line('>>');
         $writer->endObject();
@@ -438,6 +444,45 @@ final class DocumentRenderer
                 $writer->line('/Count ' . $tree->counts[$index]);
             }
             $writer->line($this->destination($pageIndex, $destYTopPt, $pageObjects, $rendered) . '>>');
+            $writer->endObject();
+        }
+
+        return $rootObject;
+    }
+
+    /**
+     * Write the catalog's `/Names /JavaScript` name tree — one entry per
+     * document-level script — and return the `/Names` root object number, or
+     * null when the document has no scripts. Keys are sorted so the tree is
+     * byte-stable.
+     */
+    private function writeNames(PdfWriter $writer, Document $document): ?int
+    {
+        $scripts = $document->scripts;
+        if ($scripts === []) {
+            return null;
+        }
+        ksort($scripts);
+
+        $registry = $writer->registry();
+        $rootObject = $registry->allocate();
+        /** @var array<string, int> $entryObjects */
+        $entryObjects = [];
+        foreach (array_keys($scripts) as $name) {
+            $entryObjects[$name] = $registry->allocate();
+        }
+
+        $writer->beginObject($rootObject);
+        $writer->line('<</JavaScript <</Names [');
+        foreach ($scripts as $name => $source) {
+            $writer->line(PdfString::text($name) . ' ' . $entryObjects[$name] . ' 0 R');
+        }
+        $writer->line(']>>>>');
+        $writer->endObject();
+
+        foreach ($scripts as $name => $source) {
+            $writer->beginObject($entryObjects[$name]);
+            $writer->line('<</S /JavaScript /JS ' . PdfString::text($source) . '>>');
             $writer->endObject();
         }
 

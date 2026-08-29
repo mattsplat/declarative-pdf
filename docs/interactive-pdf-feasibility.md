@@ -42,10 +42,10 @@ the end.
 
 | # | Foundation | Effort | Unlocks |
 |---|---|---|---|
-| F1 | **AcroForm field model** + self-drawn appearance streams (`/AcroForm`, `/Subtype /Widget`, `/AP /N` XObjects, field flags) | **L** | every form feature; server-side prefill; signature placeholders |
-| F2 | **Generic action writer** (`/GoTo`, `/GoToR`, `/URI`, `/Named`, `/ResetForm`, `/SubmitForm`, `/SetOCGState`, `/GoToE`) | **S–M** | all Tier-A navigation and buttons |
-| F3 | **Outlines writer** (`/Outlines` tree → existing anchor resolution) | **S** | bookmarks / TOC panel |
-| F4 | **JavaScript plumbing** — `/Names /JavaScript` name tree, `/OpenAction`, generic `/AA` additional-actions dict on catalog / pages / annots / fields, `/AcroForm /CO` calc order, a `Pdf\Interactive\Js` helper with canned recipes | **M** | every Tier-B feature |
+| F1 | **AcroForm field model** + self-drawn appearance streams (`/AcroForm`, `/Subtype /Widget`, `/AP /N` XObjects, field flags) — **done** (`Pdf\Node\FormField`, `Pdf\Interactive\*`, `Pdf\Render\AcroFormWriter`) | **L** | every form feature; server-side prefill; signature placeholders |
+| F2 | **Generic action writer** (`/GoTo`, `/GoToR`, `/URI`, `/Named`, `/ResetForm`, `/SubmitForm`, `/SetOCGState`, `/GoToE`) — `/SubmitForm` + `/ResetForm` + `/URI` done via `PushButton` and inline links; the rest pending | **S–M** | all Tier-A navigation and buttons |
+| F3 | **Outlines writer** (`/Outlines` tree → existing anchor resolution) — **done** | **S** | bookmarks / TOC panel |
+| F4 | **JavaScript plumbing** — `/Names /JavaScript` name tree, `/AA` on fields, `/AcroForm /CO` calc order, `Pdf\Interactive\Js` recipes — **done** (`/OpenAction` and catalog / page `/AA` still pending) | **M** | every Tier-B feature |
 | F5 | **OCG / layers** — `/OCProperties`, `/OCG` dicts, `BDC … EMC` wrapping in the content stream, `/OC` on annots/XObjects | **M** | layer control; interactive-diagram overlays (non-JS variant) |
 | F6 | **Importer exposes AcroForm** + writer rewrites `/V` and regenerates `/AP` | **M** | prefill a template PDF from application data |
 | F7 | **Incremental-update save** + PKCS#7/CMS detached signing (`ext-openssl`, `/ByteRange`, fixed-size `/Contents` placeholder) | **L** | real digital signatures |

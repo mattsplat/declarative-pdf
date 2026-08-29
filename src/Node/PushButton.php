@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Node;
 
 use Pdf\Interactive\ButtonKind;
+use Pdf\Interactive\Js;
 use Pdf\Interactive\SubmitFormat;
 use Pdf\Style\StylePatch;
 
@@ -28,8 +29,15 @@ final readonly class PushButton implements FormField
         public ?float $heightPt = null,
         public ?string $tooltip = null,
         public bool $readOnly = false,
+        public ?Js $script = null,
         private StylePatch $patch = new StylePatch(),
     ) {
+    }
+
+    /** A button whose `/A` action runs Acrobat JavaScript (`ButtonKind::Push`). */
+    public static function action(string $name, string $label, Js $script, StylePatch $patch = new StylePatch()): self
+    {
+        return new self($name, $label, ButtonKind::Push, script: $script, patch: $patch);
     }
 
     public static function submit(

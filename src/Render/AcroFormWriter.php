@@ -245,6 +245,23 @@ final class AcroFormWriter
                 $this->writer->line('/Q ' . $spec->appearance->quadding);
             }
         }
+
+        $this->writeAdditionalActions($spec);
+    }
+
+    /** The `/AA` additional-actions dictionary (`/K` `/F` `/V` `/C` JavaScript). */
+    private function writeAdditionalActions(FieldSpec $spec): void
+    {
+        $entries = $spec->actions->additionalActions();
+        if ($entries === []) {
+            return;
+        }
+
+        $aa = '';
+        foreach ($entries as $key => $source) {
+            $aa .= sprintf('/%s <</S /JavaScript /JS %s>> ', $key, PdfString::text($source));
+        }
+        $this->writer->line('/AA <<' . rtrim($aa) . '>>');
     }
 
     private function writeValue(FieldSpec $spec): void
@@ -315,7 +332,9 @@ final class AcroFormWriter
                 PdfString::text((string) $spec->submitUrl),
                 $spec->submitFormat->actionFlags(),
             )),
-            \Pdf\Interactive\ButtonKind::Push => null,
+            \Pdf\Interactive\ButtonKind::Push => $spec->actions->click !== null
+                ? $this->writer->line('/A <</S /JavaScript /JS ' . PdfString::text($spec->actions->click->source) . '>>')
+                : null,
         };
     }
 
@@ -381,10 +400,17 @@ final class AcroFormWriter
         return $object;
     }
 
-    /** @return list<string> object references, in calculation order (JS layer populates this). */
+    /** @return list<string> field object references, in field-encounter order, for every calculated field. */
     private function calculationOrder(): array
     {
-        return [];
+        $order = [];
+        foreach ($this->fields as $field) {
+            if ($field->spec->actions->hasCalculate()) {
+                $order[] = $field->objectNumber . ' 0 R';
+            }
+        }
+
+        return $order;
     }
 
     private static function colorArray(\Pdf\Color\Color $color): string

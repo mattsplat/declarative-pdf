@@ -47,10 +47,12 @@ use Pdf\Node\Spacer;
 use Pdf\Node\Table;
 use Pdf\Node\TextField;
 use Pdf\Font\ResolvedFont;
+use Pdf\Interactive\FieldActions;
 use Pdf\Interactive\FieldAppearance;
 use Pdf\Interactive\FieldFlag;
 use Pdf\Interactive\FieldSpec;
 use Pdf\Interactive\FieldType;
+use Pdf\Interactive\Js;
 use Pdf\Color\Color;
 use Pdf\Style\TextAlign;
 use Pdf\Render\ImageRegistry;
@@ -238,6 +240,7 @@ final class Measurer
                 $node->value !== '' ? $node->value : null,
                 null,
                 $node->maxLength,
+                actions: $this->textFieldActions($node),
             ),
             $node instanceof Checkbox => new FieldSpec(
                 FieldType::Checkbox,
@@ -303,6 +306,7 @@ final class Measurer
                 $node->kind,
                 $node->submitUrl,
                 $node->submitFormat,
+                new FieldActions(click: $node->script),
             ),
             $node instanceof SignatureField => new FieldSpec(
                 FieldType::Signature,
@@ -313,6 +317,21 @@ final class Measurer
             ),
             default => throw new LayoutException('Unsupported form field: ' . $node::class),
         };
+    }
+
+    private function textFieldActions(TextField $node): FieldActions
+    {
+        $keystroke = $node->keystroke;
+        if ($keystroke === null && $node->format?->keystrokeSource !== null) {
+            $keystroke = Js::raw($node->format->keystrokeSource);
+        }
+
+        return new FieldActions(
+            keystroke: $keystroke,
+            format: $node->format,
+            validate: $node->validate,
+            calculate: $node->calculate,
+        );
     }
 
     /**

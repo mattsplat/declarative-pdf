@@ -19,7 +19,8 @@ reusable `Component` nodes, vector drawing (`Path` with solid fill / stroke),
 a pure-PHP single-page PDF importer emitting vector Form XObjects, and
 interactive **AcroForm fields** with self-drawn appearance streams (text,
 checkbox, radio, dropdown, list box, push / submit / reset buttons, signature
-placeholders).
+placeholders), and an opt-in **document / field JavaScript** layer
+(`Pdf\Interactive\Js`, `/AA`, `/CO`, `/Names /JavaScript`).
 
 The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
 OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -69,42 +70,36 @@ What it does:
 Self-contained: a fillable, printable, saveable form needs no JavaScript.
 See `examples/form.php` and [`forms.md`](forms.md).
 
-### Document & field JavaScript — **M** (on top of AcroForm)
+### Document & field JavaScript — **done** (opt-in, on top of AcroForm)
 
-- **Document-level JS**: `/Names /JavaScript` name tree in the catalog; each
-  entry is `<< /S /JavaScript /JS (…) >>`. Runs on open. Good for defining
-  shared functions.
-- **Field actions** (`/AA` additional-actions dict on a widget/field):
-  - `/K` keystroke, `/F` format, `/V` validate, `/C` calculate
-  - `/A` primary action (e.g. a button that runs `this.print()` or submits)
-- **API shape**: `new TextField(name: 'total', calculate: Js::sum('qty', 'price'))`
-  or raw `Js::raw('event.value = …')`. A small `Pdf\Interactive\Js` helper with
-  a few canned recipes (sum, product, average, validate-range, format-currency)
-  covering 90% of real use, plus a raw escape hatch.
+- **Document-level JS**: `DocumentBuilder::script(name, Js|string)` → a
+  `/Names /JavaScript` name tree in the catalog, one `<< /S /JavaScript /JS (…) >>`
+  entry per script, keys sorted for byte-stable output.
+- **Field actions**: `new TextField(name: 'total', calculate: …, format: …,
+  validate: …, keystroke: …)` → an `/AA` additional-actions dict (`/K` `/F` `/V`
+  `/C`). A field with a `calculate` action joins `/AcroForm /CO` in
+  field-encounter order. `PushButton::action(name, label, Js)` sets the primary
+  `/A` JavaScript action.
+- **`Pdf\Interactive\Js`** recipes: `sum` / `product` / `average` / `minimum` /
+  `maximum` (via `AFSimple_Calculate`), `validateRange(min, max, message?)`,
+  `formatCurrency` / `formatNumber` / `formatPercent` (each carries the matching
+  `AF*_Keystroke` filter), and `Js::raw(...)`.
 
-**Honest caveats — read before committing to JS:**
+**The caveat, documented in the `Js` class and [`forms.md`](forms.md):** only
+Acrobat / Reader (and mostly Foxit) run PDF JavaScript. Chrome (pdfium), macOS
+Preview and Firefox pdf.js run little or none, many organisations disable it by
+policy, and PDF/A forbids it. A form built with self-drawn appearance streams
+stays fillable / printable / saveable everywhere; the JS layer is an
+enhancement, and calculators should degrade to an inert but complete form.
+See `examples/form-calc.php`.
 
-- **Viewer support is the whole story.** Adobe Acrobat / Reader run PDF
-  JavaScript fully. Chrome (pdfium), macOS Preview, and Firefox's pdf.js run
-  little to none — calculated and validated fields simply won't update there.
-  If the audience opens PDFs in a browser, JS calculations are invisible to
-  them.
-- Many enterprises disable PDF JavaScript by policy (it has a long history of
-  being a malware vector). Content that *depends* on it will silently misbehave.
-- It complicates accessibility and long-term archival (PDF/A forbids JS
-  entirely).
+### Form submission & FDF/XFDF — **partly done**
 
-**Recommendation:** build AcroForm fields with self-generated appearance
-streams first — that delivers fillable/printable/saveable forms that work in
-every viewer. Add the JavaScript layer as an opt-in on top for the
-Acrobat-centric workflows that need live calculations, and document the viewer
-limitation prominently.
-
-### Form submission & FDF/XFDF — **S**
-
-Once fields exist: `SubmitButton(url: …, format: Fdf|Xfdf|Html|Pdf)` →
-`/A << /S /SubmitForm /F (url) /Flags n >>`. Also `ResetButton`. Reading form
-data back (parsing a filled FDF/XFDF) is a separate small parser.
+`PushButton::submit(name, label, url, SubmitFormat::Fdf|Xfdf|Html|Pdf)` emits
+`/A << /S /SubmitForm /F << /FS /URL /F (url) >> /Flags n >>`;
+`PushButton::reset()` emits `/ResetForm`. Both are native actions and need no
+JavaScript. Writing an FDF/XFDF file from a data array, and reading a filled one
+back, is still a separate small (de)serialiser.
 
 ---
 
@@ -478,9 +473,8 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 1. **Gradients + clipping paths** (M) — the rest of the drawing story now that
    solid-paint `Path` has shipped.
 2. **Charts / sparklines** (M) — a thin layer on the path API.
-3. **Document / field JavaScript** (M) — opt-in layer on top of the now-shipped
-   AcroForm fields for Acrobat workflows, with the viewer-support caveat
-   documented.
+3. **FDF / XFDF read + write** (S each) — serialise a data array to FDF/XFDF and
+   parse a filled one back; the native submit/reset buttons already exist.
 4. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
 5. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
