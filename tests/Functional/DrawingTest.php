@@ -125,11 +125,32 @@ final class DrawingTest extends TestCase
             ->toString();
 
         $content = Pdf::contentText($pdf);
-        self::assertSame(1, preg_match('/\n28\.35 (\d+\.\d+) m\n/', $content, $match));
+        self::assertSame(1, preg_match('/\n28\.85 (\d+\.\d+) m\n/', $content, $match));
 
-        // Drawn at the top margin: 841.89 - 28.35, i.e. in the top tenth of the
-        // sheet rather than mirrored to the bottom.
-        self::assertEqualsWithDelta(813.54, (float) $match[1], 0.01);
+        // Drawn just inside the top margin: the 1pt stroke's centre line sits
+        // 0.5pt below 28.35, so its ink reaches the margin and no further —
+        // and it is in the top tenth of the sheet, not mirrored to the bottom.
+        self::assertEqualsWithDelta(813.04, (float) $match[1], 0.01);
         self::assertGreaterThan(841.89 * 0.9, (float) $match[1]);
+    }
+
+    public function test_a_path_too_tall_for_the_remaining_space_moves_to_the_next_page(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->size(PageSize::a4())->units(Unit::Pt)->margin(0)
+                ->paragraph('Above.', new StylePatch(fontSizePt: 12.0, spaceAfterPt: 0.0))
+                // 841.89 tall: it fits a whole page, but not the 828.09 left
+                // under the paragraph, and it must never be split.
+                ->path(Path::rectangle(50, 841.89, Paint::filled(Color::black()), Unit::Pt)))
+            ->toString();
+
+        self::assertStringContainsString("/Count 2\n", $pdf);
+
+        // One un-split rectangle, on the second page, at that page's top.
+        $content = Pdf::contentText($pdf);
+        self::assertSame(1, substr_count($content, "\nh\nf\n"));
+        self::assertStringContainsString("0.00 841.89 m\n50.00 841.89 l", $content);
     }
 }

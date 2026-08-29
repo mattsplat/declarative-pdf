@@ -20,7 +20,9 @@ use Pdf\Style\StylePatch;
  * is what the path occupies in block flow and what a `place()` area scales.
  * Anything drawn outside those bounds still marks the page.
  *
- * The constructor is points-only; the static factories take user units.
+ * The constructor is points-only and takes your commands verbatim; the static
+ * factories take user units and inset the geometry they generate by half the
+ * stroke width, so a stroked shape's ink stays inside the declared box.
  */
 final readonly class Path implements BlockNode
 {
@@ -57,7 +59,7 @@ final readonly class Path implements BlockNode
         $scale = $unit->pointsPerUnit();
         $scaled = [];
         foreach ($commands as $command) {
-            $scaled[] = $command->scaled($scale);
+            $scaled[] = $command->transformed($scale, $scale);
         }
 
         return new self($scaled, $width * $scale, $height * $scale, $paint, $patch);
@@ -90,7 +92,7 @@ final readonly class Path implements BlockNode
         Unit $unit = Unit::Mm,
         StylePatch $patch = new StylePatch(),
     ): self {
-        return self::of(
+        return self::generated(
             [
                 PathCommand::moveTo(0.0, 0.0),
                 PathCommand::lineTo($width, 0.0),
@@ -119,13 +121,13 @@ final readonly class Path implements BlockNode
         $ox = $cx * self::KAPPA;
         $oy = $cy * self::KAPPA;
 
-        return self::of(
+        return self::generated(
             [
-                PathCommand::moveTo($cx + $cx, $cy),
-                PathCommand::curveTo($cx + $cx, $cy + $oy, $cx + $ox, $cy + $cy, $cx, $cy + $cy),
-                PathCommand::curveTo($cx - $ox, $cy + $cy, $cx - $cx, $cy + $oy, $cx - $cx, $cy),
-                PathCommand::curveTo($cx - $cx, $cy - $oy, $cx - $ox, $cy - $cy, $cx, $cy - $cy),
-                PathCommand::curveTo($cx + $ox, $cy - $cy, $cx + $cx, $cy - $oy, $cx + $cx, $cy),
+                PathCommand::moveTo($width, $cy),
+                PathCommand::curveTo($width, $cy + $oy, $cx + $ox, $height, $cx, $height),
+                PathCommand::curveTo($cx - $ox, $height, 0.0, $cy + $oy, 0.0, $cy),
+                PathCommand::curveTo(0.0, $cy - $oy, $cx - $ox, 0.0, $cx, 0.0),
+                PathCommand::curveTo($cx + $ox, 0.0, $width, $cy - $oy, $width, $cy),
                 PathCommand::close(),
             ],
             $width,
@@ -188,6 +190,44 @@ final readonly class Path implements BlockNode
 
         $minimum = $paint->strokes() ? $unit->fromPoints($paint->strokeWidthPt) : 0.0;
 
-        return self::of($commands, max($width, $minimum), max($height, $minimum), $paint, $unit, $patch);
+        return self::generated($commands, max($width, $minimum), max($height, $minimum), $paint, $unit, $patch);
+    }
+
+    /**
+     * Fit geometry drawn across the full `$width` x `$height` box into the box
+     * *including its ink*: a stroke straddles the line it is drawn on, so
+     * generated figures are inset by half the stroke width on every side.
+     * Without it a stroked shape bleeds into the neighbouring node's spacing,
+     * or off the top of the page into the margin. A fill reaches the edge
+     * exactly and is left alone.
+     *
+     * @param list<PathCommand> $commands drawn in the un-inset box
+     */
+    private static function generated(
+        array $commands,
+        float $width,
+        float $height,
+        Paint $paint,
+        Unit $unit,
+        StylePatch $patch,
+    ): self {
+        if (!$paint->strokes()) {
+            return self::of($commands, $width, $height, $paint, $unit, $patch);
+        }
+
+        // Clamped so a stroke wider than the box collapses to its centre line
+        // rather than turning the geometry inside out.
+        $inset = $unit->fromPoints($paint->strokeWidthPt / 2);
+        $insetX = min($inset, $width / 2);
+        $insetY = min($inset, $height / 2);
+        $scaleX = $width > 0.0 ? ($width - 2 * $insetX) / $width : 0.0;
+        $scaleY = $height > 0.0 ? ($height - 2 * $insetY) / $height : 0.0;
+
+        $fitted = [];
+        foreach ($commands as $command) {
+            $fitted[] = $command->transformed($scaleX, $scaleY, $insetX, $insetY);
+        }
+
+        return self::of($fitted, $width, $height, $paint, $unit, $patch);
     }
 }

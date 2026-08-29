@@ -190,6 +190,13 @@ Path::polygon(list<Point> $points, Paint = new, Unit = Mm, StylePatch = new)    
 `line()` and `polygon()` size the box to the extent of their points, never
 narrower than the stroke, so a flat figure still reserves its own ink in flow.
 
+A stroke straddles the line it is drawn on, so every factory insets the
+geometry it generates by half the stroke width: `rectangle(60, 18, stroked 2)`
+puts the outline's *outer* edge at 60×18, not 62×20, and the shape's ink never
+bleeds into the neighbouring node's spacing or off the page into the margin. A
+fill reaches the box edge exactly and is not inset. The constructor and
+`Path::of()` take your commands verbatim — they inset nothing.
+
 `Pdf\Geometry\PathCommand` builds the segments: `moveTo(x, y)`, `lineTo(x, y)`,
 `curveTo(c1x, c1y, c2x, c2y, x, y)` (cubic Bézier), `close()`. A `moveTo`
 starts a new subpath, so one flat list describes a multi-subpath figure.

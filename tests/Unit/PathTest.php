@@ -50,6 +50,27 @@ final class PathTest extends TestCase
         );
     }
 
+    public function test_a_stroked_rectangle_is_inset_by_half_the_stroke_width(): void
+    {
+        // A 4pt stroke straddles its line, so the geometry sits 2pt in and the
+        // painted outer edge lands exactly on the declared 100x40 box.
+        $path = Path::rectangle(100.0, 40.0, Paint::stroked(Color::black(), 4.0), Unit::Pt);
+
+        self::assertSame(100.0, $path->widthPt);
+        self::assertSame(40.0, $path->heightPt);
+        self::assertSame(
+            "q 0.000 G 4.00 w 0 J 0 j\n2.00 839.89 m\n98.00 839.89 l\n98.00 803.89 l\n2.00 803.89 l\nh\nS\nQ",
+            $this->draw($path),
+        );
+    }
+
+    public function test_a_filled_shape_is_not_inset(): void
+    {
+        $path = Path::rectangle(100.0, 40.0, Paint::filled(Color::black()), Unit::Pt);
+
+        self::assertStringContainsString("0.00 841.89 m\n100.00 841.89 l", $this->draw($path));
+    }
+
     public function test_ellipse_is_four_cubic_beziers(): void
     {
         $path = Path::ellipse(80.0, 40.0, Paint::filled(Color::black()), Unit::Pt);
@@ -170,7 +191,8 @@ final class PathTest extends TestCase
         );
         $stream->path($path->commands, 0.0, 20.0, $path->paint);
 
-        // 20pt below the page top is 821.89 up from the bottom, not 20.
-        self::assertStringContainsString("0.00 821.89 m\n100.00 821.89 l", $stream->toString());
+        // 20pt below the page top is 821.89 up from the bottom, not 20 — less
+        // the 0.5pt inset that keeps the 1pt stroke inside the box.
+        self::assertStringContainsString("0.50 821.39 m\n99.50 821.39 l", $stream->toString());
     }
 }

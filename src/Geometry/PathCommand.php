@@ -49,16 +49,19 @@ final readonly class PathCommand
         return new self(PathOp::Close, []);
     }
 
-    /** Multiply every operand — how a user unit is converted to points. */
-    public function scaled(float $factor): self
+    /**
+     * Scale then translate every operand — how a user unit becomes points, and
+     * how a generated figure is inset inside its box.
+     */
+    public function transformed(float $scaleX, float $scaleY, float $dx = 0.0, float $dy = 0.0): self
     {
-        if ($factor === 1.0 || $this->points === []) {
+        if ($this->points === [] || ($scaleX === 1.0 && $scaleY === 1.0 && $dx === 0.0 && $dy === 0.0)) {
             return $this;
         }
 
-        return new self(
-            $this->op,
-            array_map(static fn (Point $p): Point => new Point($p->x * $factor, $p->y * $factor), $this->points),
-        );
+        return new self($this->op, array_map(
+            static fn (Point $p): Point => new Point($dx + $p->x * $scaleX, $dy + $p->y * $scaleY),
+            $this->points,
+        ));
     }
 }

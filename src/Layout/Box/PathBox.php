@@ -10,7 +10,7 @@ use Pdf\Style\Paint;
 
 /**
  * Vector linework at a fixed size. Never splits — half a shape on each of two
- * pages is never the intent.
+ * pages is never the intent, so it moves whole to the next page instead.
  */
 final class PathBox extends AbstractBox
 {
@@ -40,11 +40,6 @@ final class PathBox extends AbstractBox
     public function marginAfterPt(): float
     {
         return $this->marginAfterPt;
-    }
-
-    public function keepTogether(): bool
-    {
-        return true;
     }
 
     public function split(float $availableHeightPt): array
