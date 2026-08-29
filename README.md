@@ -97,12 +97,21 @@ Implemented:
   (from the `makefont` tool); subsetted program embedded with `/FontFile2`,
   `/FontDescriptor` and a ToUnicode CMap (tuto7). OpenType `.otf` with
   PostScript (CFF) outlines embeds whole as `/FontFile3` `/Subtype /Type1C`.
+- **Font weights** — `Pdf\Font\FontFace(weight: 100–900, italic)` is the
+  resolution key; `StylePatch(weight: 600)` selects a cut, unregistered weights
+  fall down a nearest-cut ladder, core families keep their bundled bold/italic.
+- **Measurement helpers** — `PageBuilder::textWidth()` / `measureBlocks()` and
+  `Pdf\Text\TextMeasurer` return advance width / stacked height in the page's
+  units, for right-aligning and sizing rectangles in an absolute layout.
+- **Reusable components** — subclass `Pdf\Node\Component`, return the tree from
+  `body()`; it expands during layout and composes anywhere a block goes.
 - **Inline HTML** — `Pdf\Text\Html::toInline()` / `$page->html()` for
   `b`/`i`/`u`/`s`/`sup`/`sub`/`a`/`br` (tuto6).
 - **Large-format sheets + absolute area layout** — `PageSize::arch('e')` /
   `ansi()` / `a0()`; `$page->place()` / `placeImage()` / `placePdf()` /
   `frame()` position content in explicit rectangles with `Fit` + `BoxAlign`
-  (blueprint / poster / plan-set layout). Block content shrinks to fit.
+  (blueprint / poster / plan-set layout). Over-tall placed blocks shrink to
+  fit — geometrically, or `ShrinkMode::FontSize` to drop point size and re-wrap.
 - **PDF page import** — `$page->placePdf('drawing.pdf', page: 1)` imports one
   page of an external (trusted, unencrypted) PDF as a **vector Form XObject**,
   copying its fonts/images/resources. `Pdf\Import\PdfReader` handles classic
@@ -135,7 +144,7 @@ sized and prioritised):
 
 ```
 composer install
-composer test        # phpunit  (135 tests)
+composer test        # phpunit  (191 tests)
 composer stan        # phpstan  (level 6)
 php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
