@@ -308,12 +308,7 @@ final class DocumentRenderer
             $target = $anchorMap[$link->anchorName()] ?? null;
             if ($target !== null) {
                 [$pageIndex, $destY] = $target;
-                $destGeometry = $rendered[$pageIndex]['geometry'];
-                $dict .= sprintf(
-                    '/Dest [%d 0 R /XYZ 0 %.2F null]>>',
-                    $pageObjects[$pageIndex],
-                    $destGeometry->flipY($destY),
-                );
+                $dict .= $this->destination($pageIndex, $destY, $pageObjects, $rendered) . '>>';
             } else {
                 $dict .= '>>';
             }
@@ -323,6 +318,23 @@ final class DocumentRenderer
 
         $writer->line($dict);
         $writer->endObject();
+    }
+
+    /**
+     * A `/Dest` array jumping to the top-left of an anchor's landing spot,
+     * `[<page> 0 R /XYZ 0 <y> null]`. Shared by link annotations and outline
+     * items so the destination syntax lives in one place.
+     *
+     * @param list<int>                                                                                           $pageObjects
+     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered
+     */
+    private function destination(int $pageIndex, float $yTopPt, array $pageObjects, array $rendered): string
+    {
+        return sprintf(
+            '/Dest [%d 0 R /XYZ 0 %.2F null]',
+            $pageObjects[$pageIndex],
+            $rendered[$pageIndex]['geometry']->flipY($yTopPt),
+        );
     }
 
     /**
@@ -371,35 +383,30 @@ final class DocumentRenderer
         $writer->endObject();
 
         foreach ($tree->items as $index => $bookmark) {
-            $siblings = $tree->siblings($index);
-            $position = (int) array_search($index, $siblings, true);
             $parentObject = $tree->parents[$index] === -1
                 ? $rootObject
                 : $itemObjects[$tree->parents[$index]];
 
             [$pageIndex, $destYTopPt] = $anchorMap[$bookmark->anchor];
-            $destGeometry = $rendered[$pageIndex]['geometry'];
+            $previous = $tree->previousSibling($index);
+            $next = $tree->nextSibling($index);
+            $childIndices = $tree->children[$index];
 
             $writer->beginObject($itemObjects[$index]);
             $writer->line('<</Title ' . PdfString::text($bookmark->title));
             $writer->line('/Parent ' . $parentObject . ' 0 R');
-            if ($position > 0) {
-                $writer->line('/Prev ' . $itemObjects[$siblings[$position - 1]] . ' 0 R');
+            if ($previous !== null) {
+                $writer->line('/Prev ' . $itemObjects[$previous] . ' 0 R');
             }
-            if ($position < count($siblings) - 1) {
-                $writer->line('/Next ' . $itemObjects[$siblings[$position + 1]] . ' 0 R');
+            if ($next !== null) {
+                $writer->line('/Next ' . $itemObjects[$next] . ' 0 R');
             }
-            $childIndices = $tree->children[$index];
             if ($childIndices !== []) {
                 $writer->line('/First ' . $itemObjects[$childIndices[0]] . ' 0 R');
                 $writer->line('/Last ' . $itemObjects[$childIndices[count($childIndices) - 1]] . ' 0 R');
                 $writer->line('/Count ' . $tree->counts[$index]);
             }
-            $writer->line(sprintf(
-                '/Dest [%d 0 R /XYZ 0 %.2F null]>>',
-                $pageObjects[$pageIndex],
-                $destGeometry->flipY($destYTopPt),
-            ));
+            $writer->line($this->destination($pageIndex, $destYTopPt, $pageObjects, $rendered) . '>>');
             $writer->endObject();
         }
 

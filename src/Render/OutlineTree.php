@@ -8,8 +8,9 @@ use Pdf\Node\Bookmark;
 
 /**
  * Resolves a flat, level-tagged {@see Bookmark} list into an outline hierarchy:
- * a parent, an ordered child list and a descendant count per item, plus the
- * top-level sequence.
+ * every navigation link a `/Outlines` item needs — parent, ordered children,
+ * previous / next sibling and descendant count — plus the top-level sequence.
+ * The renderer reads these directly and never re-derives ordering.
  *
  * Document order is preserved. An item nests under the nearest preceding item
  * of a lower level; a level that skips more than one step past the current
@@ -32,6 +33,12 @@ final readonly class OutlineTree
 
     /** @var list<int> descendant count per item, all levels */
     public array $counts;
+
+    /** @var list<int|null> previous same-parent sibling index per item */
+    public array $prevSiblings;
+
+    /** @var list<int|null> next same-parent sibling index per item */
+    public array $nextSiblings;
 
     /** @param list<Bookmark> $bookmarks */
     public function __construct(array $bookmarks)
@@ -74,11 +81,31 @@ final readonly class OutlineTree
             $counts[$i] = $total;
         }
 
+        /** @var list<int|null> $prevSiblings */
+        $prevSiblings = array_fill(0, $count, null);
+        /** @var list<int|null> $nextSiblings */
+        $nextSiblings = array_fill(0, $count, null);
+        $groups = [$roots];
+        foreach ($children as $group) {
+            if ($group !== []) {
+                $groups[] = $group;
+            }
+        }
+        foreach ($groups as $group) {
+            $size = count($group);
+            for ($k = 0; $k < $size; $k++) {
+                $prevSiblings[$group[$k]] = $k > 0 ? $group[$k - 1] : null;
+                $nextSiblings[$group[$k]] = $k < $size - 1 ? $group[$k + 1] : null;
+            }
+        }
+
         $this->items = $items;
         $this->parents = $parents;
         $this->children = $children;
         $this->roots = $roots;
         $this->counts = $counts;
+        $this->prevSiblings = $prevSiblings;
+        $this->nextSiblings = $nextSiblings;
     }
 
     public function isEmpty(): bool
@@ -86,14 +113,13 @@ final readonly class OutlineTree
         return $this->items === [];
     }
 
-    /**
-     * The siblings of item `$i` (itself included), in document order — the list
-     * that carries its `/Prev` and `/Next`.
-     *
-     * @return list<int>
-     */
-    public function siblings(int $i): array
+    public function previousSibling(int $i): ?int
     {
-        return $this->parents[$i] === -1 ? $this->roots : $this->children[$this->parents[$i]];
+        return $this->prevSiblings[$i];
+    }
+
+    public function nextSibling(int $i): ?int
+    {
+        return $this->nextSiblings[$i];
     }
 }

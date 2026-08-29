@@ -30,7 +30,10 @@ final class OutlineTreeTest extends TestCase
         self::assertSame([-1, -1, -1], $tree->parents);
         self::assertSame([[], [], []], $tree->children);
         self::assertSame([0, 0, 0], $tree->counts);
-        self::assertSame([0, 1, 2], $tree->siblings(1));
+        self::assertNull($tree->previousSibling(0));
+        self::assertSame(0, $tree->previousSibling(1));
+        self::assertSame(2, $tree->nextSibling(1));
+        self::assertNull($tree->nextSibling(2));
     }
 
     public function test_levels_nest_under_the_nearest_preceding_lower_level(): void
@@ -47,8 +50,14 @@ final class OutlineTreeTest extends TestCase
         self::assertSame([-1, 0, 0, -1, 3], $tree->parents);
         self::assertSame([[1, 2], [], [], [4], []], $tree->children);
         self::assertSame([2, 0, 0, 1, 0], $tree->counts);
-        self::assertSame([1, 2], $tree->siblings(1));
-        self::assertSame([0, 3], $tree->siblings(3));
+
+        // Ch1.1 <-> Ch1.2 are siblings; Ch1 <-> Ch2 are siblings.
+        self::assertNull($tree->previousSibling(1));
+        self::assertSame(2, $tree->nextSibling(1));
+        self::assertSame(1, $tree->previousSibling(2));
+        self::assertNull($tree->nextSibling(2));
+        self::assertSame(0, $tree->previousSibling(3));
+        self::assertNull($tree->nextSibling(3));
     }
 
     public function test_deep_descendant_counts_roll_up_through_every_level(): void
