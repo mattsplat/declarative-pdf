@@ -287,6 +287,30 @@ Trusted, unencrypted sources only. Source annotations, links and form fields
 are dropped — only the visual content is imported. For a full document merge
 that preserves outlines and links, shell out to `qpdf`.
 
+To **concatenate** PDFs, stamp every source page onto a new page of the same
+size (`examples/merge.php` is the runnable version):
+
+```php
+use Pdf\Geometry\{BoxAlign, Fit, Orientation, PageSize, Unit};
+use Pdf\Import\PdfImportDocument;
+
+$merged = Document::create();
+
+foreach (['cover.pdf', 'body.pdf', 'appendix.pdf'] as $path) {
+    $source = PdfImportDocument::fromFile($path);
+    for ($n = 1; $n <= $source->pageCount(); $n++) {
+        $page = $source->page($n);
+        [$w, $h] = [$page->widthPt(), $page->heightPt()];
+        $merged->page(fn ($p) => $p
+            ->size(PageSize::fromUnits($w, $h, Unit::Pt))
+            ->orientation($w >= $h ? Orientation::Landscape : Orientation::Portrait)
+            ->units(Unit::Pt)->margin(0)
+            ->placePdf(0, 0, $w, $h, $path, $n, Fit::Contain, BoxAlign::Center));
+    }
+}
+$merged->save('merged.pdf');
+```
+
 ## Custom (embedded) fonts
 
 Build a definition with the offline tool, then register and use it:
