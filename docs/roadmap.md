@@ -4,18 +4,8 @@ Where the library could go next. Grouped by area, ordered loosely by how well
 each fits the current architecture. Effort is a rough T-shirt size: **S** ≈ a
 day, **M** ≈ a few days, **L** ≈ a week+, **XL** ≈ a project of its own.
 
-While the version is `0.x`, minor releases may contain breaking changes.
-
-**Shipped in 0.1.0** — see [`CHANGELOG.md`](../CHANGELOG.md) for the full list:
-the box-model layout engine (line breaking, pagination, keep rules, headers and
-footers), core + embedded TrueType/CFF fonts with numeric weights, auto-sized
-tables with repeating headers, JPEG/PNG/GIF/WebP images, inline HTML, stylesheets
-with class rules, reusable `Component` nodes, text/block measurement helpers,
-page-number and watermark helpers, large-format and absolute-area layout, outline
-bookmarks, `Path` vector drawing with gradient fills and path clipping, the
-`Chart` node (bar / line / pie / sparkline), `/AcroForm` fields with self-drawn
-appearance streams, an opt-in document/field JavaScript layer, and a pure-PHP
-single-page PDF importer.
+While the version is `0.x`, minor releases may contain breaking changes. What
+already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 
@@ -41,10 +31,6 @@ single-page PDF importer.
 
 ## Vector drawing
 
-Shipped: `Path` (`moveTo` / `lineTo` / `curveTo` / `close`, solid or gradient
-fill, stroke, `FillRule`, `LineCap`, `LineJoin`), `Clip` for path clipping
-regions, and the `Chart` node. What is left:
-
 - **Dash arrays** (`d`) and **miter limit** (`M`) — **S**.
 - **Per-subpath gradients** and **tiling patterns** (`/Pattern` colour space,
   `scn`) — **S–M**; the shading path uses `sh` rather than a shading pattern.
@@ -63,9 +49,6 @@ regions, and the `Chart` node. What is left:
 ---
 
 ## Text & typography
-
-Shipped: the 14 core fonts, embedded TrueType (subsetted), OpenType/CFF
-(embedded whole), named / numeric weights via `FontFace`. What is left:
 
 - **CFF subsetting** — **L–XL** (see the near-term list).
 - **Synthetic bold / oblique** — **M**: faux-bold via text render mode 2, faux
@@ -96,10 +79,6 @@ Shipped: the 14 core fonts, embedded TrueType (subsetted), OpenType/CFF
 
 ## Document structure & metadata
 
-Shipped: the Info dictionary, explicit outline bookmarks
-(`DocumentBuilder::bookmark()` → an `/Outlines` tree with `/Prev` / `/Next` /
-`/First` / `/Last` / `/Count` and a per-item `/Dest`). What is left:
-
 - **`bookmarksFromHeadings(maxLevel: 3)`** — **S**: auto-generate the outline
   from heading marks (shares the pass the TOC wants).
 - **Outline extras** — **S**: `/PageMode /UseOutlines` to open the panel on
@@ -126,16 +105,6 @@ Shipped: the Info dictionary, explicit outline bookmarks
 ---
 
 ## Interactive forms
-
-Shipped: `TextField` / `Checkbox` / `RadioGroup` / `Dropdown` / `ListBox` /
-`PushButton` / `SignatureField` as `/AcroForm` with self-drawn `/AP /N`
-appearance streams (no `/NeedAppearances`), native `/SubmitForm` / `/ResetForm`,
-and an opt-in JavaScript layer (`Pdf\Interactive\Js` — sum / product / average /
-min / max / range-validate / currency-number-percent formatting, `Js::raw()`;
-`/AA`, `/CO`, document-level `/Names /JavaScript`). See [`forms.md`](forms.md).
-The viewer-support caveat for the JS layer is documented in the `Js` class.
-
-What is left:
 
 - **FDF / XFDF read + write** — **S each** (see the near-term list).
 - **Digital signatures** — **XL**: a `/Sig` field with a PKCS#7 / CMS signature,
@@ -170,10 +139,6 @@ What is left:
 ---
 
 ## Import / merge
-
-Shipped: one page imported as a vector Form XObject with its
-fonts/images/resources copied and renumbered; watermarks / overlays on
-*generated* pages. What is left:
 
 - **Multi-page & full-document native merge** — **L**: import a page range or a
   whole document; `$doc->append('other.pdf')` / `->prepend()` /
