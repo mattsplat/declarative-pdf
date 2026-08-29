@@ -452,12 +452,26 @@ use Pdf\Style\{Stylesheet, StylePatch};
 $sheet = (new Stylesheet())
     ->heading(1, new StylePatch(color: Color::rgb(20, 50, 110), fontSizePt: 26))
     ->heading(2, new StylePatch(color: Color::rgb(20, 50, 110)))
-    ->paragraph(new StylePatch(lineHeight: 1.45, spaceAfterPt: 8));
+    ->paragraph(new StylePatch(lineHeight: 1.45, spaceAfterPt: 8))
+    ->class('lead', new StylePatch(fontSizePt: 14, color: Color::gray(60)));
 
 Document::create()->stylesheet($sheet)->page(...)->save('out.pdf');
 ```
 
 Rules apply between the built-in defaults and each node's own `StylePatch`.
+
+A node opts into a named class rule with `StylePatch(class: 'lead')` (a
+space-separated list is allowed: `class: 'lead callout'`):
+
+```php
+$page->paragraph('A short standfirst.', new StylePatch(class: 'lead'));
+```
+
+Class rules are consulted after the node-type rule — a class beats the type,
+a class listed later beats one listed earlier — and the node's own patch still
+wins over all of them. `class` is **block-level**: it does nothing on an inline
+run. `->class('lead', …)` and `->class('table', …)` share no namespace with the
+node-type rules, so a class name may safely match a node type.
 
 ## Reusable components
 

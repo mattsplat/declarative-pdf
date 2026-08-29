@@ -420,11 +420,14 @@ groups (the plan flags "keep-together at scale").
 
 ## Tooling & developer experience
 
-### Stylesheet class selectors — **S**
+### Stylesheet class selectors — **done**
 
-`->class('lead')` on a node, `(new Stylesheet())->class('lead', $patch)` — a
-named rule beside today's per-node-type ones. `StyleResolver` already has the
-hook point between inheritance and inline patch.
+`StylePatch(class: 'lead callout')` on any block, `(new Stylesheet())->class('lead',
+$patch)` for the rule. `StyleResolver::selectorsFor()` appends a block's classes
+after its type selector, so a class rule beats the type rule, a later class beats
+an earlier one, and the node's own patch still wins over all of them. Class-rule
+keys are namespaced (`.lead`) so they can't collide with node-type selectors.
+Block-level only — `resolveInline()` does not consult the stylesheet.
 
 ### Markdown → document — **M**
 
@@ -462,15 +465,14 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 ## Suggested near-term order
 
 1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
-2. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
-3. **Gradients + clipping paths** (M) — the rest of the drawing story now that
+2. **Gradients + clipping paths** (M) — the rest of the drawing story now that
    solid-paint `Path` has shipped.
-4. **Charts / sparklines** (M) — a thin layer on the path API.
-5. **AcroForm fields with generated appearance streams** (L) — works in every
+3. **Charts / sparklines** (M) — a thin layer on the path API.
+4. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
-6. **Document / field JavaScript** (M) — opt-in layer on top of #5 for Acrobat
+5. **Document / field JavaScript** (M) — opt-in layer on top of #4 for Acrobat
    workflows, with the viewer-support caveat documented.
-7. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+6. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-8. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+7. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

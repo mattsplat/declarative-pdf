@@ -9,6 +9,7 @@ use Pdf\Node\Paragraph;
 use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
 use Pdf\Style\StyleResolver;
+use Pdf\Style\Stylesheet;
 use PHPUnit\Framework\TestCase;
 
 final class StyleResolverTest extends TestCase
@@ -97,5 +98,67 @@ final class StyleResolverTest extends TestCase
         $p = $resolver->resolveInline(new StylePatch(fontSizePt: 8.0), Style::default());
 
         self::assertSame(2.0, $p->fontSizePt);
+    }
+
+    public function test_a_node_picks_up_a_matching_class_rule(): void
+    {
+        $sheet = (new Stylesheet())->class('lead', new StylePatch(fontSizePt: 14.0));
+
+        $p = (new StyleResolver($sheet))->resolveBlock(
+            new Paragraph('x', new StylePatch(class: 'lead')),
+            Style::default(),
+        );
+
+        self::assertSame(14.0, $p->fontSizePt);
+    }
+
+    public function test_a_class_rule_beats_the_type_rule(): void
+    {
+        $sheet = (new Stylesheet())
+            ->paragraph(new StylePatch(fontSizePt: 10.0))
+            ->class('lead', new StylePatch(fontSizePt: 14.0));
+
+        $p = (new StyleResolver($sheet))->resolveBlock(
+            new Paragraph('x', new StylePatch(class: 'lead')),
+            Style::default(),
+        );
+
+        self::assertSame(14.0, $p->fontSizePt);
+    }
+
+    public function test_the_nodes_own_patch_beats_the_class_rule(): void
+    {
+        $sheet = (new Stylesheet())->class('lead', new StylePatch(fontSizePt: 14.0));
+
+        $p = (new StyleResolver($sheet))->resolveBlock(
+            new Paragraph('x', new StylePatch(fontSizePt: 20.0, class: 'lead')),
+            Style::default(),
+        );
+
+        self::assertSame(20.0, $p->fontSizePt);
+    }
+
+    public function test_with_two_classes_the_one_listed_later_wins(): void
+    {
+        $sheet = (new Stylesheet())
+            ->class('lead', new StylePatch(fontSizePt: 14.0))
+            ->class('callout', new StylePatch(fontSizePt: 18.0));
+
+        $p = (new StyleResolver($sheet))->resolveBlock(
+            new Paragraph('x', new StylePatch(class: 'callout lead')),
+            Style::default(),
+        );
+
+        self::assertSame(14.0, $p->fontSizePt, 'the class listed last in the attribute wins');
+    }
+
+    public function test_a_class_with_no_matching_rule_is_a_no_op(): void
+    {
+        $resolver = new StyleResolver(new Stylesheet());
+
+        $tagged = $resolver->resolveBlock(new Paragraph('x', new StylePatch(class: 'ghost')), Style::default());
+        $plain = $resolver->resolveBlock(new Paragraph('x'), Style::default());
+
+        self::assertEquals($plain, $tagged);
     }
 }

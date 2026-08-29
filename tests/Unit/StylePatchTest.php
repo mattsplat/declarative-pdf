@@ -106,5 +106,29 @@ final class StylePatchTest extends TestCase
         self::assertFalse((new StylePatch(fontSizePt: 0.0))->isEmpty());
         self::assertFalse((new StylePatch(fontFamily: ''))->isEmpty());
         self::assertFalse((new StylePatch(underline: false))->isEmpty());
+
+        // `class` counts: a class-only patch must survive as a node's patch() so
+        // the measurer wraps a component body in the Container carrying it.
+        self::assertFalse((new StylePatch(class: 'lead'))->isEmpty());
+    }
+
+    public function test_apply_to_ignores_the_class_field(): void
+    {
+        $out = (new StylePatch(class: 'lead'))->applyTo(Style::default());
+
+        self::assertEquals(Style::default(), $out);
+    }
+
+    public function test_stylesheet_class_rules_do_not_collide_with_type_selectors(): void
+    {
+        $typeRule = new StylePatch(fontSizePt: 10.0);
+        $classRule = new StylePatch(fontSizePt: 14.0);
+
+        $sheet = (new Stylesheet())
+            ->paragraph($typeRule)
+            ->class('paragraph', $classRule);
+
+        self::assertSame($typeRule, $sheet->get('paragraph'), 'the node-type rule is untouched');
+        self::assertSame($classRule, $sheet->get('.paragraph'), 'the class rule lives under a namespaced key');
     }
 }
