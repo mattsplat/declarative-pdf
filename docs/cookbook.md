@@ -264,7 +264,8 @@ $p->path(Path::of([
 
 ### A bar chart from rectangles
 
-There is no chart layer yet; one `place()` per bar is all it takes.
+For a data chart, reach for the [`Chart`](#charts) node below. To hand-place
+bars — a one-off shape, a custom mark — one `place()` per bar is all it takes.
 
 ```php
 $values = ['Q1' => 32, 'Q2' => 58, 'Q3' => 41, 'Q4' => 76];
@@ -286,6 +287,49 @@ $p->place(22, $top + $height, 152, 1, [
 `ShrinkMode::None` keeps the shape at its stated size; the default `Scale`
 would shrink content taller than its area. `examples/shapes.php` is the whole
 thing.
+
+## Charts
+
+`Chart` is a fixed-size block node drawn entirely from `Path`s and text: it
+stacks in flow or drops into a `place()` area like a `Path`, and it never
+splits across a page. The factories take a list of `Series` (label, values,
+optional colour); a `Series` colour left null is filled from a built-in
+palette by position, so output stays deterministic.
+
+```php
+use Pdf\Chart\{LegendPosition, Series};
+use Pdf\Node\Chart;
+
+$quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+
+$p->chart(Chart::bar(
+    [Series::of('Revenue', [32, 58, 41, 76]), Series::of('Cost', [21, 30, 27, 44])],
+    $quarters,
+    width: 150,
+    height: 60,
+    legend: LegendPosition::Bottom,
+));
+
+$p->chart(Chart::line([Series::of('Sessions', [120, 145, 138, 172, 190])], $quarters));
+$p->chart(Chart::pie([45, 25, 18, 12], ['Direct', 'Search', 'Social', 'Referral']));
+```
+
+Bar and line get a nice-number value axis (rounded to a 1 / 2 / 5 step),
+tick and category labels, and an optional legend (`LegendPosition::Top`,
+`Bottom`, `Right` or `None`). A bar axis always includes zero; a line axis
+fits the data. Sizes are in the page's units — pass `unit:` to change that.
+
+A **sparkline** is a bare trend line — no axes, labels or legend — sized in
+points by default so it sits next to a number:
+
+```php
+use Pdf\Color\Color;
+
+$p->paragraph('Revenue, last eight weeks:');
+$p->chart(Chart::sparkline([12, 15, 11, 19, 17, 22, 20, 26], 140, 20, Color::fromHex('#2f6fbf')));
+```
+
+`examples/chart.php` renders all four kinds.
 
 ## Large-format sheets laid out in areas
 

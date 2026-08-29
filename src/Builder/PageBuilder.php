@@ -18,6 +18,7 @@ use Pdf\Layout\Measurer;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
+use Pdf\Node\Chart;
 use Pdf\Node\Columns;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
@@ -210,6 +211,12 @@ final class PageBuilder
     public function path(Path $path): self
     {
         return $this->add($path);
+    }
+
+    /** Add a data chart — see {@see Chart::bar()} / `line()` / `pie()` / `sparkline()`. */
+    public function chart(Chart $chart): self
+    {
+        return $this->add($chart);
     }
 
     public function pageBreak(): self

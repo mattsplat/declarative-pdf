@@ -16,7 +16,8 @@ geometric or font-size fit), page-number and watermark helpers, public text /
 block measurement helpers
 (`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
 reusable `Component` nodes, vector drawing (`Path` with solid fill / stroke),
-and a pure-PHP single-page PDF importer emitting vector Form XObjects.
+data charts (`Pdf\Node\Chart` — bar / line / pie / sparkline on the `Path`
+API), and a pure-PHP single-page PDF importer emitting vector Form XObjects.
 
 The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
 OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -133,11 +134,24 @@ What is left:
   for placed areas.
 - Rounded rectangles, polylines and arcs as further factories — **S**.
 
-### Charts / sparklines — **M**
+### Charts / sparklines — **done**
 
-Not core, but a thin `Pdf\Chart` built on the (now shipped) path API: bar,
-line, pie, sparkline — axes, ticks, labels and a legend. Deterministic, no
-external deps. `examples/shapes.php` hand-builds a bar chart today.
+`Pdf\Node\Chart` is a fixed-size block node built entirely on the `Path`
+primitive and text: `Chart::bar()`, `Chart::line()`, `Chart::pie()` and
+`Chart::sparkline()`, taking one or more `Pdf\Chart\Series` (label, values,
+optional colour). Bar and line draw a nice-number value axis
+(`Pdf\Chart\Scale`, Heckbert's algorithm), tick + category labels and an
+optional legend (`LegendPosition`); pie is polygon slices with a legend;
+a sparkline is a bare trend line. Series colours default from
+`Pdf\Chart\Palette` by position, so output is deterministic with no palette
+choice. It never splits — like a `Path`, it moves whole to the next page.
+See `examples/chart.php`. What is left:
+
+- **Stacked / 100 % bars, area fill, scatter, donut** — **S each**.
+- **Second value axis, log scale, explicit axis bounds / tick count** — **S**.
+- **Data labels on points and bars, value formatting callbacks** — **S**.
+- `examples/shapes.php` still hand-builds a bar chart from raw `Path`s on
+  purpose — it is the worked example of composing the primitive.
 
 ### Transparency & blend modes — **S**
 
@@ -474,13 +488,12 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 ## Suggested near-term order
 
 1. **Gradients + clipping paths** (M) — the rest of the drawing story now that
-   solid-paint `Path` has shipped.
-2. **Charts / sparklines** (M) — a thin layer on the path API.
-3. **AcroForm fields with generated appearance streams** (L) — works in every
+   solid-paint `Path` and `Chart` have shipped.
+2. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
-4. **Document / field JavaScript** (M) — opt-in layer on top of #3 for Acrobat
+3. **Document / field JavaScript** (M) — opt-in layer on top of #2 for Acrobat
    workflows, with the viewer-support caveat documented.
-5. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+4. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-6. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+5. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

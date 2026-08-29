@@ -92,6 +92,7 @@ sheet, centred on the whole page and rotated; `opacity` below 1 emits an
 | `spacer(float $height, Unit = Mm)` | `Spacer` |
 | `rule(float $thicknessPt = 0.5, ?Color = null)` | `Rule` |
 | `path(Path)` | `Path` — vector linework; see [`Pdf\Node\Path`](#pdfnodepath) |
+| `chart(Chart)` | `Chart` — bar / line / pie / sparkline; see [`Pdf\Node\Chart`](#pdfnodechart) |
 | `pageBreak()` | `PageBreak` |
 | `anchor(string $name)` | `Anchor` (internal-link target) |
 | `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI |
@@ -218,6 +219,34 @@ is `Miter` / `Round` / `Bevel`.
 A path never splits across a page break. Gradients, clipping paths, dash
 arrays and per-subpath paint are not implemented — see
 [the roadmap](roadmap.md#vector-drawing).
+
+### `Pdf\Node\Chart`
+
+A fixed-size data chart drawn from `Path`s and text. It occupies a stated
+`width` × `height` box in block flow or in a `place()` area, and — like a
+`Path` — never splits across a page. Series colours left null are filled from
+`Pdf\Chart\Palette` by position, keeping output deterministic.
+
+```php
+Chart::bar(iterable<Series>, iterable<string> $categories = [], float $width = 120, float $height = 70,
+           Unit = Mm, LegendPosition = None, StylePatch = new)
+Chart::line(iterable<Series>, iterable<string> $categories = [], float $width = 120, float $height = 70,
+            Unit = Mm, LegendPosition = None, StylePatch = new)
+Chart::pie(iterable<float> $values, iterable<string> $labels = [], float $size = 70,
+           Unit = Mm, LegendPosition = Right, StylePatch = new)
+Chart::sparkline(iterable<float> $values, float $width = 120, float $height = 22, ?Color = null,
+                 Unit = Pt, StylePatch = new)
+```
+
+`Pdf\Chart\Series` is `new Series(string $label, iterable<float> $values, ?Color = null)`
+(or `Series::of(...)`). `LegendPosition` is `None` / `Top` / `Bottom` / `Right`.
+
+Bar and line draw a value axis rounded to a nice 1 / 2 / 5 step
+(`Pdf\Chart\Scale`), tick labels, category labels and the legend. A bar axis
+always spans zero; a line axis fits the data. A pie is polygon slices; a
+sparkline is just the trend line with a dot at the last point. Stacked bars,
+area fill, log / dual axes and data labels are not implemented — see
+[the roadmap](roadmap.md#charts--sparklines--done).
 
 ### `Pdf\Node\Document`, `Page`, `PageMaster`, `Meta`
 
