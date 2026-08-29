@@ -109,8 +109,8 @@ data back (parsing a filled FDF/XFDF) is a separate small parser.
 
 ### Drawing primitives — **M**
 
-A `Canvas`-level drawing API for authoring linework (the plan's top "not yet
-implemented" item). `ContentStream` already emits `re` / `l` / `m` / fill /
+A `Canvas`-level drawing API for authoring linework. `ContentStream` already
+emits `re` / `l` / `m` / fill /
 stroke for borders and rules — this exposes it as a first-class node.
 
 - `Path` node: `moveTo` / `lineTo` / `curveTo` (cubic Bézier `c`) / `close`,
@@ -323,10 +323,12 @@ This is the plan's "shell out to qpdf" item done natively. The parser
 (`Pdf\Import\PdfReader`) already handles xref streams, object streams and
 `/Prev` chains, so the reading half is mostly there.
 
-### Stamping / watermarks / n-up — **M**
+### Stamping imported pages / n-up — **M**
 
-- `$page->stamp('DRAFT', opacity: 0.2, rotate: 45)` — text or image overlay /
-  underlay on imported or generated pages.
+Text/image watermarks on *generated* pages shipped (`PageBuilder::watermark()`).
+What's left:
+
+- Stamp a watermark or overlay/underlay onto pages of an *imported* PDF.
 - N-up: place 2 / 4 / 8 source pages per sheet (booklet imposition, proof
   sheets).
 - Page resize / crop / rotate on import.
@@ -410,8 +412,8 @@ groups (the plan flags "keep-together at scale").
 
 ### Stylesheet class selectors — **S**
 
-The plan's last "not yet implemented" item: `->class('lead')` on a node,
-`(new Stylesheet())->class('lead', $patch)`. `StyleResolver` already has the
+`->class('lead')` on a node, `(new Stylesheet())->class('lead', $patch)` — a
+named rule beside today's per-node-type ones. `StyleResolver` already has the
 hook point between inheritance and inline patch.
 
 ### Markdown → document — **M**
@@ -450,8 +452,8 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 ## Suggested near-term order
 
 1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
-2. **Stylesheet class selectors** (S) — closes the last plan gap.
-3. **Drawing primitives** (M) — unblocks charts, watermarks, better tables.
+2. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
+3. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
 4. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
 5. **Document / field JavaScript** (M) — opt-in layer on top of #4 for Acrobat
