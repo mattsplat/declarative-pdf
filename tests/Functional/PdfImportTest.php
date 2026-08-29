@@ -254,4 +254,39 @@ final class PdfImportTest extends TestCase
 
         Golden::assert('imported.pdf', $pdf);
     }
+
+    public function test_merge_by_stamping_keeps_each_source_page_at_its_size(): void
+    {
+        $renderer = Pdf::deterministicRenderer();
+
+        $wide = tempnam(sys_get_temp_dir(), 'wide') . '.pdf';
+        Document::create()->using($renderer)
+            ->page(fn ($p) => $p->size(PageSize::a4())->landscape()->paragraph('wide'))
+            ->save($wide);
+
+        try {
+            $merged = Document::create()->using($renderer);
+            foreach ([$this->multiPage, $wide] as $path) {
+                $source = PdfImportDocument::fromFile($path);
+                for ($n = 1; $n <= $source->pageCount(); $n++) {
+                    $page = $source->page($n);
+                    $w = $page->widthPt();
+                    $h = $page->heightPt();
+                    $merged->page(fn ($p) => $p
+                        ->size(PageSize::fromUnits($w, $h, Unit::Pt))
+                        ->orientation($w >= $h ? \Pdf\Geometry\Orientation::Landscape : \Pdf\Geometry\Orientation::Portrait)
+                        ->units(Unit::Pt)->margin(0)
+                        ->placePdf(0, 0, $w, $h, $path, $n, Fit::Contain, BoxAlign::Center));
+                }
+            }
+            $pdf = $merged->toString();
+        } finally {
+            @unlink($wide);
+        }
+
+        $multiPageCount = (new PdfImportDocument(PdfReader::fromFile($this->multiPage)))->pageCount();
+        self::assertSame($multiPageCount + 1, preg_match_all('#/Type /Page\b#', $pdf));
+        // the last (landscape) page keeps a wider-than-tall MediaBox
+        self::assertMatchesRegularExpression('#/MediaBox \[0 0 841\.89 595\.28\]#', $pdf);
+    }
 }
