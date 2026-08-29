@@ -278,7 +278,7 @@ Bar and line draw a value axis rounded to a nice 1 / 2 / 5 step
 always spans zero; a line axis fits the data. A pie is polygon slices; a
 sparkline is just the trend line with a dot at the last point. Stacked bars,
 area fill, log / dual axes and data labels are not implemented — see
-[the roadmap](roadmap.md#charts--sparklines--done).
+[the roadmap](roadmap.md#vector-drawing).
 
 ### `Pdf\Node\Document`, `Page`, `PageMaster`, `Meta`
 
