@@ -107,9 +107,9 @@ final class StylePatchTest extends TestCase
         self::assertFalse((new StylePatch(fontFamily: ''))->isEmpty());
         self::assertFalse((new StylePatch(underline: false))->isEmpty());
 
-        // `class` is a selector, not a visual override — it does not count.
-        self::assertTrue((new StylePatch(class: 'lead'))->isEmpty());
-        self::assertFalse((new StylePatch(class: 'lead', bold: true))->isEmpty());
+        // `class` counts: a class-only patch must survive as a node's patch() so
+        // the measurer wraps a component body in the Container carrying it.
+        self::assertFalse((new StylePatch(class: 'lead'))->isEmpty());
     }
 
     public function test_apply_to_ignores_the_class_field(): void
@@ -119,13 +119,16 @@ final class StylePatchTest extends TestCase
         self::assertEquals(Style::default(), $out);
     }
 
-    public function test_stylesheet_class_is_an_alias_for_set(): void
+    public function test_stylesheet_class_rules_do_not_collide_with_type_selectors(): void
     {
-        $patch = new StylePatch(fontSizePt: 14.0);
-        $viaClass = (new Stylesheet())->class('lead', $patch);
-        $viaSet = (new Stylesheet())->set('lead', $patch);
+        $typeRule = new StylePatch(fontSizePt: 10.0);
+        $classRule = new StylePatch(fontSizePt: 14.0);
 
-        self::assertEquals($viaSet, $viaClass);
-        self::assertSame($patch, $viaClass->get('lead'));
+        $sheet = (new Stylesheet())
+            ->paragraph($typeRule)
+            ->class('paragraph', $classRule);
+
+        self::assertSame($typeRule, $sheet->get('paragraph'), 'the node-type rule is untouched');
+        self::assertSame($classRule, $sheet->get('.paragraph'), 'the class rule lives under a namespaced key');
     }
 }

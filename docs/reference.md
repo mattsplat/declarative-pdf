@@ -256,7 +256,7 @@ Every constructor argument is nullable and defaults to `null` ("inherit").
 | `keepWithNext` | `bool` | keep on the same page as the following block |
 | `keepTogether` | `bool` | never split across a page |
 | `orphans` / `widows` | `int` | min lines left behind / carried forward (default 2) |
-| `class` | `string` | space-separated `Stylesheet` class-rule names (`'lead callout'`) the node opts into; a selector, not a visual override — ignored by `isEmpty()` and `applyTo()` |
+| `class` | `string` | space-separated `Stylesheet` class-rule names (`'lead callout'`) the block opts into. **Block-level only** — ignored on an inline run. Not a visual property (`applyTo()` skips it), but a class-only patch is still non-empty |
 
 Helpers: `StylePatch::superscript()`, `StylePatch::subscript()`,
 `StylePatch::none()`. `$patch->applyTo(Style) : Style`.
@@ -279,10 +279,12 @@ base size) and `keepWithNext`.
 ```
 
 Applied by the resolver **between** the built-in defaults and the node's own
-`StylePatch`. A node opts into a class rule with `StylePatch(class: 'lead')`;
-class rules are consulted after the node-type rule (so a class beats the type,
-and a class listed later beats one listed earlier) and before the node's own
-patch.
+`StylePatch`. A block opts into a class rule with `StylePatch(class: 'lead')`
+(a space-separated list is allowed); class rules are consulted after the
+node-type rule (so a class beats the type, and a class listed later beats one
+listed earlier) and before the node's own patch. `class` is block-level — it
+does nothing on an inline run. Class-rule keys are namespaced internally, so
+`->class('table', …)` never clashes with the `table` node-type rule.
 
 ### `Pdf\Style\ColumnWidth`
 

@@ -412,11 +412,12 @@ groups (the plan flags "keep-together at scale").
 
 ### Stylesheet class selectors — **done**
 
-`StylePatch(class: 'lead callout')` on any node, `(new Stylesheet())->class('lead',
-$patch)` for the rule. `StyleResolver::selectorsFor()` appends a node's classes
+`StylePatch(class: 'lead callout')` on any block, `(new Stylesheet())->class('lead',
+$patch)` for the rule. `StyleResolver::selectorsFor()` appends a block's classes
 after its type selector, so a class rule beats the type rule, a later class beats
-an earlier one, and the node's own patch still wins over all of them. `class` is a
-selector, not a visual property — `StylePatch::isEmpty()` ignores it.
+an earlier one, and the node's own patch still wins over all of them. Class-rule
+keys are namespaced (`.lead`) so they can't collide with node-type selectors.
+Block-level only — `resolveInline()` does not consult the stylesheet.
 
 ### Markdown → document — **M**
 

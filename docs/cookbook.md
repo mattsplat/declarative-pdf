@@ -405,8 +405,9 @@ $page->paragraph('A short standfirst.', new StylePatch(class: 'lead'));
 
 Class rules are consulted after the node-type rule — a class beats the type,
 a class listed later beats one listed earlier — and the node's own patch still
-wins over all of them. `class` is a selector, not a visual property: a patch
-that only sets `class` counts as empty.
+wins over all of them. `class` is **block-level**: it does nothing on an inline
+run. `->class('lead', …)` and `->class('table', …)` share no namespace with the
+node-type rules, so a class name may safely match a node type.
 
 ## Reusable components
 

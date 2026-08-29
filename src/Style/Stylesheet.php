@@ -38,11 +38,15 @@ final class Stylesheet
     /**
      * Register a class rule. A node opts in with `StylePatch(class: 'lead')`;
      * class rules are applied after the node-type rule and before the node's
-     * own patch. Thin alias for {@see self::set()}.
+     * own patch.
+     *
+     * Stored under a `.`-prefixed key so a class can never collide with a
+     * node-type selector (`->class('table', …)` must not restyle every table).
+     * The `.` is internal — callers pass the bare name here and on the node.
      */
     public function class(string $name, StylePatch $patch): self
     {
-        return $this->set($name, $patch);
+        return $this->set('.' . $name, $patch);
     }
 
     public function get(string $selector): ?StylePatch

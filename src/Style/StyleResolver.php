@@ -68,8 +68,10 @@ final class StyleResolver
     }
 
     /**
-     * The node-type selector followed by the node's own class names, so a class
-     * rule wins over the type rule and a later class wins over an earlier one.
+     * The node-type selector followed by the node's own class names (each
+     * `.`-prefixed to match {@see Stylesheet::class()}'s namespaced keys), so a
+     * class rule wins over the type rule and a later class wins over an earlier
+     * one.
      *
      * @return list<string>
      */
@@ -88,7 +90,7 @@ final class StyleResolver
         if ($class !== null) {
             foreach (preg_split('/\s+/', trim($class)) ?: [] as $name) {
                 if ($name !== '') {
-                    $selectors[] = $name;
+                    $selectors[] = '.' . $name;
                 }
             }
         }
