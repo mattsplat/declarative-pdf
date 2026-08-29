@@ -335,3 +335,75 @@ Document::create()->stylesheet($sheet)->page(...)->save('out.pdf');
 ```
 
 Rules apply between the built-in defaults and each node's own `StylePatch`.
+
+## Reusable components
+
+Subclass `Component`: take your parameters in the constructor, return the tree
+from `body()`. A non-empty `patch()` frames the body like an implicit
+`Container` (padding, border, background, inherited style).
+
+```php
+use Pdf\Node\{Component, BlockNode, Paragraph, Rule};
+use Pdf\Style\{Border, StylePatch};
+use Pdf\Color\Color;
+use Pdf\Geometry\Edges;
+
+final readonly class Callout extends Component
+{
+    public function __construct(private string $text) {}
+
+    public function body(): BlockNode
+    {
+        return new Paragraph($this->text, new StylePatch(fontSizePt: 10));
+    }
+
+    public function patch(): StylePatch
+    {
+        return new StylePatch(
+            paddingPt: Edges::all(8),
+            background: Color::rgb(255, 245, 150),
+            border: Border::uniform(0.5, Color::gray(180)),
+            keepTogether: true,
+        );
+    }
+}
+```
+
+A component takes a **slot** by accepting child blocks — `body()` can `yield`:
+
+```php
+final readonly class Card extends Component
+{
+    /** @param iterable<BlockNode> $content */
+    public function __construct(private string $title, private iterable $content) {}
+
+    public function body(): iterable
+    {
+        yield new Paragraph($this->title, new StylePatch(bold: true, fontSizePt: 13, spaceAfterPt: 4));
+        yield new Rule(0.5, Color::gray(200));
+        yield from $this->content;
+    }
+
+    public function patch(): StylePatch
+    {
+        return new StylePatch(paddingPt: Edges::all(12), border: Border::uniform(0.75));
+    }
+}
+```
+
+Use one anywhere a block goes — page flow, a `Container`, a `TableCell`, a
+`place()` area:
+
+```php
+$p->component(new Callout('Payment due within 30 days.'));
+$p->component(new Card('Line items', [
+    new Paragraph('Design — $1,200'),
+    new Paragraph('Build — $4,800'),
+]));
+// nest, and re-style from the outside with a Container:
+$p->container([new Callout('Thanks!')], new StylePatch(spaceBeforePt: 20));
+```
+
+`body()` is called more than once per render (intrinsic sizing, each pagination
+pass) — keep it pure. A component whose `body()` reaches itself raises a
+`LayoutException` instead of recursing forever.

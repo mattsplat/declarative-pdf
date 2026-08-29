@@ -24,6 +24,7 @@ use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
 use Pdf\Node\Columns;
+use Pdf\Node\Component;
 use Pdf\Node\Container;
 use Pdf\Node\Heading;
 use Pdf\Node\ImageBlock;
@@ -52,6 +53,15 @@ use Pdf\Text\InlineSequence;
  */
 final class Measurer
 {
+    /** Guards against a {@see Component} whose `body()` reaches itself. */
+    /**
+     * The {@see Component}s currently being expanded, keyed by object id — a
+     * transient guard against a `body()` that reaches itself. Never emitted.
+     *
+     * @var array<int, true>
+     */
+    private array $componentPath = [];
+
     public function __construct(
         private readonly StyleResolver $styles,
         private readonly FontRegistry $fonts,
@@ -125,8 +135,32 @@ final class Measurer
             $node instanceof Columns => $this->measureColumns($node, $widthPt, $parentStyle),
             $node instanceof Table => $this->measureTable($node, $widthPt, $parentStyle),
             $node instanceof Anchor => new AnchorBox($node->name),
+            $node instanceof Component => $this->measureComponent($node, $widthPt, $parentStyle),
             default => throw new LayoutException('Unsupported block node: ' . $node::class),
         };
+    }
+
+    private function measureComponent(Component $node, float $widthPt, Style $parentStyle): Box
+    {
+        $id = spl_object_id($node);
+        if (isset($this->componentPath[$id])) {
+            throw new LayoutException(sprintf('Component %s expands to itself.', $node::class));
+        }
+
+        $this->componentPath[$id] = true;
+        try {
+            $body = $node->body();
+            $children = $body instanceof BlockNode ? [$body] : $body;
+            $patch = $node->patch();
+
+            // A non-empty patch wraps the body like an implicit Container, so
+            // padding / border / background / inheritance all reuse that path.
+            return $patch->isEmpty()
+                ? $this->measureStack($children, $widthPt, $parentStyle)
+                : $this->measureContainer(new Container($children, $patch), $widthPt, $parentStyle);
+        } finally {
+            unset($this->componentPath[$id]);
+        }
     }
 
     private function measureText(Heading|Paragraph $node, float $widthPt, Style $parentStyle): TextBox
