@@ -53,7 +53,13 @@ final readonly class StylePatch
     /** True when this patch overrides nothing — every field is `null`. */
     public function isEmpty(): bool
     {
-        return $this == self::none();
+        foreach (get_object_vars($this) as $value) {
+            if ($value !== null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** Superscript: smaller text raised above the baseline. */

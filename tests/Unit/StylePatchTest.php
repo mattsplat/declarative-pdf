@@ -94,4 +94,17 @@ final class StylePatchTest extends TestCase
 
         self::assertEquals(Style::default(), $out);
     }
+
+    public function test_is_empty_is_true_only_when_every_field_is_null(): void
+    {
+        self::assertTrue((new StylePatch())->isEmpty());
+        self::assertTrue(StylePatch::none()->isEmpty());
+
+        // A field set to a falsy-but-not-null value is still an override.
+        self::assertFalse((new StylePatch(bold: false))->isEmpty());
+        self::assertFalse((new StylePatch(keepTogether: false))->isEmpty());
+        self::assertFalse((new StylePatch(fontSizePt: 0.0))->isEmpty());
+        self::assertFalse((new StylePatch(fontFamily: ''))->isEmpty());
+        self::assertFalse((new StylePatch(underline: false))->isEmpty());
+    }
 }

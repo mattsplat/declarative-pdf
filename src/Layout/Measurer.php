@@ -54,7 +54,13 @@ use Pdf\Text\InlineSequence;
 final class Measurer
 {
     /** Guards against a {@see Component} whose `body()` reaches itself. */
-    private int $componentDepth = 0;
+    /**
+     * The {@see Component}s currently being expanded, keyed by object id — a
+     * transient guard against a `body()` that reaches itself. Never emitted.
+     *
+     * @var array<int, true>
+     */
+    private array $componentPath = [];
 
     public function __construct(
         private readonly StyleResolver $styles,
@@ -136,22 +142,24 @@ final class Measurer
 
     private function measureComponent(Component $node, float $widthPt, Style $parentStyle): Box
     {
-        if ($this->componentDepth >= 64) {
-            throw new LayoutException(sprintf('Component %s expands too deeply — a cycle?', $node::class));
+        $id = spl_object_id($node);
+        if (isset($this->componentPath[$id])) {
+            throw new LayoutException(sprintf('Component %s expands to itself.', $node::class));
         }
 
-        $this->componentDepth++;
+        $this->componentPath[$id] = true;
         try {
             $body = $node->body();
             $children = $body instanceof BlockNode ? [$body] : $body;
+            $patch = $node->patch();
 
             // A non-empty patch wraps the body like an implicit Container, so
             // padding / border / background / inheritance all reuse that path.
-            return $node->patch()->isEmpty()
+            return $patch->isEmpty()
                 ? $this->measureStack($children, $widthPt, $parentStyle)
-                : $this->measureContainer(new Container($children, $node->patch()), $widthPt, $parentStyle);
+                : $this->measureContainer(new Container($children, $patch), $widthPt, $parentStyle);
         } finally {
-            $this->componentDepth--;
+            unset($this->componentPath[$id]);
         }
     }
 

@@ -74,20 +74,31 @@ final class ComponentTest extends TestCase
         self::assertStringContainsString('(inner) Tj', $text);
     }
 
-    public function test_a_component_with_no_patch_is_transparent(): void
+    public function test_a_component_with_no_patch_splices_its_body_in_byte_identically(): void
     {
-        $bare = new readonly class extends Component {
-            public function body(): BlockNode
+        $renderer = Pdf::deterministicRenderer();
+
+        $wrapper = new readonly class extends Component {
+            public function body(): iterable
             {
-                return new Paragraph('bare');
+                yield new Paragraph('alpha', new StylePatch(bold: true));
+                yield new Paragraph('beta');
             }
         };
 
-        $pdf = Document::create()->using(Pdf::deterministicRenderer())
-            ->page(fn ($p) => $p->component($bare))
+        $viaComponent = Document::create()->using($renderer)
+            ->page(fn ($p) => $p->paragraph('before')->component($wrapper)->paragraph('after'))
             ->toString();
 
-        self::assertStringContainsString('(bare) Tj', Pdf::contentText($pdf));
+        $viaHand = Document::create()->using($renderer)
+            ->page(fn ($p) => $p
+                ->paragraph('before')
+                ->paragraph('alpha', new StylePatch(bold: true))
+                ->paragraph('beta')
+                ->paragraph('after'))
+            ->toString();
+
+        self::assertSame($viaHand, $viaComponent);
     }
 
     public function test_a_cyclic_component_fails_loud(): void
