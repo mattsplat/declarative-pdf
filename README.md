@@ -148,12 +148,13 @@ Implemented:
 Not yet implemented (see [`docs/roadmap.md`](docs/roadmap.md) for the full list,
 sized and prioritised):
 
-- gradients, clipping paths and dash arrays (solid-paint `Path` has shipped)
+- dash arrays, per-subpath paint and node transforms (solid + gradient `Path`,
+  clipping and charts have shipped)
 - full document-to-document PDF merge (bookmarks, links, forms) — shell out to
   `qpdf` for that; the built-in importer is single-page-as-XObject
-- outlines / bookmarks, tagged PDF / PDF-A, font subsetting, encryption
+- font subsetting for CFF, tagged PDF / PDF-A, XMP metadata, encryption
 - import from encrypted PDFs
-- stylesheet *class* selectors (per-node `StylePatch` covers the same need today)
+- FDF / XFDF read and write (the native submit / reset buttons already exist)
 
 ## Development
 
@@ -161,7 +162,7 @@ sized and prioritised):
 composer install
 composer test        # phpunit  (306 tests)
 composer stan        # phpstan  (level 6)
-php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet shapes chart watermark merge form form-calc
+php examples/showcase.php  # the grand tour; also: hello report media table styled html custom-font sheet detail-sheet shapes chart watermark merge form form-calc
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
 ```
 

@@ -4,66 +4,158 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
+use Pdf\Chart\LegendPosition;
+use Pdf\Chart\Series;
 use Pdf\Color\Color;
 use Pdf\Document;
 use Pdf\Geometry\Edges;
+use Pdf\Geometry\Unit;
 use Pdf\Layout\PageContext;
+use Pdf\Node\Chart;
 use Pdf\Node\Paragraph;
+use Pdf\Node\Table;
+use Pdf\Node\TableCell;
+use Pdf\Node\TableRow;
 use Pdf\Style\Border;
+use Pdf\Style\ColumnWidth;
 use Pdf\Style\StylePatch;
 use Pdf\Style\TextAlign;
 
-Document::create()
-    ->meta(fn ($m) => $m->title('Phase 2 Report')->author('declarative-pdf'))
-    ->page(function ($p) {
-        $p->header(fn (PageContext $c) => new Paragraph(
-            "Phase 2 Report",
-            new StylePatch(fontSizePt: 9.0, color: Color::gray(120), spaceAfterPt: 0.0),
-        ));
-        $p->footer(fn (PageContext $c) => new Paragraph(
-            "Page {$c->pageNumber} of {$c->pageCount}",
-            new StylePatch(fontSizePt: 9.0, color: Color::gray(120), align: TextAlign::Center, spaceAfterPt: 0.0),
-        ));
+/*
+ * A multi-page report: running header and footer, a bookmark outline built
+ * from anchors, callout containers that split cleanly across pages, lists, a
+ * data table with a totals row, and an embedded chart.
+ */
 
-        $p->heading(1, 'Multi-page pagination');
-        for ($i = 1; $i <= 6; $i++) {
-            $p->heading(3, "Section {$i}");
-            $p->paragraph(str_repeat(
-                "This is a body paragraph that exists only to consume vertical space so the "
-                . "document flows onto several pages. Sentence {$i}. ",
-                6,
-            ), new StylePatch(align: TextAlign::Justify));
-        }
+$navy = Color::rgb(19, 33, 68);
+$accent = Color::rgb(64, 120, 200);
+$muted = Color::gray(115);
 
-        $p->heading(2, 'A callout box');
-        $p->container([
-            new Paragraph('This container has padding, a border and a tinted background, and it '
-                . 'splits cleanly if it happens to straddle a page boundary.'),
-        ], new StylePatch(
-            paddingPt: Edges::all(8.0),
-            border: Border::uniform(0.75, Color::gray(160)),
-            background: Color::rgb(245, 245, 250),
-            spaceBeforePt: 8.0,
-            spaceAfterPt: 8.0,
-        ));
+$callout = static fn (string $title, string $body): array => [
+    new Paragraph($title, new StylePatch(bold: true, color: $navy, spaceAfterPt: 3.0)),
+    new Paragraph($body),
+];
+$calloutPatch = new StylePatch(
+    paddingPt: Edges::all(10.0),
+    border: new Border(new Edges(0.0, 0.0, 0.0, 3.0), $accent),
+    background: Color::rgb(244, 247, 252),
+    spaceBeforePt: 10.0,
+    spaceAfterPt: 10.0,
+);
 
-        $p->heading(2, 'Lists');
-        $p->bulletList([
-            'First bullet point.',
-            'Second bullet point, long enough to wrap onto a second line so you can check '
-                . 'that the continuation lines align under the text and not the marker.',
-            'Third bullet point.',
+$doc = Document::create()
+    ->meta(fn ($m) => $m
+        ->title('Phase 2 Report')
+        ->author('declarative-pdf')
+        ->subject('Layout engine, quarter in review'))
+    ->pageNumbers('Page {n} of {N}', TextAlign::Center, 8.5, $muted)
+    ->bookmark('Summary', 'summary', 0)
+    ->bookmark('Throughput', 'throughput', 0)
+    ->bookmark('Risks', 'risks', 1)
+    ->bookmark('Detail tables', 'tables', 0)
+    ->bookmark('Appendix', 'appendix', 0);
+
+$doc->page(function ($p) use ($navy, $accent, $muted, $callout, $calloutPatch): void {
+    $p->header(fn (PageContext $c) => new Paragraph(
+        'PHASE 2 REPORT   |   CONFIDENTIAL',
+        new StylePatch(fontSizePt: 7.5, color: $muted, spaceAfterPt: 0.0),
+    ));
+
+    $p->anchor('summary');
+    $p->heading(1, 'Phase 2 report', new StylePatch(color: $navy));
+    $p->paragraph(
+        'The layout engine reached feature parity with the imperative baseline '
+        . 'this quarter and moved ahead of it: real pagination, automatic table '
+        . 'sizing, embedded fonts, vector drawing, charts and interactive forms '
+        . 'all landed.',
+        new StylePatch(align: TextAlign::Justify, lineHeight: 1.45, spaceAfterPt: 8.0),
+    );
+
+    $p->container($callout(
+        'Headline',
+        'Every document in the example suite now renders through one code path, '
+        . 'and the golden-file tests lock the output byte-for-byte.',
+    ), $calloutPatch);
+
+    $p->anchor('throughput');
+    $p->heading(2, 'Throughput', new StylePatch(color: $navy));
+    $p->paragraph('Tests and rendered examples, by month:', new StylePatch(spaceAfterPt: 4.0));
+    $p->chart(Chart::bar(
+        [
+            Series::of('Tests', [162, 198, 239, 306], $accent),
+            Series::of('Examples', [9, 11, 12, 16], Color::rgb(150, 180, 220)),
+        ],
+        ['May', 'Jun', 'Jul', 'Aug'],
+        150.0,
+        52.0,
+        Unit::Mm,
+        LegendPosition::Bottom,
+    ));
+
+    $p->anchor('risks');
+    $p->heading(3, 'Risks', new StylePatch(color: Color::gray(70)));
+    $p->bulletList([
+        'CFF fonts still embed whole; subsetting is the next size win.',
+        'PDF JavaScript reaches only Acrobat — calculators must degrade to a '
+            . 'usable blank form everywhere else.',
+        'The importer is single-page; a true document merge is planned.',
+    ]);
+
+    $p->pageBreak();
+
+    $p->anchor('tables');
+    $p->heading(2, 'Detail tables', new StylePatch(color: $navy));
+    $p->paragraph('A table sizes its columns to content and repeats its header on '
+        . 'every page it spans. Numeric columns are right-aligned; the last row is '
+        . 'a total.', new StylePatch(spaceAfterPt: 6.0));
+
+    $lines = [
+        ['Measurer', 41, 1.9],
+        ['LineBreaker', 33, 1.1],
+        ['Paginator', 58, 3.4],
+        ['TableLayout', 44, 2.2],
+        ['DocumentRenderer', 96, 5.1],
+    ];
+    $rows = [
+        new TableRow([
+            new TableCell('Component'),
+            new TableCell('Tests', patch: new StylePatch(align: TextAlign::Right)),
+            new TableCell('kLOC', patch: new StylePatch(align: TextAlign::Right)),
+        ]),
+    ];
+    $totalTests = 0;
+    $totalLoc = 0.0;
+    foreach ($lines as [$name, $tests, $loc]) {
+        $totalTests += $tests;
+        $totalLoc += $loc;
+        $rows[] = new TableRow([
+            new TableCell($name),
+            new TableCell((string) $tests, patch: new StylePatch(align: TextAlign::Right)),
+            new TableCell(number_format($loc, 1), patch: new StylePatch(align: TextAlign::Right)),
         ]);
-        $p->orderedList([
-            'Step one.',
-            'Step two.',
-            'Step three.',
-        ]);
+    }
+    $rows[] = new TableRow([
+        new TableCell('Total', patch: new StylePatch(bold: true)),
+        new TableCell((string) $totalTests, patch: new StylePatch(bold: true, align: TextAlign::Right)),
+        new TableCell(number_format($totalLoc, 1), patch: new StylePatch(bold: true, align: TextAlign::Right)),
+    ]);
 
-        $p->pageBreak();
-        $p->heading(2, 'After an explicit page break');
-        $p->paragraph('This heading was forced onto a fresh page by a PageBreak node.');
-    })
-    ->save(__DIR__ . '/report.pdf');
+    $p->add(new Table(
+        $rows,
+        [ColumnWidth::fraction(1.0), ColumnWidth::fixed(60.0), ColumnWidth::fixed(60.0)],
+        headerRows: 1,
+        headerBackground: Color::rgb(230, 236, 245),
+    ));
 
-echo "Wrote " . __DIR__ . "/report.pdf\n";
+    $p->anchor('appendix');
+    $p->heading(2, 'Appendix', new StylePatch(color: $navy, spaceBeforePt: 16.0));
+    $p->orderedList([
+        'Methodology: counts taken from composer test and the examples/ folder.',
+        'All figures exclude vendor/ and generated fixtures.',
+        'Prior-quarter numbers restated to the new component boundaries.',
+    ]);
+});
+
+$doc->save(__DIR__ . '/report.pdf');
+
+echo 'Wrote ' . __DIR__ . "/report.pdf\n";
