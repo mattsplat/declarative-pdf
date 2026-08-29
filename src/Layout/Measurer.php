@@ -8,6 +8,7 @@ use Pdf\Exception\LayoutException;
 use Pdf\Font\FontRegistry;
 use Pdf\Image\ImageFactory;
 use Pdf\Layout\Box\AnchorBox;
+use Pdf\Layout\Box\ChartBox;
 use Pdf\Layout\Box\ColumnsBox;
 use Pdf\Layout\Box\ContainerBox;
 use Pdf\Layout\Box\ImageBox;
@@ -24,6 +25,7 @@ use Pdf\Layout\Box\TextBox;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
+use Pdf\Node\Chart;
 use Pdf\Node\Columns;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
@@ -132,6 +134,7 @@ final class Measurer
             $node instanceof PageBreak => new PageBreakBox(),
             $node instanceof Rule => $this->measureRule($node, $parentStyle),
             $node instanceof Path => $this->measurePath($node, $parentStyle),
+            $node instanceof Chart => $this->measureChart($node, $parentStyle),
             $node instanceof Container => $this->measureContainer($node, $widthPt, $parentStyle),
             $node instanceof BulletList, $node instanceof OrderedList => $this->measureList($node, $widthPt, $parentStyle),
             $node instanceof ImageBlock => $this->measureImage($node, $widthPt, $parentStyle),
@@ -212,6 +215,29 @@ final class Measurer
             $node->widthPt,
             $node->heightPt,
             $node->paint,
+            $style->spaceBeforePt,
+            $style->spaceAfterPt,
+        );
+    }
+
+    private function measureChart(Chart $node, Style $parentStyle): ChartBox
+    {
+        $style = $this->styles->resolveBlock($node, $parentStyle);
+        $font = $this->fonts->use($style->fontFamily, $style->fontFace);
+
+        return new ChartBox(
+            $node->kind,
+            $node->series,
+            $node->categories,
+            $node->widthPt,
+            $node->heightPt,
+            $node->legend,
+            $node->axes,
+            $font,
+            // Axis and legend text is captioning: a notch below body size, floored
+            // so it stays legible, and never larger than the resolved size.
+            max(6.0, min($style->fontSizePt * 0.7, 9.0)),
+            $style->color,
             $style->spaceBeforePt,
             $style->spaceAfterPt,
         );

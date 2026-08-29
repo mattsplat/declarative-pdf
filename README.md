@@ -116,6 +116,10 @@ Implemented:
   `close`, solid fill and stroke, nonzero / even-odd fill rule, cap and join;
   `Path::line()` / `rectangle()` / `ellipse()` / `polygon()` factories. A block
   node, so it flows or goes in a `place()` rectangle (`examples/shapes.php`).
+- **Charts** — `Pdf\Node\Chart`: `Chart::bar()` / `line()` / `pie()` /
+  `sparkline()`, one or more `Series`, a nice-number value axis, tick and
+  category labels, an optional legend. A thin layer on `Path` — deterministic,
+  no dependencies (`examples/chart.php`).
 - **PDF page import** — `$page->placePdf('drawing.pdf', page: 1)` imports one
   page of an external (trusted, unencrypted) PDF as a **vector Form XObject**,
   copying its fonts/images/resources. `Pdf\Import\PdfReader` handles classic
@@ -148,9 +152,9 @@ sized and prioritised):
 
 ```
 composer install
-composer test        # phpunit  (239 tests)
+composer test        # phpunit  (258 tests)
 composer stan        # phpstan  (level 6)
-php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet shapes watermark merge
+php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet shapes chart watermark merge
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
 ```
 
