@@ -95,11 +95,14 @@ final class DocumentRenderer
             }
         }
 
-        // --- Pass A: render content streams, collect links + anchors ---
+        // --- Pass A: render content streams, collect links + anchors + shadings ---
+        $namer = new ResourceNamer();
+        /** @var list<ShadingResource> $shadings */
+        $shadings = [];
         /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered */
         $rendered = [];
         foreach ($pages as $page) {
-            $stream = new ContentStream($page->geometry);
+            $stream = new ContentStream($page->geometry, namer: $namer);
             $content = $page->geometry->contentBox();
 
             if ($page->watermark !== null && !$page->watermark->overlay) {
@@ -111,11 +114,15 @@ final class DocumentRenderer
             $page->footer?->render($stream, $content->x, $page->footerTopPt, $content->width);
 
             foreach ($page->areas as $area) {
-                $this->renderArea($stream, $page->geometry, $area);
+                $this->renderArea($stream, $page->geometry, $area, $namer);
             }
 
             if ($page->watermark !== null && $page->watermark->overlay) {
                 $this->renderWatermark($stream, $page->geometry, $page->watermark, $fonts);
+            }
+
+            foreach ($stream->collectedShadings() as $shading) {
+                $shadings[] = $shading;
             }
 
             $rendered[] = [
@@ -222,6 +229,16 @@ final class DocumentRenderer
             $gsObjects[$name] = $object;
         }
 
+        // Shading objects for gradient-filled paths.
+        /** @var array<string, int> $shadingObjects  shading name => object number */
+        $shadingObjects = [];
+        foreach ($shadings as $shading) {
+            $shading->objectNumber = $writer->beginObject();
+            $writer->line($shading->dictionary);
+            $writer->endObject();
+            $shadingObjects[$shading->name] = $shading->objectNumber;
+        }
+
         // Resource dictionary (object 2).
         $writer->beginObject(2);
         $writer->line('<<');
@@ -242,6 +259,13 @@ final class DocumentRenderer
         if ($gsObjects !== []) {
             $writer->line('/ExtGState <<');
             foreach ($gsObjects as $name => $object) {
+                $writer->line('/' . $name . ' ' . $object . ' 0 R');
+            }
+            $writer->line('>>');
+        }
+        if ($shadingObjects !== []) {
+            $writer->line('/Shading <<');
+            foreach ($shadingObjects as $name => $object) {
                 $writer->line('/' . $name . ' ' . $object . ' 0 R');
             }
             $writer->line('>>');
@@ -413,8 +437,12 @@ final class DocumentRenderer
         return $rootObject;
     }
 
-    private function renderArea(ContentStream $stream, PageGeometry $geometry, \Pdf\Layout\PlacedArea $area): void
-    {
+    private function renderArea(
+        ContentStream $stream,
+        PageGeometry $geometry,
+        \Pdf\Layout\PlacedArea $area,
+        ResourceNamer $namer,
+    ): void {
         $rect = $area->rectPt;
         $rw = $rect->width;
         $rh = $rect->height;
@@ -433,7 +461,7 @@ final class DocumentRenderer
         }
 
         if ($area->blocks !== null) {
-            $this->renderBlockArea($stream, $geometry, $area);
+            $this->renderBlockArea($stream, $geometry, $area, $namer);
             return;
         }
 
@@ -546,8 +574,12 @@ final class DocumentRenderer
         ];
     }
 
-    private function renderBlockArea(ContentStream $stream, PageGeometry $geometry, \Pdf\Layout\PlacedArea $area): void
-    {
+    private function renderBlockArea(
+        ContentStream $stream,
+        PageGeometry $geometry,
+        \Pdf\Layout\PlacedArea $area,
+        ResourceNamer $namer,
+    ): void {
         $rect = $area->rectPt;
         $contentHeight = max($area->blocksNaturalHeightPt, 0.0);
         $scale = ($area->blocksGeometricShrink && $contentHeight > 0.0 && $contentHeight > $rect->height)
@@ -563,7 +595,7 @@ final class DocumentRenderer
             new \Pdf\Geometry\PageSize($rect->width, max(1.0, $contentHeight)),
             \Pdf\Geometry\Orientation::Portrait,
             new \Pdf\Geometry\Edges(),
-        ), emitPreamble: false);
+        ), emitPreamble: false, namer: $namer);
         $area->blocks?->render($sub, 0.0, 0.0, $rect->width);
 
         $ty = $geometry->flipY($originYTop + $scale * $contentHeight);
@@ -582,6 +614,9 @@ final class DocumentRenderer
         }
         foreach ($sub->collectedAnchors() as $anchor) {
             $stream->anchor($anchor->name, $originYTop + $scale * $anchor->yTopPt);
+        }
+        foreach ($sub->collectedShadings() as $shading) {
+            $stream->recordShading($shading);
         }
     }
 

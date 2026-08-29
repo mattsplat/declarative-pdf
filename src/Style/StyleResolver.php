@@ -7,6 +7,7 @@ namespace Pdf\Style;
 use Pdf\Font\FontStyle;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
+use Pdf\Node\Clip;
 use Pdf\Node\Container;
 use Pdf\Node\Heading;
 use Pdf\Node\OrderedList;
@@ -83,6 +84,7 @@ final class StyleResolver
             $node instanceof BulletList, $node instanceof OrderedList => ['list'],
             $node instanceof Table => ['table'],
             $node instanceof Container => ['container'],
+            $node instanceof Clip => ['clip'],
             default => [],
         };
 

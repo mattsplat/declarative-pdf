@@ -18,6 +18,7 @@ use Pdf\Layout\Measurer;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
+use Pdf\Node\Clip;
 use Pdf\Node\Columns;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
@@ -43,6 +44,7 @@ use Pdf\Node\Spacer;
 use Pdf\Node\Table;
 use Pdf\Node\TableRow;
 use Pdf\Style\ColumnWidth;
+use Pdf\Style\FillRule;
 use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
 use Pdf\Style\TextAlign;
@@ -210,6 +212,22 @@ final class PageBuilder
     public function path(Path $path): self
     {
         return $this->add($path);
+    }
+
+    /**
+     * Clip a group of blocks to a {@see Path}'s region. The path is used for its
+     * outline only, not painted — add it again with {@see self::path()} to draw
+     * it.
+     *
+     * @param iterable<BlockNode> $children
+     */
+    public function clip(
+        Path $path,
+        iterable $children,
+        FillRule $clipRule = FillRule::NonZero,
+        StylePatch $patch = new StylePatch(),
+    ): self {
+        return $this->add(new Clip($path, $children, $clipRule, $patch));
     }
 
     public function pageBreak(): self

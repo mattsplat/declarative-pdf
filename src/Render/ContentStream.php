@@ -11,6 +11,8 @@ use Pdf\Geometry\PathCommand;
 use Pdf\Layout\AnchorMark;
 use Pdf\Layout\Canvas;
 use Pdf\Layout\LinkRect;
+use Pdf\Style\FillRule;
+use Pdf\Style\Gradient;
 use Pdf\Style\Paint;
 
 /**
@@ -31,10 +33,18 @@ final class ContentStream implements Canvas
     /** @var list<AnchorMark> */
     private array $anchors = [];
 
+    /** @var list<ShadingResource> */
+    private array $shadings = [];
+
+    private readonly ResourceNamer $namer;
+
     public function __construct(
         private readonly PageGeometry $geometry,
         bool $emitPreamble = true,
+        ?ResourceNamer $namer = null,
     ) {
+        $this->namer = $namer ?? new ResourceNamer();
+
         if ($emitPreamble) {
             // Square line caps, matching AddPage() (fpdf.php:312).
             $this->raw('2 J');
@@ -128,22 +138,46 @@ final class ContentStream implements Canvas
 
     /**
      * Emit a painted path. Each operand is translated by ($xPt, $yTopPt) and
-     * then flipped, so the caller only ever thinks top-down.
+     * then flipped, so the caller only ever thinks top-down. A gradient fill is
+     * painted as a shading clipped to the path; `$boxWidthPt` / `$boxHeightPt`
+     * are the path's own box and resolve the gradient's fractional geometry.
      *
      * @param list<PathCommand> $commands
      */
-    public function path(array $commands, float $xPt, float $yTopPt, Paint $paint): void
-    {
+    public function path(
+        array $commands,
+        float $xPt,
+        float $yTopPt,
+        Paint $paint,
+        float $boxWidthPt = 0.0,
+        float $boxHeightPt = 0.0,
+    ): void {
+        if ($commands === []) {
+            return;
+        }
+
+        $commandLines = $this->pathCommandLines($commands, $xPt, $yTopPt);
+        $fill = $paint->fill;
+
+        if ($fill instanceof Gradient) {
+            $this->fillWithGradient($fill, $commandLines, $paint->fillRule, $xPt, $yTopPt, $boxWidthPt, $boxHeightPt);
+            if ($paint->strokes()) {
+                $this->strokeOnly($paint, $commandLines);
+            }
+
+            return;
+        }
+
         $painter = $paint->operator();
-        if ($painter === null || $commands === []) {
+        if ($painter === null) {
             return;
         }
 
         $stroke = $paint->strokes() ? $paint->stroke : null;
 
         $state = '';
-        if ($paint->fill !== null) {
-            $state .= $paint->fill->fillOp() . ' ';
+        if ($fill instanceof Color) {
+            $state .= $fill->fillOp() . ' ';
         }
         if ($stroke !== null) {
             // The page preamble leaves `2 J` in effect, so the cap and join are
@@ -157,8 +191,20 @@ final class ContentStream implements Canvas
             );
         }
 
-        $lines = ['q ' . rtrim($state)];
+        $lines = ['q ' . rtrim($state), ...$commandLines, $painter, 'Q'];
+        $this->raw(implode("\n", $lines));
+    }
 
+    /**
+     * The path-construction operators for $commands, each operand translated by
+     * ($xPt, $yTopPt) and then flipped.
+     *
+     * @param list<PathCommand> $commands
+     * @return list<string>
+     */
+    private function pathCommandLines(array $commands, float $xPt, float $yTopPt): array
+    {
+        $lines = [];
         foreach ($commands as $command) {
             $operands = '';
             foreach ($command->points as $point) {
@@ -171,9 +217,62 @@ final class ContentStream implements Canvas
             $lines[] = $operands . $command->op->operator();
         }
 
-        $lines[] = $painter;
-        $lines[] = 'Q';
+        return $lines;
+    }
+
+    /**
+     * Register a shading for $gradient and emit `q … W n /Sh… sh Q`: the path
+     * becomes the clip and `sh` paints the gradient across it. `sh` honours the
+     * CTM, so a placed path's enclosing `cm` transforms the gradient with it.
+     *
+     * @param list<string> $commandLines
+     */
+    private function fillWithGradient(
+        Gradient $gradient,
+        array $commandLines,
+        FillRule $fillRule,
+        float $xPt,
+        float $yTopPt,
+        float $boxWidthPt,
+        float $boxHeightPt,
+    ): void {
+        $name = $this->namer->next('Sh');
+        $place = fn (float $x, float $y): array => [$xPt + $x, $this->geometry->flipY($yTopPt + $y)];
+        $coords = $gradient->coords($place, $boxWidthPt, $boxHeightPt);
+
+        $this->shadings[] = new ShadingResource($name, sprintf(
+            '<</ShadingType %d /ColorSpace /DeviceRGB /Coords [%s] /Function %s /Extend [%s]>>',
+            $gradient->shadingType(),
+            implode(' ', array_map(static fn (float $n): string => sprintf('%.2F', $n), $coords)),
+            $gradient->functionDictionary(),
+            $gradient->spread->extendArray(),
+        ));
+
+        $lines = ['q', ...$commandLines, 'W' . $fillRule->operatorSuffix() . ' n', '/' . $name . ' sh', 'Q'];
         $this->raw(implode("\n", $lines));
+    }
+
+    /**
+     * Stroke $commandLines on their own — the second pass for a gradient-filled
+     * path that also has a stroke.
+     *
+     * @param list<string> $commandLines
+     */
+    private function strokeOnly(Paint $paint, array $commandLines): void
+    {
+        $stroke = $paint->stroke;
+        if ($stroke === null) {
+            return;
+        }
+
+        $state = sprintf(
+            '%s %.2F w %d J %d j',
+            $stroke->strokeOp(),
+            $paint->strokeWidthPt,
+            $paint->lineCap->value,
+            $paint->lineJoin->value,
+        );
+        $this->raw(implode("\n", ['q ' . $state, ...$commandLines, 'S', 'Q']));
     }
 
     /**
@@ -184,6 +283,31 @@ final class ContentStream implements Canvas
     {
         $yBottom = $this->geometry->flipY($yTopPt + $heightPt);
         $this->raw(sprintf('q %.2F %.2F %.2F %.2F re W n', $xPt, $yBottom, $widthPt, $heightPt));
+        $draw();
+        $this->raw('Q');
+    }
+
+    /**
+     * Run $draw with an arbitrary command list as the clip region. Coordinates
+     * are relative to ($xPt, $yTopPt), the same convention as {@see path()}.
+     *
+     * @param list<PathCommand> $commands
+     */
+    public function withPathClip(
+        array $commands,
+        float $xPt,
+        float $yTopPt,
+        FillRule $rule,
+        \Closure $draw,
+    ): void {
+        if ($commands === []) {
+            $draw();
+
+            return;
+        }
+
+        $lines = ['q', ...$this->pathCommandLines($commands, $xPt, $yTopPt), 'W' . $rule->operatorSuffix() . ' n'];
+        $this->raw(implode("\n", $lines));
         $draw();
         $this->raw('Q');
     }
@@ -219,6 +343,18 @@ final class ContentStream implements Canvas
     public function anchor(string $name, float $yTopPt): void
     {
         $this->anchors[] = new AnchorMark($name, $yTopPt);
+    }
+
+    /** Adopt a shading collected from a nested stream (e.g. a placed area). */
+    public function recordShading(ShadingResource $shading): void
+    {
+        $this->shadings[] = $shading;
+    }
+
+    /** @return list<ShadingResource> */
+    public function collectedShadings(): array
+    {
+        return $this->shadings;
     }
 
     /** @return list<LinkRect> */

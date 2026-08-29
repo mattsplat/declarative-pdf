@@ -12,9 +12,12 @@ use Pdf\Geometry\Unit;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Path;
 use Pdf\Style\FillRule;
+use Pdf\Style\GradientStop;
+use Pdf\Style\LinearGradient;
 use Pdf\Style\LineCap;
 use Pdf\Style\LineJoin;
 use Pdf\Style\Paint;
+use Pdf\Style\RadialGradient;
 use Pdf\Style\StylePatch;
 use Pdf\Style\TextAlign;
 
@@ -113,6 +116,53 @@ Document::create()
         $p->place($chartX, $chartTop + $chartHeight, $axisWidth, 1.0, [
             Path::line(0, 0, $axisWidth, 0, Paint::stroked(Color::gray(60), 1.0, LineCap::Square)),
         ], shrink: ShrinkMode::None);
+    })
+    ->page(function ($p) use ($star): void {
+        $p->units(Unit::Mm);
+
+        $p->heading(1, 'Gradients and clipping');
+        $p->paragraph('A gradient fills a Path with a PDF shading — axial (linear) or radial — '
+            . 'instead of a flat colour. Stops and geometry are fractions of the shape\'s box.');
+
+        $sunset = [
+            new GradientStop(0.0, Color::fromHex('#f9d976')),
+            new GradientStop(0.55, Color::fromHex('#e96443')),
+            new GradientStop(1.0, Color::fromHex('#6a1b4d')),
+        ];
+
+        $p->path(Path::rectangle(
+            120,
+            26,
+            Paint::gradient(LinearGradient::horizontal($sunset)),
+            patch: new StylePatch(spaceAfterPt: 8.0),
+        ));
+        $p->path(Path::ellipse(
+            120,
+            26,
+            Paint::gradient(RadialGradient::centered([
+                new GradientStop(0.0, Color::white()),
+                new GradientStop(1.0, Color::fromHex('#2f6fbf')),
+            ])),
+            patch: new StylePatch(spaceAfterPt: 10.0),
+        ));
+
+        $p->heading(2, 'Clipped to a shape');
+        $p->paragraph('Clip confines its children to a Path region. Here a paragraph and a '
+            . 'gradient bar are masked by a five-pointed star.');
+
+        $p->spacer(4);
+        $p->clip(
+            Path::polygon($star(24.0), Paint::filled(Color::black())),
+            [
+                new Paragraph('CLIPPED', new StylePatch(
+                    fontSizePt: 20.0,
+                    color: Color::fromHex('#6a1b4d'),
+                    align: TextAlign::Center,
+                )),
+                Path::rectangle(48, 40, Paint::gradient(LinearGradient::vertical($sunset))),
+            ],
+            FillRule::EvenOdd,
+        );
     })
     ->save(__DIR__ . '/shapes.pdf');
 

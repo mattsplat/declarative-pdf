@@ -8,6 +8,7 @@ use Pdf\Exception\LayoutException;
 use Pdf\Font\FontRegistry;
 use Pdf\Image\ImageFactory;
 use Pdf\Layout\Box\AnchorBox;
+use Pdf\Layout\Box\ClipBox;
 use Pdf\Layout\Box\ColumnsBox;
 use Pdf\Layout\Box\ContainerBox;
 use Pdf\Layout\Box\ImageBox;
@@ -24,6 +25,7 @@ use Pdf\Layout\Box\TextBox;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
+use Pdf\Node\Clip;
 use Pdf\Node\Columns;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
@@ -132,6 +134,7 @@ final class Measurer
             $node instanceof PageBreak => new PageBreakBox(),
             $node instanceof Rule => $this->measureRule($node, $parentStyle),
             $node instanceof Path => $this->measurePath($node, $parentStyle),
+            $node instanceof Clip => $this->measureClip($node, $parentStyle),
             $node instanceof Container => $this->measureContainer($node, $widthPt, $parentStyle),
             $node instanceof BulletList, $node instanceof OrderedList => $this->measureList($node, $widthPt, $parentStyle),
             $node instanceof ImageBlock => $this->measureImage($node, $widthPt, $parentStyle),
@@ -212,6 +215,22 @@ final class Measurer
             $node->widthPt,
             $node->heightPt,
             $node->paint,
+            $style->spaceBeforePt,
+            $style->spaceAfterPt,
+        );
+    }
+
+    private function measureClip(Clip $node, Style $parentStyle): ClipBox
+    {
+        $style = $this->styles->resolveBlock($node, $parentStyle);
+        $inner = $this->measureStack($node->children, $node->path->widthPt, $style);
+
+        return new ClipBox(
+            $node->path->commands,
+            $node->path->widthPt,
+            $node->path->heightPt,
+            $node->clipRule,
+            $inner,
             $style->spaceBeforePt,
             $style->spaceAfterPt,
         );
