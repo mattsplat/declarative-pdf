@@ -90,6 +90,7 @@ sheet, centred on the whole page and rotated; `opacity` below 1 emits an
 | `html(string, StylePatch = new)` | `Paragraph` from inline HTML |
 | `spacer(float $height, Unit = Mm)` | `Spacer` |
 | `rule(float $thicknessPt = 0.5, ?Color = null)` | `Rule` |
+| `path(Path)` | `Path` — vector linework; see [`Pdf\Node\Path`](#pdfnodepath) |
 | `pageBreak()` | `PageBreak` |
 | `anchor(string $name)` | `Anchor` (internal-link target) |
 | `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI |
@@ -140,6 +141,7 @@ sheet** of the logical page, on top of the flow content.
 | `Paragraph` | `(string\|InlineSequence $content, StylePatch)` |
 | `Spacer` | `(float $heightPt)` — or `Spacer::of(float, Unit)` |
 | `Rule` | `(float $thicknessPt = 0.5, ?Color $color = null, StylePatch)` |
+| `Path` | `(iterable<PathCommand> $commands, float $widthPt, float $heightPt, Paint, StylePatch)` — see below |
 | `PageBreak` | `()` |
 | `Anchor` | `(string $name)` |
 | `Container` | `(iterable<BlockNode> $children, StylePatch)` |
@@ -168,6 +170,46 @@ pass; a non-empty `patch()` frames its `body()` (padding / border / background /
 inherited style). `body()` must be pure — it is called more than once per
 render. `$page->component($x)` is sugar for `$page->add($x)`. See the
 [cookbook recipe](cookbook.md#reusable-components).
+
+### `Pdf\Node\Path`
+
+Vector linework: an ordered command list painted with a solid `Paint`.
+Coordinates are relative to the path's own box, top-left origin, y increasing
+downward. The box does **not** shrink-wrap the geometry — the author states its
+size, and that is what the path occupies in block flow and what a `place()`
+area scales. The constructor is points-only; every factory takes user units.
+
+```php
+Path::of(iterable<PathCommand>, float $width, float $height, Paint = new, Unit = Mm, StylePatch = new)
+Path::line(float $x1, $y1, $x2, $y2, Paint = new, Unit = Mm, StylePatch = new)
+Path::rectangle(float $width, float $height, Paint = new, Unit = Mm, StylePatch = new)
+Path::ellipse(float $width, float $height, Paint = new, Unit = Mm, StylePatch = new)   // 4-Bézier approximation
+Path::polygon(list<Point> $points, Paint = new, Unit = Mm, StylePatch = new)           // closed
+```
+
+`line()` and `polygon()` size the box to the extent of their points, never
+narrower than the stroke, so a flat figure still reserves its own ink in flow.
+
+`Pdf\Geometry\PathCommand` builds the segments: `moveTo(x, y)`, `lineTo(x, y)`,
+`curveTo(c1x, c1y, c2x, c2y, x, y)` (cubic Bézier), `close()`. A `moveTo`
+starts a new subpath, so one flat list describes a multi-subpath figure.
+
+`Pdf\Style\Paint` says how it is painted:
+
+```php
+new Paint(?Color $fill = null, ?Color $stroke = null, float $strokeWidthPt = 0.5,
+          FillRule = NonZero, LineCap = Butt, LineJoin = Miter)
+Paint::filled(Color, FillRule = NonZero)
+Paint::stroked(Color, float $widthPt = 0.5, LineCap = Butt, LineJoin = Miter)
+```
+
+A `Paint` with neither half defaults to a hairline black outline. `FillRule`
+is `NonZero` / `EvenOdd`; `LineCap` is `Butt` / `Round` / `Square`; `LineJoin`
+is `Miter` / `Round` / `Bevel`.
+
+A path never splits across a page break. Gradients, clipping paths, dash
+arrays and per-subpath paint are not implemented — see
+[the roadmap](roadmap.md#vector-drawing).
 
 ### `Pdf\Node\Document`, `Page`, `PageMaster`, `Meta`
 

@@ -14,8 +14,8 @@ decorations, inline HTML, named stylesheets, large-format sheets, absolute area
 placement (`place()` with `ShrinkMode` geometric or font-size fit), page-number
 and watermark helpers, public text / block measurement helpers
 (`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
-reusable `Component` nodes, and a pure-PHP single-page PDF importer emitting
-vector Form XObjects.
+reusable `Component` nodes, vector drawing (`Path` with solid fill / stroke),
+and a pure-PHP single-page PDF importer emitting vector Form XObjects.
 
 The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
 OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -107,26 +107,36 @@ data back (parsing a filled FDF/XFDF) is a separate small parser.
 
 ## Vector drawing
 
-### Drawing primitives — **M**
+### Drawing primitives — **done** (solid paint)
 
-A `Canvas`-level drawing API for authoring linework. `ContentStream` already
-emits `re` / `l` / `m` / fill /
-stroke for borders and rules — this exposes it as a first-class node.
+`Pdf\Node\Path` is a first-class block node: an ordered list of
+`Pdf\Geometry\PathCommand`s (`moveTo` / `lineTo` / `curveTo` / `close`, one
+flat list describing any number of subpaths) painted with a solid
+`Pdf\Style\Paint` — fill colour, stroke colour, stroke width, `FillRule`
+(nonzero / even-odd), `LineCap`, `LineJoin`. Static factories cover `line`,
+`rectangle`, `ellipse` (4-Bézier approximation) and `polygon`; `Path::of()`
+takes a hand-built command list. Coordinates are box-relative and top-left, in
+the caller's `Unit`. Works in block flow and in `$page->place()`.
+See `examples/shapes.php`.
 
-- `Path` node: `moveTo` / `lineTo` / `curveTo` (cubic Bézier `c`) / `close`,
-  fill rule (nonzero / even-odd), stroke width, cap, join, miter, dash array.
-- Convenience shapes: `Line`, `Rectangle` (rounded via Béziers), `Ellipse`,
-  `Polygon`, `Polyline`.
-- Fills: solid `Color` today; gradients (`/Shading` type 2 axial / type 3
-  radial) is a **M** add-on.
-- Clipping paths (`W` / `W*`).
-- Placed in block flow (intrinsic size = bounding box) or absolutely via
-  `$page->place()`.
+What is left:
 
-### Charts / sparklines — **M** (needs drawing primitives)
+- **Gradients** — **M**: `/Shading` type 2 (axial) / type 3 (radial) as a fill,
+  plus the `/Pattern` colour space and `sh`.
+- **Clipping paths** (`W` / `W*`) — **S**: `ContentStream::withClip()` already
+  clips to a rectangle; the general case is the same code taking a command list.
+- **Dash arrays** (`d`) and **miter limit** (`M`) — **S**.
+- **Per-subpath paint** and **auto bounding-box sizing** (the author states the
+  box today) — **S each**.
+- **Transforms** (rotation / skew on the node) — **S**; `cm` is already emitted
+  for placed areas.
+- Rounded rectangles, polylines and arcs as further factories — **S**.
 
-Not core, but a thin `Pdf\Chart` built on the path API: bar, line, pie,
-sparkline. Deterministic, no external deps.
+### Charts / sparklines — **M**
+
+Not core, but a thin `Pdf\Chart` built on the (now shipped) path API: bar,
+line, pie, sparkline — axes, ticks, labels and a legend. Deterministic, no
+external deps. `examples/shapes.php` hand-builds a bar chart today.
 
 ### Transparency & blend modes — **S**
 
@@ -453,12 +463,14 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 
 1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
 2. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
-3. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
-4. **AcroForm fields with generated appearance streams** (L) — works in every
+3. **Gradients + clipping paths** (M) — the rest of the drawing story now that
+   solid-paint `Path` has shipped.
+4. **Charts / sparklines** (M) — a thin layer on the path API.
+5. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
-5. **Document / field JavaScript** (M) — opt-in layer on top of #4 for Acrobat
+6. **Document / field JavaScript** (M) — opt-in layer on top of #5 for Acrobat
    workflows, with the viewer-support caveat documented.
-6. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+7. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-7. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+8. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

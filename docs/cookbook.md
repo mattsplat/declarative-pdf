@@ -199,6 +199,70 @@ $p->placeImage(0, 0, 60, 20, 'https://cdn.example.com/nameplate.png');
 $p->placeImageData(0, 0, 60, 20, $pngBytes);
 ```
 
+## Drawing shapes
+
+`Path` is a block node, so linework stacks in normal flow or lands in a
+`place()` rectangle like anything else. Coordinates are relative to the path's
+own box, top-left origin — the same convention as the rest of the library.
+
+```php
+use Pdf\Color\Color;
+use Pdf\Node\Path;
+use Pdf\Style\{FillRule, LineJoin, Paint};
+
+$p->path(Path::rectangle(60, 14, Paint::filled(Color::fromHex('#2f6fbf'))));
+$p->path(Path::ellipse(60, 18, new Paint(
+    fill: Color::white(),
+    stroke: Color::fromHex('#2f6fbf'),
+    strokeWidthPt: 1.5,
+)));
+$p->path(Path::line(0, 0, 170, 0, Paint::stroked(Color::gray(140), 1.0)));
+```
+
+Sizes are in the page's units by default; pass `Unit::Pt` (or any other) to a
+factory to change that. A `Paint` with neither `fill` nor `stroke` draws a
+hairline black outline.
+
+For an arbitrary figure, build the command list yourself. A `moveTo` starts a
+new subpath, so one list can describe several — with `FillRule::EvenOdd` that
+is how you punch a hole:
+
+```php
+use Pdf\Geometry\PathCommand;
+
+$p->path(Path::of([
+    PathCommand::moveTo(0, 0),
+    PathCommand::lineTo(40, 0),
+    PathCommand::curveTo(40, 22, 22, 40, 0, 40),
+    PathCommand::close(),
+], width: 40, height: 40, paint: Paint::filled(Color::gray(60), FillRule::EvenOdd)));
+```
+
+### A bar chart from rectangles
+
+There is no chart layer yet; one `place()` per bar is all it takes.
+
+```php
+$values = ['Q1' => 32, 'Q2' => 58, 'Q3' => 41, 'Q4' => 76];
+$top = 165.0;
+$height = 55.0;
+
+foreach (array_values($values) as $i => $value) {
+    $bar = $height * $value / 80;
+    $p->place(22 + $i * 40, $top + $height - $bar, 26, $bar, [
+        Path::rectangle(26, $bar, Paint::filled(Color::fromHex('#2f6fbf'))),
+    ], shrink: \Pdf\Geometry\ShrinkMode::None);
+}
+
+$p->place(22, $top + $height, 152, 1, [
+    Path::line(0, 0, 152, 0, Paint::stroked(Color::gray(60), 1.0)),
+], shrink: \Pdf\Geometry\ShrinkMode::None);
+```
+
+`ShrinkMode::None` keeps the shape at its stated size; the default `Scale`
+would shrink content taller than its area. `examples/shapes.php` is the whole
+thing.
+
 ## Large-format sheets laid out in areas
 
 Work in inches, position content in explicit rectangles.
