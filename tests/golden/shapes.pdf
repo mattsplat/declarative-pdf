@@ -1,0 +1,225 @@
+%PDF-1.3
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Contents 4 0 R>>
+endobj
+4 0 obj
+<</Length 1496>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Vector drawing) Tj ET
+BT /F2 12.00 Tf 28.35 765.84 Td (Solid fills and strokes, in flow and absolutely placed.) Tj ET
+q 0.184 0.435 0.749 rg
+28.35 756.54 m
+198.43 756.54 l
+198.43 716.85 l
+28.35 716.85 l
+h
+f
+Q
+q 0.910 0.933 0.973 rg 0.184 0.435 0.749 RG 1.50 w 0 J 0 j
+198.43 683.34 m
+198.43 669.25 160.36 657.83 113.39 657.83 c
+66.42 657.83 28.35 669.25 28.35 683.34 c
+28.35 697.43 66.42 708.85 113.39 708.85 c
+160.36 708.85 198.43 697.43 198.43 683.34 c
+h
+B
+Q
+q 0.549 G 1.00 w 0 J 0 j
+28.35 649.83 m
+510.24 649.83 l
+S
+Q
+q 1.0000 0 0 1.0000 56.69 453.16 cm
+q 0.851 0.502 0.235 rg
+42.52 76.92 m
+67.51 0.00 l
+2.08 47.54 l
+82.96 47.54 l
+17.53 0.00 l
+h
+f*
+Q
+Q
+q 1.0000 0 0 1.0000 170.08 445.04 cm
+q 0.541 0.310 0.749 rg
+85.04 42.52 m
+85.04 19.04 66.00 0.00 42.52 0.00 c
+19.04 0.00 0.00 19.04 0.00 42.52 c
+0.00 66.00 19.04 85.04 42.52 85.04 c
+66.00 85.04 85.04 66.00 85.04 42.52 c
+h
+f
+Q
+Q
+q 1.0000 0 0 1.0000 62.36 218.27 cm
+q 0.184 0.435 0.749 rg
+0.00 62.36 m
+73.70 62.36 l
+73.70 0.00 l
+0.00 0.00 l
+h
+f
+Q
+Q
+q 1.0000 0 0 1.0000 175.75 218.27 cm
+q 0.247 0.616 0.353 rg
+0.00 113.03 m
+73.70 113.03 l
+73.70 0.00 l
+0.00 0.00 l
+h
+f
+Q
+Q
+q 1.0000 0 0 1.0000 289.13 218.27 cm
+q 0.851 0.502 0.235 rg
+0.00 79.90 m
+73.70 79.90 l
+73.70 0.00 l
+0.00 0.00 l
+h
+f
+Q
+Q
+q 1.0000 0 0 1.0000 402.52 218.27 cm
+q 0.541 0.310 0.749 rg
+0.00 148.11 m
+73.70 148.11 l
+73.70 0.00 l
+0.00 0.00 l
+h
+f
+Q
+Q
+q 1.0000 0 0 1.0000 62.36 217.27 cm
+q 0.235 G 1.00 w 0 J 0 j
+0.00 1.00 m
+430.87 1.00 l
+S
+Q
+Q
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R]
+/Count 1
+/MediaBox [0 0 595.28 841.89]
+>>
+endobj
+5 0 obj
+<</Length 675>>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo
+<</Registry (Adobe)
+/Ordering (UCS)
+/Supplement 0
+>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+6 beginbfrange
+<00> <7F> <0000>
+<86> <87> <2020>
+<91> <92> <2018>
+<93> <94> <201C>
+<96> <97> <2013>
+<A0> <FF> <00A0>
+endbfrange
+19 beginbfchar
+<80> <20AC>
+<82> <201A>
+<83> <0192>
+<84> <201E>
+<85> <2026>
+<88> <02C6>
+<89> <2030>
+<8A> <0160>
+<8B> <2039>
+<8C> <0152>
+<8E> <017D>
+<95> <2022>
+<98> <02DC>
+<99> <2122>
+<9A> <0161>
+<9B> <203A>
+<9C> <0153>
+<9E> <017E>
+<9F> <0178>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+6 0 obj
+<</Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 5 0 R
+>>
+endobj
+7 0 obj
+<</Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 5 0 R
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 6 0 R
+/F2 7 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+8 0 obj
+<<
+/Producer (fpdf/pdf-test)
+/Title (Vector drawing)
+/CreationDate (D:20260826120000+00'00')
+>>
+endobj
+9 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+>>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000001633 00000 n 
+0000002674 00000 n 
+0000000009 00000 n 
+0000000087 00000 n 
+0000001719 00000 n 
+0000002443 00000 n 
+0000002561 00000 n 
+0000002788 00000 n 
+0000002899 00000 n 
+trailer
+<<
+/Size 10
+/Root 9 0 R
+/Info 8 0 R
+>>
+startxref
+2948
+%%EOF
