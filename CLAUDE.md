@@ -44,6 +44,7 @@ guidelines, adapted for a standalone typed PHP library.
 | `Style/` | `Style`, `StylePatch` (sparse overrides), `StyleResolver`, `Stylesheet`, enums |
 | `Layout/` | the engine — `Measurer`, `LineBreaker`, `Paginator`, `TableLayout`, and `Box/*` (the box model: `contentHeightPt`, `split`, `render`, …) |
 | `Render/` | `DocumentRenderer` (the pipeline entry) + the byte-level PDF writer, ported from FPDF |
+| `Interactive/` | the AcroForm field model — `FieldType`, `FieldFlag`, `FieldSpec`, `FieldAppearance`, the self-drawn `AppearanceStream` builder, and the `Js` / `FieldActions` JavaScript layer |
 | `Font/` `Image/` `Import/` | font loading/embedding · image decoders · the pure-PHP PDF-page importer |
 | `Chart/` | the thin chart layer — `Series`, `Scale` (nice-number axis), `Plot` (data → points), `Palette`, enums; rendered by `Layout/Box/ChartBox` |
 | `Geometry/` `Color/` `Text/` | value objects, colour, inline text / encoding / inline HTML |
@@ -127,9 +128,9 @@ Breaking any of these is a bug even if the tests pass:
 Run these — do not write throwaway verification scripts:
 
 ```
-composer test                      # vendor/bin/phpunit  — 274 tests
+composer test                      # vendor/bin/phpunit  — 306 tests
 composer stan                      # vendor/bin/phpstan analyse  — level 6
-for f in examples/*.php; do php "$f"; done   # render all 13 examples
+for f in examples/*.php; do php "$f"; done   # render all 15 examples
 UPDATE_GOLDENS=1 composer test     # regenerate goldens after an intended change
 ```
 

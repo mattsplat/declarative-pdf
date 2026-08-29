@@ -23,6 +23,7 @@ use Pdf\Node\Clip;
 use Pdf\Node\Columns;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
+use Pdf\Node\FormField;
 use Pdf\Node\Heading;
 use Pdf\Node\ImageBlock;
 use Pdf\Node\ListItem;
@@ -235,6 +236,17 @@ final class PageBuilder
         StylePatch $patch = new StylePatch(),
     ): self {
         return $this->add(new Clip($path, $children, $clipRule, $patch));
+    }
+
+    /**
+     * Add an interactive form field — a {@see \Pdf\Node\TextField},
+     * {@see \Pdf\Node\Checkbox}, {@see \Pdf\Node\RadioGroup},
+     * {@see \Pdf\Node\Dropdown}, {@see \Pdf\Node\ListBox},
+     * {@see \Pdf\Node\PushButton} or {@see \Pdf\Node\SignatureField}.
+     */
+    public function field(FormField $field): self
+    {
+        return $this->add($field);
     }
 
     public function pageBreak(): self

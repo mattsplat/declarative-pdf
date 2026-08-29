@@ -9,6 +9,9 @@
   drawing with gradient fills and path clipping.
 - **[API reference](reference.md)** — every builder method, node constructor,
   style option, enum, and the `Pdf\Import\*` reader API.
+- **[Interactive forms](forms.md)** — AcroForm field nodes, self-drawn
+  appearance streams, submit / reset buttons, and the viewer-support caveat for
+  the optional JavaScript layer.
 - **[FPDF vs. declarative — side by side](fpdf-vs-declarative.md)** — the seven
   FPDF tutorials, each next to its declarative rewrite.
 - **[Porting from FPDF](porting.md)** — `Cell` / `MultiCell` / `AddPage` /
@@ -20,7 +23,7 @@
 - **[Architecture](architecture.md)** — the measure → paginate → render
   pipeline, the box model, and what was ported vs. rewritten.
 - **[Roadmap](roadmap.md)** — potential features, sized and prioritised
-  (forms, JavaScript, gradients, subsetting, tagged PDF, native merge, …).
+  (font subsetting, tagged PDF / PDF/A, native merge, FDF/XFDF, …).
 - **[Interactive PDF feasibility](interactive-pdf-feasibility.md)** — the
   forms / JS / layers / signatures / 3D wishlist analysed for difficulty and,
   crucially, for which viewers the behaviour actually reaches.

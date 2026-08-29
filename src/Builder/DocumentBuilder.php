@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Builder;
 
 use Pdf\Color\Color;
+use Pdf\Interactive\Js;
 use Pdf\Node\Bookmark;
 use Pdf\Node\Document;
 use Pdf\Node\Meta;
@@ -37,6 +38,9 @@ final class DocumentBuilder
 
     /** @var list<Bookmark> */
     private array $bookmarks = [];
+
+    /** @var array<string, string> document-level JavaScript, name => source */
+    private array $scripts = [];
 
     private ?DocumentRenderer $renderer = null;
 
@@ -130,6 +134,18 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Register a document-level JavaScript function, run when the file opens.
+     * Only Acrobat / Reader (and mostly Foxit) execute PDF JavaScript — see
+     * {@see Js} for the full viewer-support caveat.
+     */
+    public function script(string $name, Js|string $js): self
+    {
+        $this->scripts[$name] = $js instanceof Js ? $js->source : $js;
+
+        return $this;
+    }
+
     public function using(DocumentRenderer $renderer): self
     {
         $this->renderer = $renderer;
@@ -167,6 +183,7 @@ final class DocumentBuilder
             $this->baseStyle,
             $this->stylesheet,
             $this->bookmarks,
+            $this->scripts,
         );
     }
 

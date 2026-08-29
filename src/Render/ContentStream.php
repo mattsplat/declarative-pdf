@@ -11,6 +11,7 @@ use Pdf\Geometry\PathCommand;
 use Pdf\Layout\AnchorMark;
 use Pdf\Layout\Canvas;
 use Pdf\Layout\LinkRect;
+use Pdf\Layout\WidgetRect;
 use Pdf\Style\FillRule;
 use Pdf\Style\Gradient;
 use Pdf\Style\Paint;
@@ -35,6 +36,9 @@ final class ContentStream implements Canvas
 
     /** @var list<ShadingResource> */
     private array $shadings = [];
+
+    /** @var list<WidgetRect> */
+    private array $widgets = [];
 
     private readonly ResourceNamer $namer;
 
@@ -355,6 +359,17 @@ final class ContentStream implements Canvas
     public function collectedShadings(): array
     {
         return $this->shadings;
+    }
+
+    public function widget(WidgetRect $widget): void
+    {
+        $this->widgets[] = $widget;
+    }
+
+    /** @return list<WidgetRect> */
+    public function collectedWidgets(): array
+    {
+        return $this->widgets;
     }
 
     /** @return list<LinkRect> */

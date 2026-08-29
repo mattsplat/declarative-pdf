@@ -120,6 +120,14 @@ Implemented:
   `sparkline()`, one or more `Series`, a nice-number value axis, tick and
   category labels, an optional legend. A thin layer on `Path` — deterministic,
   no dependencies (`examples/chart.php`).
+- **Interactive forms** — `TextField` / `Checkbox` / `RadioGroup` / `Dropdown` /
+  `ListBox` / `PushButton` / `SignatureField` nodes become `/AcroForm` fields
+  with **self-drawn `/AP` appearance streams** (correct in every viewer, no
+  `/NeedAppearances`). Native `/SubmitForm` and `/ResetForm` buttons; comb,
+  multiline, password, multi-select flags. Opt-in Acrobat JavaScript layer —
+  `Pdf\Interactive\Js` calculate / format / validate recipes, `/AA`, `/CO`,
+  document-level `/Names /JavaScript` (`examples/form.php`,
+  `examples/form-calc.php`, [`docs/forms.md`](docs/forms.md)).
 - **PDF page import** — `$page->placePdf('drawing.pdf', page: 1)` imports one
   page of an external (trusted, unencrypted) PDF as a **vector Form XObject**,
   copying its fonts/images/resources. `Pdf\Import\PdfReader` handles classic
@@ -140,7 +148,6 @@ Implemented:
 Not yet implemented (see [`docs/roadmap.md`](docs/roadmap.md) for the full list,
 sized and prioritised):
 
-- interactive forms (AcroForm) and embedded JavaScript
 - gradients, clipping paths and dash arrays (solid-paint `Path` has shipped)
 - full document-to-document PDF merge (bookmarks, links, forms) — shell out to
   `qpdf` for that; the built-in importer is single-page-as-XObject
@@ -152,9 +159,9 @@ sized and prioritised):
 
 ```
 composer install
-composer test        # phpunit  (274 tests)
+composer test        # phpunit  (306 tests)
 composer stan        # phpstan  (level 6)
-php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet shapes chart watermark merge
+php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet shapes chart watermark merge form form-calc
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
 ```
 

@@ -19,8 +19,17 @@ final readonly class Document
     public array $bookmarks;
 
     /**
+     * Document-level JavaScript, name => source, run when the file opens. Only
+     * Acrobat / Reader (and mostly Foxit) execute it.
+     *
+     * @var array<string, string>
+     */
+    public array $scripts;
+
+    /**
      * @param iterable<Page> $pages
      * @param iterable<Bookmark> $bookmarks
+     * @param array<string, string> $scripts
      */
     public function __construct(
         iterable $pages,
@@ -28,9 +37,11 @@ final readonly class Document
         public ?Style $baseStyle = null,
         public ?Stylesheet $stylesheet = null,
         iterable $bookmarks = [],
+        array $scripts = [],
     ) {
         $this->pages = is_array($pages) ? array_values($pages) : iterator_to_array($pages, false);
         $this->bookmarks = is_array($bookmarks) ? array_values($bookmarks) : iterator_to_array($bookmarks, false);
+        $this->scripts = $scripts;
     }
 
     public function style(): Style

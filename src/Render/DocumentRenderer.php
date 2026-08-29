@@ -14,6 +14,7 @@ use Pdf\Layout\LinkRect;
 use Pdf\Layout\Measurer;
 use Pdf\Layout\Paginator;
 use Pdf\Layout\PhysicalPage;
+use Pdf\Layout\WidgetRect;
 use Pdf\Exception\PdfException;
 use Pdf\Node\Document;
 use Pdf\Node\Watermark;
@@ -95,11 +96,11 @@ final class DocumentRenderer
             }
         }
 
-        // --- Pass A: render content streams, collect links + anchors + shadings ---
+        // --- Pass A: render content streams, collect links + anchors + shadings + widgets ---
         $namer = new ResourceNamer();
         /** @var list<ShadingResource> $shadings */
         $shadings = [];
-        /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered */
+        /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, widgets: list<WidgetRect>}> $rendered */
         $rendered = [];
         foreach ($pages as $page) {
             $stream = new ContentStream($page->geometry, namer: $namer);
@@ -130,6 +131,7 @@ final class DocumentRenderer
                 'content' => $stream->toString(),
                 'links' => $stream->collectedLinks(),
                 'anchors' => $stream->collectedAnchors(),
+                'widgets' => $stream->collectedWidgets(),
             ];
         }
 
@@ -142,9 +144,17 @@ final class DocumentRenderer
             }
         }
 
+        $hasWidgets = false;
+        foreach ($rendered as $r) {
+            if ($r['widgets'] !== []) {
+                $hasWidgets = true;
+                break;
+            }
+        }
+
         $registry = new ObjectRegistry(2);
         $writer = new PdfWriter($registry, $this->compress);
-        $writer->header($images->requiresPdf14() || !$imports->isEmpty() ? '1.4' : '1.3');
+        $writer->header($images->requiresPdf14() || !$imports->isEmpty() || $hasWidgets ? '1.4' : '1.3');
         $withAlpha = $images->hasAlpha();
 
         // --- Pre-allocate per-page object numbers, in FPDF's order ---
@@ -156,6 +166,20 @@ final class DocumentRenderer
             $pageObjects[$index] = $registry->allocate();
             $contentObjects[$index] = $registry->allocate();
             $linkObjects[$index] = array_map(static fn () => $registry->allocate(), $r['links']);
+        }
+
+        // Interactive form: allocate widget / field / appearance objects now so
+        // each page's /Annots array can reference them below.
+        $acroForm = new AcroFormWriter($writer);
+        if ($hasWidgets) {
+            $acroForm->plan(array_map(
+                static fn (int $index): array => [
+                    'geometry' => $rendered[$index]['geometry'],
+                    'pageObject' => $pageObjects[$index],
+                    'widgets' => $rendered[$index]['widgets'],
+                ],
+                array_keys($rendered),
+            ));
         }
 
         $defaultGeometry = $rendered[0]['geometry'];
@@ -176,8 +200,9 @@ final class DocumentRenderer
             if ($withAlpha) {
                 $writer->line('/Group <</Type /Group /S /Transparency /CS /DeviceRGB>>');
             }
-            if ($linkObjects[$index] !== []) {
-                $refs = implode(' ', array_map(static fn (int $n) => $n . ' 0 R', $linkObjects[$index]));
+            $annots = [...$linkObjects[$index], ...$acroForm->annotRefsForPage($index)];
+            if ($annots !== []) {
+                $refs = implode(' ', array_map(static fn (int $n) => $n . ' 0 R', $annots));
                 $writer->line('/Annots [' . $refs . ']');
             }
             $writer->line('/Contents ' . $contentObjects[$index] . ' 0 R>>');
@@ -218,6 +243,12 @@ final class DocumentRenderer
 
         // Document outline (bookmarks) — pre-allocated as a block, FPDF-style.
         $outlinesObject = $this->writeOutlines($writer, $document, $anchorMap, $pageObjects, $rendered);
+
+        // Interactive form objects, at the numbers reserved during planning.
+        $acroFormObject = $acroForm->write($fonts);
+
+        // Document-level JavaScript name tree.
+        $namesObject = $this->writeNames($writer, $document);
 
         // ExtGState objects for translucent watermarks.
         /** @var array<string, int> $gsObjects  gs name => object number */
@@ -291,6 +322,12 @@ final class DocumentRenderer
         $writer->line('/Pages 1 0 R');
         if ($outlinesObject !== null) {
             $writer->line('/Outlines ' . $outlinesObject . ' 0 R');
+        }
+        if ($acroFormObject !== null) {
+            $writer->line('/AcroForm ' . $acroFormObject . ' 0 R');
+        }
+        if ($namesObject !== null) {
+            $writer->line('/Names ' . $namesObject . ' 0 R');
         }
         $writer->line('>>');
         $writer->endObject();
@@ -431,6 +468,45 @@ final class DocumentRenderer
                 $writer->line('/Count ' . $tree->counts[$index]);
             }
             $writer->line($this->destination($pageIndex, $destYTopPt, $pageObjects, $rendered) . '>>');
+            $writer->endObject();
+        }
+
+        return $rootObject;
+    }
+
+    /**
+     * Write the catalog's `/Names /JavaScript` name tree — one entry per
+     * document-level script — and return the `/Names` root object number, or
+     * null when the document has no scripts. Keys are sorted so the tree is
+     * byte-stable.
+     */
+    private function writeNames(PdfWriter $writer, Document $document): ?int
+    {
+        $scripts = $document->scripts;
+        if ($scripts === []) {
+            return null;
+        }
+        ksort($scripts);
+
+        $registry = $writer->registry();
+        $rootObject = $registry->allocate();
+        /** @var array<string, int> $entryObjects */
+        $entryObjects = [];
+        foreach (array_keys($scripts) as $name) {
+            $entryObjects[$name] = $registry->allocate();
+        }
+
+        $writer->beginObject($rootObject);
+        $writer->line('<</JavaScript <</Names [');
+        foreach ($scripts as $name => $source) {
+            $writer->line(PdfString::text($name) . ' ' . $entryObjects[$name] . ' 0 R');
+        }
+        $writer->line(']>>>>');
+        $writer->endObject();
+
+        foreach ($scripts as $name => $source) {
+            $writer->beginObject($entryObjects[$name]);
+            $writer->line('<</S /JavaScript /JS ' . PdfString::text($source) . '>>');
             $writer->endObject();
         }
 
@@ -617,6 +693,9 @@ final class DocumentRenderer
         }
         foreach ($sub->collectedShadings() as $shading) {
             $stream->recordShading($shading);
+        }
+        foreach ($sub->collectedWidgets() as $widget) {
+            $stream->widget($widget->scaled($scale, $originX, $originYTop));
         }
     }
 
