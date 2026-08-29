@@ -1,0 +1,204 @@
+%PDF-1.3
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Contents 4 0 R>>
+endobj
+4 0 obj
+<</Length 679>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Gradients and clipping) Tj ET
+q
+28.35 776.34 m
+368.51 776.34 l
+368.51 708.31 l
+28.35 708.31 l
+h
+W n
+/Sh1 sh
+Q
+q
+368.51 666.29 m
+368.51 647.51 292.36 632.28 198.43 632.28 c
+104.49 632.28 28.35 647.51 28.35 666.29 c
+28.35 685.08 104.49 700.31 198.43 700.31 c
+292.36 700.31 368.51 685.08 368.51 666.29 c
+h
+W n
+/Sh2 sh
+Q
+q
+96.38 609.60 m
+136.37 486.53 l
+31.68 562.59 l
+161.08 562.59 l
+56.39 486.53 l
+h
+W* n
+BT /F2 18.00 Tf 28.35 593.85 Td (CLIP) Tj ET
+q
+28.35 588.90 m
+164.41 588.90 l
+164.41 475.51 l
+28.35 475.51 l
+h
+W n
+/Sh3 sh
+Q
+Q
+q 1.0000 0 0 1.0000 340.16 161.58 cm
+q
+0.00 113.39 m
+113.39 113.39 l
+113.39 0.00 l
+0.00 0.00 l
+h
+W n
+/Sh4 sh
+Q
+Q
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R]
+/Count 1
+/MediaBox [0 0 595.28 841.89]
+>>
+endobj
+5 0 obj
+<</Length 675>>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo
+<</Registry (Adobe)
+/Ordering (UCS)
+/Supplement 0
+>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+6 beginbfrange
+<00> <7F> <0000>
+<86> <87> <2020>
+<91> <92> <2018>
+<93> <94> <201C>
+<96> <97> <2013>
+<A0> <FF> <00A0>
+endbfrange
+19 beginbfchar
+<80> <20AC>
+<82> <201A>
+<83> <0192>
+<84> <201E>
+<85> <2026>
+<88> <02C6>
+<89> <2030>
+<8A> <0160>
+<8B> <2039>
+<8C> <0152>
+<8E> <017D>
+<95> <2022>
+<98> <02DC>
+<99> <2122>
+<9A> <0161>
+<9B> <203A>
+<9C> <0153>
+<9E> <017E>
+<9F> <0178>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+6 0 obj
+<</Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 5 0 R
+>>
+endobj
+7 0 obj
+<</Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 5 0 R
+>>
+endobj
+8 0 obj
+<</ShadingType 2 /ColorSpace /DeviceRGB /Coords [28.35 742.32 368.51 742.32] /Function <</FunctionType 3 /Domain [0 1] /Functions [<</FunctionType 2 /Domain [0 1] /C0 [0.9765 0.8510 0.4627] /C1 [0.9137 0.3922 0.2627] /N 1>> <</FunctionType 2 /Domain [0 1] /C0 [0.9137 0.3922 0.2627] /C1 [0.4157 0.1059 0.3020] /N 1>>] /Bounds [0.55000] /Encode [0 1 0 1]>> /Extend [true true]>>
+endobj
+9 0 obj
+<</ShadingType 3 /ColorSpace /DeviceRGB /Coords [198.43 666.29 0.00 198.43 666.29 170.08] /Function <</FunctionType 2 /Domain [0 1] /C0 [1.0000 1.0000 1.0000] /C1 [0.1843 0.4353 0.7490] /N 1>> /Extend [true true]>>
+endobj
+10 0 obj
+<</ShadingType 2 /ColorSpace /DeviceRGB /Coords [96.38 588.90 96.38 475.51] /Function <</FunctionType 3 /Domain [0 1] /Functions [<</FunctionType 2 /Domain [0 1] /C0 [0.9765 0.8510 0.4627] /C1 [0.9137 0.3922 0.2627] /N 1>> <</FunctionType 2 /Domain [0 1] /C0 [0.9137 0.3922 0.2627] /C1 [0.4157 0.1059 0.3020] /N 1>>] /Bounds [0.55000] /Encode [0 1 0 1]>> /Extend [true true]>>
+endobj
+11 0 obj
+<</ShadingType 3 /ColorSpace /DeviceRGB /Coords [56.69 56.69 0.00 56.69 56.69 56.69] /Function <</FunctionType 3 /Domain [0 1] /Functions [<</FunctionType 2 /Domain [0 1] /C0 [0.9765 0.8510 0.4627] /C1 [0.9137 0.3922 0.2627] /N 1>> <</FunctionType 2 /Domain [0 1] /C0 [0.9137 0.3922 0.2627] /C1 [0.4157 0.1059 0.3020] /N 1>>] /Bounds [0.55000] /Encode [0 1 0 1]>> /Extend [true true]>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 6 0 R
+/F2 7 0 R
+>>
+/XObject <<
+>>
+/Shading <<
+/Sh1 8 0 R
+/Sh2 9 0 R
+/Sh3 10 0 R
+/Sh4 11 0 R
+>>
+>>
+endobj
+12 0 obj
+<<
+/Producer (fpdf/pdf-test)
+/Title (Gradients and clipping)
+/CreationDate (D:20260826120000+00'00')
+>>
+endobj
+13 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+>>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000815 00000 n 
+0000003274 00000 n 
+0000000009 00000 n 
+0000000087 00000 n 
+0000000901 00000 n 
+0000001625 00000 n 
+0000001743 00000 n 
+0000001856 00000 n 
+0000002249 00000 n 
+0000002479 00000 n 
+0000002872 00000 n 
+0000003449 00000 n 
+0000003569 00000 n 
+trailer
+<<
+/Size 14
+/Root 13 0 R
+/Info 12 0 R
+>>
+startxref
+3619
+%%EOF

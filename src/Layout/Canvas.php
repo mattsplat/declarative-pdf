@@ -39,11 +39,32 @@ interface Canvas
 
     /**
      * Draw arbitrary linework. Command coordinates are relative to
-     * ($xPt, $yTopPt) and painted in one `q … Q` group.
+     * ($xPt, $yTopPt) and painted in one `q … Q` group. `$boxWidthPt` /
+     * `$boxHeightPt` are the path's own box, used to resolve a gradient fill.
      *
      * @param list<\Pdf\Geometry\PathCommand> $commands
      */
-    public function path(array $commands, float $xPt, float $yTopPt, \Pdf\Style\Paint $paint): void;
+    public function path(
+        array $commands,
+        float $xPt,
+        float $yTopPt,
+        \Pdf\Style\Paint $paint,
+        float $boxWidthPt = 0.0,
+        float $boxHeightPt = 0.0,
+    ): void;
+
+    /**
+     * Run $draw with $commands (relative to ($xPt, $yTopPt)) as the clip region.
+     *
+     * @param list<\Pdf\Geometry\PathCommand> $commands
+     */
+    public function withPathClip(
+        array $commands,
+        float $xPt,
+        float $yTopPt,
+        \Pdf\Style\FillRule $rule,
+        \Closure $draw,
+    ): void;
 
     /** Draw image resource `/I{imageIndex}` into the given box. */
     public function image(int $imageIndex, float $xPt, float $yTopPt, float $widthPt, float $heightPt): void;

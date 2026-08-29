@@ -6,22 +6,24 @@ namespace Pdf\Layout\Box;
 
 use Pdf\Geometry\PathCommand;
 use Pdf\Layout\Canvas;
-use Pdf\Style\Paint;
+use Pdf\Style\FillRule;
 
 /**
- * Vector linework at a fixed size. Never splits — half a shape on each of two
- * pages is never the intent, so it moves whole to the next page instead.
+ * Renders a nested stack inside a path clip. Like {@see PathBox} it is a
+ * fixed-size figure that never splits: it moves whole to the next page rather
+ * than leaving half a clipped drawing behind.
  */
-final class PathBox extends AbstractBox
+final class ClipBox extends AbstractBox
 {
     /**
-     * @param list<PathCommand> $commands coordinates relative to the box's top-left
+     * @param list<PathCommand> $clipCommands coordinates relative to the box's top-left
      */
     public function __construct(
-        private readonly array $commands,
+        private readonly array $clipCommands,
         private readonly float $widthPt,
         private readonly float $heightPt,
-        private readonly Paint $paint,
+        private readonly FillRule $clipRule,
+        private readonly StackBox $inner,
         private readonly float $marginBeforePt = 0.0,
         private readonly float $marginAfterPt = 0.0,
     ) {
@@ -49,7 +51,19 @@ final class PathBox extends AbstractBox
 
     public function render(Canvas $canvas, float $xPt, float $yTopPt, float $widthPt): void
     {
-        $canvas->path($this->commands, $xPt, $yTopPt, $this->paint, $this->widthPt, $this->heightPt);
+        // Children were measured against the clip path's own width, so they must
+        // render at that width too — not the wider column they sit in.
+        $inner = $this->inner;
+        $innerWidth = $this->widthPt;
+        $canvas->withPathClip(
+            $this->clipCommands,
+            $xPt,
+            $yTopPt,
+            $this->clipRule,
+            static function () use ($inner, $canvas, $xPt, $yTopPt, $innerWidth): void {
+                $inner->render($canvas, $xPt, $yTopPt, $innerWidth);
+            },
+        );
     }
 
     public function minIntrinsicWidthPt(): float

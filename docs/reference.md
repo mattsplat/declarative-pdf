@@ -93,6 +93,7 @@ sheet, centred on the whole page and rotated; `opacity` below 1 emits an
 | `rule(float $thicknessPt = 0.5, ?Color = null)` | `Rule` |
 | `path(Path)` | `Path` — vector linework; see [`Pdf\Node\Path`](#pdfnodepath) |
 | `chart(Chart)` | `Chart` — bar / line / pie / sparkline; see [`Pdf\Node\Chart`](#pdfnodechart) |
+| `clip(Path $region, iterable<BlockNode>, FillRule = NonZero, StylePatch = new)` | `Clip` — children masked to `$region` |
 | `pageBreak()` | `PageBreak` |
 | `anchor(string $name)` | `Anchor` (internal-link target) |
 | `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI |
@@ -144,6 +145,7 @@ sheet** of the logical page, on top of the flow content.
 | `Spacer` | `(float $heightPt)` — or `Spacer::of(float, Unit)` |
 | `Rule` | `(float $thicknessPt = 0.5, ?Color $color = null, StylePatch)` |
 | `Path` | `(iterable<PathCommand> $commands, float $widthPt, float $heightPt, Paint, StylePatch)` — see below |
+| `Clip` | `(Path $path, iterable<BlockNode> $children, FillRule $clipRule = NonZero, StylePatch)` — clips `$children` to `$path`'s region |
 | `PageBreak` | `()` |
 | `Anchor` | `(string $name)` |
 | `Container` | `(iterable<BlockNode> $children, StylePatch)` |
@@ -175,7 +177,7 @@ render. `$page->component($x)` is sugar for `$page->add($x)`. See the
 
 ### `Pdf\Node\Path`
 
-Vector linework: an ordered command list painted with a solid `Paint`.
+Vector linework: an ordered command list painted with a `Paint`.
 Coordinates are relative to the path's own box, top-left origin, y increasing
 downward. The box does **not** shrink-wrap the geometry — the author states its
 size, and that is what the path occupies in block flow and what a `place()`
@@ -206,9 +208,10 @@ starts a new subpath, so one flat list describes a multi-subpath figure.
 `Pdf\Style\Paint` says how it is painted:
 
 ```php
-new Paint(?Color $fill = null, ?Color $stroke = null, float $strokeWidthPt = 0.5,
+new Paint(Color|Gradient|null $fill = null, ?Color $stroke = null, float $strokeWidthPt = 0.5,
           FillRule = NonZero, LineCap = Butt, LineJoin = Miter)
 Paint::filled(Color, FillRule = NonZero)
+Paint::gradient(Gradient, FillRule = NonZero)
 Paint::stroked(Color, float $widthPt = 0.5, LineCap = Butt, LineJoin = Miter)
 ```
 
@@ -216,8 +219,37 @@ A `Paint` with neither half defaults to a hairline black outline. `FillRule`
 is `NonZero` / `EvenOdd`; `LineCap` is `Butt` / `Round` / `Square`; `LineJoin`
 is `Miter` / `Round` / `Bevel`.
 
-A path never splits across a page break. Gradients, clipping paths, dash
-arrays and per-subpath paint are not implemented — see
+#### Gradient fills
+
+`Pdf\Style\Gradient` is `LinearGradient` (axial `/Shading` type 2) or
+`RadialGradient` (radial type 3), painted with `sh` inside the path's own clip.
+Stop offsets and the geometry below are fractions of the path's box; stops are
+normalised to span 0→1.
+
+```php
+LinearGradient::horizontal(iterable<GradientStop>, GradientSpread = Pad)   // (0,½)→(1,½)
+LinearGradient::vertical(iterable<GradientStop>, GradientSpread = Pad)     // (½,0)→(½,1)
+LinearGradient::between(iterable<GradientStop>, float $x0, $y0, $x1, $y1, GradientSpread = Pad)
+RadialGradient::centered(iterable<GradientStop>, float $cx = .5, $cy = .5, $radius = .5, GradientSpread = Pad)
+RadialGradient::focused(iterable<GradientStop>, float $focalX, $focalY, $cx = .5, $cy = .5,
+                        $radius = .5, $innerRadius = 0, GradientSpread = Pad)
+GradientStop::at(float $offset, Color)
+```
+
+`GradientSpread` is `Pad` (hold the end colours across the whole shape) or
+`None` (paint nothing past the first/last stop). A radius is a fraction of the
+box's larger side.
+
+#### Clipping
+
+`$page->clip(Path $region, iterable<BlockNode> $children, FillRule = NonZero,
+StylePatch = new)` (node: `Pdf\Node\Clip`) renders `$children` masked to
+`$region`'s command list. The region path supplies geometry only — its paint is
+ignored; add it again with `path()` to draw its outline. Like `Path`, a `Clip`
+never splits across a page break.
+
+A path never splits across a page break. Dash arrays, per-subpath paint and
+node transforms are not implemented — see
 [the roadmap](roadmap.md#vector-drawing).
 
 ### `Pdf\Node\Chart`

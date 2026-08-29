@@ -15,9 +15,10 @@ large-format sheets, absolute area placement (`place()` with `ShrinkMode`
 geometric or font-size fit), page-number and watermark helpers, public text /
 block measurement helpers
 (`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
-reusable `Component` nodes, vector drawing (`Path` with solid fill / stroke),
-data charts (`Pdf\Node\Chart` — bar / line / pie / sparkline on the `Path`
-API), and a pure-PHP single-page PDF importer emitting vector Form XObjects.
+reusable `Component` nodes, vector drawing (`Path` with solid or gradient fill /
+stroke, plus `Clip` for path clipping regions), data charts (`Pdf\Node\Chart` —
+bar / line / pie / sparkline on the `Path` API), and a pure-PHP single-page PDF
+importer emitting vector Form XObjects.
 
 The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
 OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -109,25 +110,28 @@ data back (parsing a filled FDF/XFDF) is a separate small parser.
 
 ## Vector drawing
 
-### Drawing primitives — **done** (solid paint)
+### Drawing primitives — **done** (solid + gradient paint, clipping)
 
 `Pdf\Node\Path` is a first-class block node: an ordered list of
 `Pdf\Geometry\PathCommand`s (`moveTo` / `lineTo` / `curveTo` / `close`, one
-flat list describing any number of subpaths) painted with a solid
-`Pdf\Style\Paint` — fill colour, stroke colour, stroke width, `FillRule`
-(nonzero / even-odd), `LineCap`, `LineJoin`. Static factories cover `line`,
-`rectangle`, `ellipse` (4-Bézier approximation) and `polygon`; `Path::of()`
-takes a hand-built command list. Coordinates are box-relative and top-left, in
-the caller's `Unit`. Works in block flow and in `$page->place()`.
-See `examples/shapes.php`.
+flat list describing any number of subpaths) painted with a `Pdf\Style\Paint` —
+stroke colour, stroke width, `FillRule` (nonzero / even-odd), `LineCap`,
+`LineJoin`, and a fill that is either a solid colour or a gradient. Static
+factories cover `line`, `rectangle`, `ellipse` (4-Bézier approximation) and
+`polygon`; `Path::of()` takes a hand-built command list. Coordinates are
+box-relative and top-left, in the caller's `Unit`. Works in block flow and in
+`$page->place()`. See `examples/shapes.php`.
+
+| Feature | API |
+|---|---|
+| Axial / radial gradient fill | `Paint::gradient(LinearGradient::horizontal($stops))`, `RadialGradient::centered($stops)` — emitted as `/Shading` type 2 / 3 painted with `sh` inside the path clip; stops and geometry are box fractions, spread `Pad` / `None` |
+| Clipping regions | `$page->clip($path, [$children], FillRule)` / `Pdf\Node\Clip` — children render inside the path; `ContentStream::withPathClip()` is the general `W` / `W*` case |
 
 What is left:
 
-- **Gradients** — **M**: `/Shading` type 2 (axial) / type 3 (radial) as a fill,
-  plus the `/Pattern` colour space and `sh`.
-- **Clipping paths** (`W` / `W*`) — **S**: `ContentStream::withClip()` already
-  clips to a rectangle; the general case is the same code taking a command list.
 - **Dash arrays** (`d`) and **miter limit** (`M`) — **S**.
+- **Per-subpath gradients** and **tiling patterns** (`/Pattern` colour space,
+  `scn`) — **S–M**; the shading path uses `sh` rather than a shading pattern.
 - **Per-subpath paint** and **auto bounding-box sizing** (the author states the
   box today) — **S each**.
 - **Transforms** (rotation / skew on the node) — **S**; `cm` is already emitted
@@ -487,13 +491,13 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 
 ## Suggested near-term order
 
-1. **Gradients + clipping paths** (M) — the rest of the drawing story now that
-   solid-paint `Path` and `Chart` have shipped.
-2. **AcroForm fields with generated appearance streams** (L) — works in every
-   viewer without JavaScript.
-3. **Document / field JavaScript** (M) — opt-in layer on top of #2 for Acrobat
-   workflows, with the viewer-support caveat documented.
-4. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+1. **Gradients + clipping paths** — **done**; see *Drawing primitives* above.
+2. **Charts / sparklines** — **done**; see *Charts / sparklines* above.
+3. **AcroForm fields with generated appearance streams** — **done**; see
+   *Interactive forms & JavaScript* above.
+4. **Document / field JavaScript** — **done** (opt-in, Acrobat, with the
+   viewer-support caveat documented); see above.
+5. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-5. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+6. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

@@ -288,6 +288,52 @@ $p->place(22, $top + $height, 152, 1, [
 would shrink content taller than its area. `examples/shapes.php` is the whole
 thing.
 
+### Gradient fills
+
+A `Paint`'s fill can be a `LinearGradient` (axial) or `RadialGradient` (radial)
+instead of a flat colour — emitted as a PDF `/Shading` painted with `sh` inside
+the shape. Stop offsets and the gradient geometry are fractions of the path's
+box.
+
+```php
+use Pdf\Style\{GradientStop, LinearGradient, Paint, RadialGradient};
+
+$sunset = [
+    GradientStop::at(0.0, Color::fromHex('#f9d976')),
+    GradientStop::at(0.55, Color::fromHex('#e96443')),
+    GradientStop::at(1.0, Color::fromHex('#6a1b4d')),
+];
+
+$p->path(Path::rectangle(120, 24, Paint::gradient(LinearGradient::horizontal($sunset))));
+$p->path(Path::ellipse(120, 24, Paint::gradient(RadialGradient::centered([
+    GradientStop::at(0.0, Color::white()),
+    GradientStop::at(1.0, Color::fromHex('#2f6fbf')),
+]))));
+```
+
+Stops are normalised to span 0→1. `GradientSpread::None` (the second argument to
+every factory) paints nothing past the first and last stop instead of holding
+the end colours.
+
+### Clipping to a shape
+
+`clip()` masks a group of blocks to a `Path` region — the path gives geometry
+only, so add it again with `path()` if you also want its outline.
+
+```php
+$p->clip(
+    Path::polygon($starPoints, Paint::filled(Color::black())),
+    [
+        new Paragraph('CLIPPED', new StylePatch(fontSizePt: 20, align: TextAlign::Center)),
+        Path::rectangle(48, 40, Paint::gradient(LinearGradient::vertical($sunset))),
+    ],
+    FillRule::EvenOdd,
+);
+```
+
+Children are measured and drawn at the clip path's width, and a `Clip` never
+splits across a page break.
+
 ## Charts
 
 `Chart` is a fixed-size block node drawn entirely from `Path`s and text: it

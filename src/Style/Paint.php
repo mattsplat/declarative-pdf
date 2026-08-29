@@ -7,17 +7,18 @@ namespace Pdf\Style;
 use Pdf\Color\Color;
 
 /**
- * How a {@see \Pdf\Node\Path} is painted: solid fill, solid stroke, or both.
+ * How a {@see \Pdf\Node\Path} is painted: the fill (a solid {@see Color} or a
+ * {@see Gradient}), the stroke (a solid {@see Color}), or both.
  *
- * Gradients (`/Shading`) and dash arrays are deliberately absent — see the
- * "Vector drawing" section of `docs/roadmap.md`.
+ * Dash arrays are deliberately absent — see the "Vector drawing" section of
+ * `docs/roadmap.md`.
  */
 final readonly class Paint
 {
     public ?Color $stroke;
 
     public function __construct(
-        public ?Color $fill = null,
+        public Color|Gradient|null $fill = null,
         ?Color $stroke = null,
         public float $strokeWidthPt = 0.5,
         public FillRule $fillRule = FillRule::NonZero,
@@ -34,6 +35,11 @@ final readonly class Paint
         return new self(fill: $color, fillRule: $fillRule);
     }
 
+    public static function gradient(Gradient $gradient, FillRule $fillRule = FillRule::NonZero): self
+    {
+        return new self(fill: $gradient, fillRule: $fillRule);
+    }
+
     public static function stroked(
         Color $color,
         float $widthPt = 0.5,
@@ -46,6 +52,11 @@ final readonly class Paint
     public function fills(): bool
     {
         return $this->fill !== null;
+    }
+
+    public function hasGradientFill(): bool
+    {
+        return $this->fill instanceof Gradient;
     }
 
     public function strokes(): bool
