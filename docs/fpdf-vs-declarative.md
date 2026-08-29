@@ -411,5 +411,4 @@ rejected those outright.
 | `$pdf->Output('I' \| 'D')` | `$doc->output()->inline()` / `->download()` |
 | FPDI (`setSourceFile` / `importPage` / `useTemplate`) | `$p->placePdf(x, y, w, h, 'src.pdf', page: 1)` |
 
-See [`porting.md`](porting.md) for the same mapping in prose, and
-[`reference.md`](reference.md) for the full API.
+See [`reference.md`](reference.md) for the full API.

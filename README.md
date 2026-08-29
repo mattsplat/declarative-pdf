@@ -94,8 +94,7 @@ Windows-1252.
 | [Architecture](docs/architecture.md) | the pipeline, the box model, what was ported |
 | [Roadmap](docs/roadmap.md) | what is planned, sized and prioritised |
 | [FPDF vs. declarative](docs/fpdf-vs-declarative.md) | the seven FPDF tutorials, side by side |
-| [Porting from FPDF](docs/porting.md) | `Cell` / `MultiCell` / `WriteHTML` → the declarative equivalent |
-| [Comparison](docs/comparison.md) · [PDFBlocks](docs/pdfblocks-vs-declarative.md) | vs. FPDF / TCPDF / tc-lib-pdf / PDFBlocks |
+| [Comparison](docs/comparison.md) | vs. FPDF / TCPDF / tc-lib-pdf / PDFBlocks — feature matrix, trade-offs |
 | [Interactive forms](docs/forms.md) | AcroForm fields and the JavaScript caveat |
 
 Not yet implemented — see the [roadmap](docs/roadmap.md): CFF font subsetting,

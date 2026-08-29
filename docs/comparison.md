@@ -169,11 +169,6 @@ PDFBlocks reads like SwiftUI; declarative-pdf reads like a builder API — and i
 `Table` is hand-assembled per cell where PDFBlocks' takes type-safe `KeyPath`
 columns with automatic data grouping.
 
-A full construct-by-construct side-by-side — hello world, styled/inline text,
-page setup, stacks, headers, columns, images, the `Table`, reusable components,
-vector drawing — is in
-[`pdfblocks-vs-declarative.md`](pdfblocks-vs-declarative.md).
-
 ### Feature deltas
 
 **PDFBlocks has, declarative-pdf doesn't:** vector shapes (Capsule / Circle /

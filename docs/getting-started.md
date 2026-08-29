@@ -122,5 +122,4 @@ Document::create()->using($renderer)->page(...)->save('out.pdf');
 - [Cookbook](cookbook.md) — task-oriented recipes
 - [Reference](reference.md) — every method, node and option
 - [FPDF vs. declarative](fpdf-vs-declarative.md) — the 7 FPDF tutorials, side by side
-- [Porting from FPDF](porting.md)
 - [Architecture](architecture.md)

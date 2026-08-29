@@ -144,11 +144,6 @@ What is left:
   LTV, and PAdES-baseline profiles for EU compliance. The visible appearance is
   easy; the cryptography and byte-exact incremental save are the hard part.
 
-A dedicated feature-by-feature breakdown — conditional forms, calculators,
-configurators, quizzes, layers, 3D, dynamic tables, the event model — with
-difficulty **and viewer-reach** ratings is in
-[`interactive-pdf-feasibility.md`](interactive-pdf-feasibility.md).
-
 ---
 
 ## Annotations (non-link)
