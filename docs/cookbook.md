@@ -59,6 +59,8 @@ Document::create()->watermark('DRAFT')->page(...)->...;  // whole document
 The font size auto-fits the page diagonal unless you pass `fontSizePt`. A page
 may override the document watermark with its own `watermark()`.
 
+## Multi-page flow and page breaks
+
 Content paginates on its own. Force a break with `pageBreak()`; keep a block
 whole with `keepTogether`; keep a heading with the block after it (the default
 for headings) with `keepWithNext`.
