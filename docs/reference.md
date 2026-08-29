@@ -38,7 +38,7 @@ immutable tree.
 | `page(callable(PageBuilder))` | append a logical page; the closure runs at `build()` / `toString()` time, once fonts are known, so it can call the measurement helpers below |
 | `addPage(Pdf\Node\Page)` | append a pre-built page |
 | `baseStyle(Pdf\Style\Style)` | document-wide defaults (default `Style::default()`) |
-| `stylesheet(Pdf\Style\Stylesheet)` | per-node-type rules |
+| `stylesheet(Pdf\Style\Stylesheet)` | per-node-type and named class rules |
 | `pageNumbers(string $format = 'Page {n} of {N}', TextAlign = Center, float $fontSizePt = 9, ?Color = null, bool $inHeader = false)` | page numbers on every `page()` |
 | `watermark(string\|Pdf\Node\Watermark)` | stamp on every `page()`; a page may override |
 | `using(Pdf\Render\DocumentRenderer)` | custom renderer (fonts, clock, compression, producer) |
@@ -256,6 +256,7 @@ Every constructor argument is nullable and defaults to `null` ("inherit").
 | `keepWithNext` | `bool` | keep on the same page as the following block |
 | `keepTogether` | `bool` | never split across a page |
 | `orphans` / `widows` | `int` | min lines left behind / carried forward (default 2) |
+| `class` | `string` | space-separated `Stylesheet` class-rule names (`'lead callout'`) the node opts into; a selector, not a visual override — ignored by `isEmpty()` and `applyTo()` |
 
 Helpers: `StylePatch::superscript()`, `StylePatch::subscript()`,
 `StylePatch::none()`. `$patch->applyTo(Style) : Style`.
@@ -274,10 +275,14 @@ base size) and `keepWithNext`.
   ->heading(int $level, StylePatch)
   ->paragraph(StylePatch)
   ->set(string $selector, StylePatch)      // 'h1'..'h6', 'paragraph', 'list', 'table', 'container'
+  ->class(string $name, StylePatch)        // a named rule; alias for ->set()
 ```
 
 Applied by the resolver **between** the built-in defaults and the node's own
-`StylePatch`.
+`StylePatch`. A node opts into a class rule with `StylePatch(class: 'lead')`;
+class rules are consulted after the node-type rule (so a class beats the type,
+and a class listed later beats one listed earlier) and before the node's own
+patch.
 
 ### `Pdf\Style\ColumnWidth`
 

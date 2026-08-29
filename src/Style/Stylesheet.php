@@ -8,9 +8,10 @@ namespace Pdf\Style;
  * Named style rules applied by {@see StyleResolver} between a block's built-in
  * defaults and its own patch.
  *
- * Selectors are node-type names: `h1`..`h6`, `paragraph`, `list`, `table`,
- * `container`. FPDF had no equivalent — every style was ad-hoc `SetFont()` /
- * `SetTextColor()` calls.
+ * Selectors are node-type names (`h1`..`h6`, `paragraph`, `list`, `table`,
+ * `container`) or arbitrary class names a node opts into via
+ * `StylePatch(class: 'lead')`. FPDF had no equivalent — every style was ad-hoc
+ * `SetFont()` / `SetTextColor()` calls.
  */
 final class Stylesheet
 {
@@ -32,6 +33,16 @@ final class Stylesheet
     public function paragraph(StylePatch $patch): self
     {
         return $this->set('paragraph', $patch);
+    }
+
+    /**
+     * Register a class rule. A node opts in with `StylePatch(class: 'lead')`;
+     * class rules are applied after the node-type rule and before the node's
+     * own patch. Thin alias for {@see self::set()}.
+     */
+    public function class(string $name, StylePatch $patch): self
+    {
+        return $this->set($name, $patch);
     }
 
     public function get(string $selector): ?StylePatch

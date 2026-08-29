@@ -106,5 +106,26 @@ final class StylePatchTest extends TestCase
         self::assertFalse((new StylePatch(fontSizePt: 0.0))->isEmpty());
         self::assertFalse((new StylePatch(fontFamily: ''))->isEmpty());
         self::assertFalse((new StylePatch(underline: false))->isEmpty());
+
+        // `class` is a selector, not a visual override — it does not count.
+        self::assertTrue((new StylePatch(class: 'lead'))->isEmpty());
+        self::assertFalse((new StylePatch(class: 'lead', bold: true))->isEmpty());
+    }
+
+    public function test_apply_to_ignores_the_class_field(): void
+    {
+        $out = (new StylePatch(class: 'lead'))->applyTo(Style::default());
+
+        self::assertEquals(Style::default(), $out);
+    }
+
+    public function test_stylesheet_class_is_an_alias_for_set(): void
+    {
+        $patch = new StylePatch(fontSizePt: 14.0);
+        $viaClass = (new Stylesheet())->class('lead', $patch);
+        $viaSet = (new Stylesheet())->set('lead', $patch);
+
+        self::assertEquals($viaSet, $viaClass);
+        self::assertSame($patch, $viaClass->get('lead'));
     }
 }

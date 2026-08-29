@@ -410,11 +410,13 @@ groups (the plan flags "keep-together at scale").
 
 ## Tooling & developer experience
 
-### Stylesheet class selectors — **S**
+### Stylesheet class selectors — **done**
 
-`->class('lead')` on a node, `(new Stylesheet())->class('lead', $patch)` — a
-named rule beside today's per-node-type ones. `StyleResolver` already has the
-hook point between inheritance and inline patch.
+`StylePatch(class: 'lead callout')` on any node, `(new Stylesheet())->class('lead',
+$patch)` for the rule. `StyleResolver::selectorsFor()` appends a node's classes
+after its type selector, so a class rule beats the type rule, a later class beats
+an earlier one, and the node's own patch still wins over all of them. `class` is a
+selector, not a visual property — `StylePatch::isEmpty()` ignores it.
 
 ### Markdown → document — **M**
 
@@ -452,13 +454,12 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 ## Suggested near-term order
 
 1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
-2. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
-3. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
-4. **AcroForm fields with generated appearance streams** (L) — works in every
+2. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
+3. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
-5. **Document / field JavaScript** (M) — opt-in layer on top of #4 for Acrobat
+4. **Document / field JavaScript** (M) — opt-in layer on top of #3 for Acrobat
    workflows, with the viewer-support caveat documented.
-6. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+5. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-7. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+6. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

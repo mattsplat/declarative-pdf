@@ -67,10 +67,15 @@ final class StyleResolver
         return $this->scaleFixedFontSize($patch, $patch->applyTo($style));
     }
 
-    /** @return list<string> */
+    /**
+     * The node-type selector followed by the node's own class names, so a class
+     * rule wins over the type rule and a later class wins over an earlier one.
+     *
+     * @return list<string>
+     */
     private function selectorsFor(BlockNode $node): array
     {
-        return match (true) {
+        $selectors = match (true) {
             $node instanceof Heading => ['h' . $node->level],
             $node instanceof Paragraph => ['paragraph'],
             $node instanceof BulletList, $node instanceof OrderedList => ['list'],
@@ -78,6 +83,17 @@ final class StyleResolver
             $node instanceof Container => ['container'],
             default => [],
         };
+
+        $class = $node->patch()->class;
+        if ($class !== null) {
+            foreach (preg_split('/\s+/', trim($class)) ?: [] as $name) {
+                if ($name !== '') {
+                    $selectors[] = $name;
+                }
+            }
+        }
+
+        return $selectors;
     }
 
     /** Resolve an inline run's style on top of its block's resolved style. */

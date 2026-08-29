@@ -42,6 +42,12 @@ final readonly class StylePatch
         public ?bool $keepTogether = null,
         public ?int $orphans = null,
         public ?int $widows = null,
+        /**
+         * Space-separated {@see Stylesheet} class-rule names (`'lead callout'`).
+         * A selector, not a visual override — {@see self::isEmpty()} ignores it
+         * and {@see self::applyTo()} never reads it.
+         */
+        public ?string $class = null,
     ) {
     }
 
@@ -50,11 +56,15 @@ final readonly class StylePatch
         return new self();
     }
 
-    /** True when this patch overrides nothing — every field is `null`. */
+    /**
+     * True when this patch overrides no *visual* property — every field bar
+     * `class` (a selector, not a style) is `null`. Drives whether the measurer
+     * wraps a component body in an implicit Container.
+     */
     public function isEmpty(): bool
     {
-        foreach (get_object_vars($this) as $value) {
-            if ($value !== null) {
+        foreach (get_object_vars($this) as $name => $value) {
+            if ($name !== 'class' && $value !== null) {
                 return false;
             }
         }
