@@ -30,6 +30,11 @@ reproduced in full below.
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED.
 
+The core-font metric files in `resources/fonts/` (the 14 standard PDF fonts —
+Courier, Helvetica, Times, Symbol, ZapfDingbats) are the character-width tables
+that FPDF ships, themselves derived from Adobe's publicly published AFM metrics.
+They carry no separate licence beyond FPDF's above.
+
 
 ================================================================================
 2. Bundled fonts  —  SIL Open Font License, Version 1.1

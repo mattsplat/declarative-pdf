@@ -2,6 +2,8 @@
     "name": "mattsplat/declarative-pdf",
     "description": "A typed, declarative PDF generation library with a block-layout engine.",
     "type": "library",
+    "keywords": ["pdf", "pdf-generation", "fpdf", "layout", "typesetting", "acroform", "pdf-forms"],
+    "homepage": "https://github.com/mattsplat/declarative-pdf",
     "license": "MIT",
     "authors": [
         {
@@ -9,6 +11,10 @@
             "email": "matthewjohncoleman@gmail.com"
         }
     ],
+    "support": {
+        "issues": "https://github.com/mattsplat/declarative-pdf/issues",
+        "source": "https://github.com/mattsplat/declarative-pdf"
+    },
     "require": {
         "php": ">=8.3",
         "ext-zlib": "*",
@@ -35,9 +41,23 @@
     },
     "scripts": {
         "test": "phpunit",
-        "stan": "phpstan analyse"
+        "stan": "phpstan analyse",
+        "check": [
+            "@stan",
+            "@test"
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Run the PHPUnit suite",
+        "stan": "Run PHPStan static analysis (level 6)",
+        "check": "Run static analysis and the test suite"
     },
     "config": {
         "sort-packages": true
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "0.1.x-dev"
+        }
     }
 }

@@ -128,6 +128,7 @@ Breaking any of these is a bug even if the tests pass:
 Run these — do not write throwaway verification scripts:
 
 ```
+composer check                     # stan + test (the full gate)
 composer test                      # vendor/bin/phpunit  — 306 tests
 composer stan                      # vendor/bin/phpstan analyse  — level 6
 for f in examples/*.php; do php "$f"; done   # render all 16 examples
