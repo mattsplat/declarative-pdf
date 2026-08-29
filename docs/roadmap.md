@@ -214,12 +214,20 @@ already exists.
 
 ## Document structure & metadata
 
-### Outlines / bookmarks — **S**
+### Outlines / bookmarks — **done** (explicit)
 
-`/Outlines` tree in the catalog pointing at `Anchor` destinations. API:
-`$doc->bookmark('Chapter 1', anchor: 'ch1')` or auto-generated from headings
-(`->bookmarksFromHeadings(maxLevel: 3)`). The anchor→(page, y) resolution is
-already done for internal links; this reuses it directly. **Low-hanging fruit.**
+`DocumentBuilder::bookmark('Chapter 1', 'ch1', level: 0)` accumulates outline
+entries; the renderer emits an `/Outlines` tree in the catalog with
+`/Prev` / `/Next` / `/First` / `/Last` / `/Count` links and a
+`/Dest [<page> 0 R /XYZ 0 <y> null]` per item, resolved through the same
+anchor→(page, y) map the internal links use. Nesting is by `level` in call
+order. An unresolved anchor throws `Pdf\Exception\PdfException`. What is left:
+
+- **`bookmarksFromHeadings(maxLevel: 3)`** — **S**: auto-generate the outline
+  from heading marks. Needs the heading-mark collection pass that the
+  [Table of contents](#table-of-contents--m) item also wants.
+- `/PageMode /UseOutlines` to open the panel on load, collapsed `/Count`
+  (negative), and coloured / bold items (`/C`, `/F`).
 
 ### XMP metadata — **S**
 
@@ -451,14 +459,13 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 
 ## Suggested near-term order
 
-1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
-2. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
-3. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
-4. **AcroForm fields with generated appearance streams** (L) — works in every
+1. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
+2. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
+3. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
-5. **Document / field JavaScript** (M) — opt-in layer on top of #4 for Acrobat
+4. **Document / field JavaScript** (M) — opt-in layer on top of #3 for Acrobat
    workflows, with the viewer-support caveat documented.
-6. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+5. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-7. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+6. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.
