@@ -3,6 +3,12 @@
     "description": "A typed, declarative PDF generation library with a block-layout engine.",
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Matthew Coleman",
+            "email": "matthewjohncoleman@gmail.com"
+        }
+    ],
     "require": {
         "php": ">=8.3",
         "ext-zlib": "*",
