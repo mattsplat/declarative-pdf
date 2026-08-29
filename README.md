@@ -1,11 +1,16 @@
 # declarative-pdf
 
-A reimagining of FPDF as a **typed, declarative** PDF library with a real
-block-layout engine.
+[![CI](https://github.com/mattsplat/declarative-pdf/actions/workflows/ci.yml/badge.svg)](https://github.com/mattsplat/declarative-pdf/actions/workflows/ci.yml)
+[![PHP](https://img.shields.io/badge/php-8.3%2B-8892bf.svg)](https://www.php.net/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+<!-- [![Packagist](https://img.shields.io/packagist/v/mattsplat/declarative-pdf.svg)](https://packagist.org/packages/mattsplat/declarative-pdf) -->
 
-Instead of driving a cursor (`AddPage` / `SetFont` / `Cell` / `Ln`), you
-describe the document as an immutable tree of nodes and a layout engine places
-them.
+A reimagining of FPDF as a **typed, declarative** PDF library with a real
+block-layout engine. Instead of driving a cursor (`AddPage` / `SetFont` /
+`Cell` / `Ln`), you describe the document as an immutable tree of nodes and a
+`measure → paginate → render → serialise` pipeline places everything.
+
+Zero runtime dependencies beyond `ext-zlib` and `ext-mbstring`.
 
 ```php
 use Pdf\Document;
@@ -21,174 +26,116 @@ Document::create()
     ->save('out.pdf');
 ```
 
-The immutable tree can also be built directly:
+The immutable `Pdf\Node\*` tree is public too, for when you want to build or
+transform it directly — see [Getting started](docs/getting-started.md).
 
-```php
-use Pdf\Node\{Document, Page, PageMaster, Heading, Paragraph, Meta};
-use Pdf\Text\InlineSequence;
+## Gallery
 
-$tree = new Document(
-    meta: new Meta(title: 'Report'),
-    pages: [new Page(new PageMaster(), [
-        new Heading(1, InlineSequence::of('Overview')),
-        new Paragraph('Body text.'),
-    ])],
-);
+Rendered by the scripts in [`examples/`](examples/) — `php examples/<name>.php`.
 
-file_put_contents('out.pdf', Document::render($tree)); // \Pdf\Document facade
+| | | |
+|---|---|---|
+| [![hello](docs/images/hello.png)](examples/hello.php) | [![styled](docs/images/styled.png)](examples/styled.php) | [![chart](docs/images/chart.png)](examples/chart.php) |
+| **hello** — the model in one page | **styled** — a house style via stylesheet | **chart** — bar / line / pie / sparkline |
+| [![form](docs/images/form.png)](examples/form.php) | [![shapes](docs/images/shapes.png)](examples/shapes.php) | [![sheet](docs/images/sheet.png)](examples/sheet.php) |
+| **form** — AcroForm fields, self-drawn | **shapes** — gradients + path clipping | **sheet** — ARCH D, absolute layout |
+
+## Install
+
+```bash
+composer require mattsplat/declarative-pdf
 ```
 
-## Requirements
+Requires **PHP 8.3+** with `ext-zlib` and `ext-mbstring`. `ext-gd` is needed to
+decode GIF and WebP images; `ext-iconv` for font encodings other than
+Windows-1252.
 
-- PHP 8.3+
-- ext-zlib, ext-mbstring
-- ext-gd for GIF / WebP images; ext-iconv for non-Windows-1252 font encodings
+## Features
 
-## Status — Phases 1–5
+- **Layout engine** — greedy line breaking with justification, box-model
+  pagination (split / keep-together / keep-with-next / widow–orphan), explicit
+  page breaks, header and footer closures with a real total page count.
+- **Text** — UTF-8 in, transcoded per font; inline bold / italic / underline /
+  strike / super- and subscript / links / hard breaks / inline images; inline
+  HTML (`b i u s sup sub a br`).
+- **Style** — inheritance, per-node-type stylesheet rules, named class rules,
+  a sparse `StylePatch` for per-node overrides.
+- **Fonts** — the 14 core fonts; embedded TrueType (subsetted) and OpenType/CFF;
+  named and numeric weights via `FontFace`.
+- **Tables** — automatic column sizing (auto / fixed / fraction), repeating
+  headers across pages, row and cell splitting, colspans, per-cell alignment
+  and background.
+- **Images** — JPEG, PNG (with soft mask), GIF, WebP — from a path, an
+  `http(s)://` URL or a `data:` URI; block or inline.
+- **Vector drawing** — `Path` with Bézier segments, solid or gradient fills
+  (axial and radial `/Shading`), stroke, fill rules, caps and joins; `Clip` to
+  an arbitrary path.
+- **Charts** — a thin `Chart` node over the path API: bar, line, pie, sparkline
+  with a nice-number axis and legends.
+- **Interactive forms** — text / checkbox / radio / dropdown / list box /
+  button / signature fields as `/AcroForm` with self-drawn appearance streams
+  (no `/NeedAppearances`); native submit / reset; an opt-in Acrobat JavaScript
+  layer (calculations, formatting, validation).
+- **Navigation & structure** — internal and external links, a bookmark outline,
+  large-format sheets, absolute-area layout (`place` / `placeImage` /
+  `placePdf` / `frame` with `Fit`, `BoxAlign`, `ShrinkMode`).
+- **PDF import** — a pure-PHP reader for trusted, unencrypted PDFs; one page
+  imported as a vector Form XObject.
+- **Deterministic** — with a fixed clock, `compress: false` and a fixed producer
+  string the output is byte-stable; the golden-file tests depend on it.
 
-Implemented:
+## Documentation — [`docs/`](docs/)
 
-- Typed low-level PDF writer (objects, streams, Flate, xref, trailer) — ported
-  from `fpdf.php` `_put*` / `_enddoc`.
-- Core-font metrics and embedding, ToUnicode CMaps, `/Widths`, `/FontDescriptor`
-  — ported from `_putfonts` / `_tounicodecmap`.
-- Style resolution with inheritance, heading/paragraph defaults, and box
-  properties (padding / border / background).
-- Greedy line breaking across multi-style runs, with justification — ported
-  from the `MultiCell` scan loop.
-- A box model (`Box` / `StackBox` / `TextBox` / `ContainerBox` / `ListItemBox` …)
-  with `split()`-based **multi-page pagination**: page-break trigger,
-  orphan/widow control, `keepWithNext`, `keepTogether`, explicit `PageBreak`.
-- Block flow: `Spacer`, `Rule`, `Container` (padding/border/background),
-  `BulletList` / `OrderedList`.
-- **Headers and footers** as `PageContext`-driven closures on the page master
-  (replacing `Header()` / `Footer()` overrides); real total page count, no
-  `{nb}` alias.
-- **Images** — JPEG, PNG (incl. palette, colour-key and full alpha → soft
-  mask), GIF and WebP (both via in-memory PNG re-encode; the WebP path fixes
-  FPDF's alpha-losing JPEG conversion). Ported from `_parse*` / `_putimage`.
-  Sources may be a path, an `http(s)://` URL, or a `data:` URI (URL fetch is
-  dependency-free — streams, with an `ext-curl` fallback).
-- **Links** — inline `withLink()` runs targeting a URI or an `#anchor`;
-  `Anchor` nodes resolved to `/Dest` after layout; `/Annots` per page. Ported
-  from `AddLink` / `SetLink` / `Link` / `_putlinks`.
-- **Multi-column layout** — `Columns` block: balanced when it fits, filled
-  column-then-page when it overflows (replaces the tuto4 `AcceptPageBreak`
-  trick).
-- **Tables** — `Table` / `TableRow` / `TableCell` with automatic column
-  sizing (`ColumnWidth::auto()` / `fixed()` / `fraction()` + min/max clamps),
-  a deterministic CSS-style autosizing algorithm (`Layout\TableLayout`),
-  per-page row splitting with **repeating header rows**, oversized-row cell
-  splitting, `colspan`, vertical alignment, per-cell background, grid borders.
-  Replaces the hand-built `Cell()` grids of tuto5.
-- **UTF-8 text** — API input is UTF-8 and is transcoded to each font's encoding
-  before measuring and emitting (`Text\Encoding`): Windows-1252 via mbstring,
-  the other `makefont` code pages (cp1250–1258, cp874, KOI8, ISO-8859-*) via
-  iconv. Accents, the euro sign, em/en dashes and curly quotes render correctly.
-- **Inline decorations** — `withBold` / `withItalic` / `withUnderline` /
-  `withStrikethrough` / `withSuperscript` / `withSubscript` / `withBreak`
-  (`<br>` without a paragraph split) / `withImage` (an image that flows with
-  the text, sits on the baseline and grows the line height); `fontSizeScale`
-  and `baselineShift` on `StylePatch`. The line breaker works on an item
-  stream (`Layout\Inline\{Word,Space,Break,Box}Item`), not a byte loop.
-- **Named stylesheets** — `Style\Stylesheet` per-type rules (`h1`, `paragraph`,
-  `table`, …) applied between built-in defaults and the node's own patch.
-- **Embedded fonts** — `FontRepository::register()` a TrueType/Type1 `.json`
-  (from the `makefont` tool); subsetted program embedded with `/FontFile2`,
-  `/FontDescriptor` and a ToUnicode CMap (tuto7). OpenType `.otf` with
-  PostScript (CFF) outlines embeds whole as `/FontFile3` `/Subtype /Type1C`.
-- **Font weights** — `Pdf\Font\FontFace(weight: 100–900, italic)` is the
-  resolution key; `StylePatch(weight: 600)` selects a cut, unregistered weights
-  fall down a nearest-cut ladder, core families keep their bundled bold/italic.
-- **Measurement helpers** — `PageBuilder::textWidth()` / `measureBlocks()` and
-  `Pdf\Text\TextMeasurer` return advance width / stacked height in the page's
-  units, for right-aligning and sizing rectangles in an absolute layout.
-- **Reusable components** — subclass `Pdf\Node\Component`, return the tree from
-  `body()`; it expands during layout and composes anywhere a block goes.
-- **Inline HTML** — `Pdf\Text\Html::toInline()` / `$page->html()` for
-  `b`/`i`/`u`/`s`/`sup`/`sub`/`a`/`br` (tuto6).
-- **Large-format sheets + absolute area layout** — `PageSize::arch('e')` /
-  `ansi()` / `a0()`; `$page->place()` / `placeImage()` / `placePdf()` /
-  `frame()` position content in explicit rectangles with `Fit` + `BoxAlign`
-  (blueprint / poster / plan-set layout). Over-tall placed blocks shrink to
-  fit — geometrically, or `ShrinkMode::FontSize` to drop point size and re-wrap.
-- **Vector drawing** — `Pdf\Node\Path` with `moveTo` / `lineTo` / `curveTo` /
-  `close`, solid fill and stroke, nonzero / even-odd fill rule, cap and join;
-  `Path::line()` / `rectangle()` / `ellipse()` / `polygon()` factories. A block
-  node, so it flows or goes in a `place()` rectangle (`examples/shapes.php`).
-- **Charts** — `Pdf\Node\Chart`: `Chart::bar()` / `line()` / `pie()` /
-  `sparkline()`, one or more `Series`, a nice-number value axis, tick and
-  category labels, an optional legend. A thin layer on `Path` — deterministic,
-  no dependencies (`examples/chart.php`).
-- **Interactive forms** — `TextField` / `Checkbox` / `RadioGroup` / `Dropdown` /
-  `ListBox` / `PushButton` / `SignatureField` nodes become `/AcroForm` fields
-  with **self-drawn `/AP` appearance streams** (correct in every viewer, no
-  `/NeedAppearances`). Native `/SubmitForm` and `/ResetForm` buttons; comb,
-  multiline, password, multi-select flags. Opt-in Acrobat JavaScript layer —
-  `Pdf\Interactive\Js` calculate / format / validate recipes, `/AA`, `/CO`,
-  document-level `/Names /JavaScript` (`examples/form.php`,
-  `examples/form-calc.php`, [`docs/forms.md`](docs/forms.md)).
-- **PDF page import** — `$page->placePdf('drawing.pdf', page: 1)` imports one
-  page of an external (trusted, unencrypted) PDF as a **vector Form XObject**,
-  copying its fonts/images/resources. `Pdf\Import\PdfReader` handles classic
-  and stream xrefs, object streams and `/Prev` chains.
-- `Document::create()` builder; file / string / HTTP output.
+| | |
+|---|---|
+| [Getting started](docs/getting-started.md) | install, first document, output destinations, determinism |
+| [Cookbook](docs/cookbook.md) | task-oriented recipes for every feature |
+| [API reference](docs/reference.md) | every builder method, node, style option, enum |
+| [Architecture](docs/architecture.md) | the pipeline, the box model, what was ported |
+| [Roadmap](docs/roadmap.md) | what is planned, sized and prioritised |
+| [FPDF vs. declarative](docs/fpdf-vs-declarative.md) | the seven FPDF tutorials, side by side |
+| [Porting from FPDF](docs/porting.md) | `Cell` / `MultiCell` / `WriteHTML` → the declarative equivalent |
+| [Comparison](docs/comparison.md) · [PDFBlocks](docs/pdfblocks-vs-declarative.md) | vs. FPDF / TCPDF / tc-lib-pdf / PDFBlocks |
+| [Interactive forms](docs/forms.md) | AcroForm fields and the JavaScript caveat |
 
-### Docs — [`docs/`](docs/)
-
-- [Getting started](docs/getting-started.md) — install, first document, output
-- [Cookbook](docs/cookbook.md) — recipes for every feature
-- [API reference](docs/reference.md) — every method, node, option, enum
-- [FPDF vs. declarative](docs/fpdf-vs-declarative.md) — the 7 tutorials, side by side
-- [Porting from FPDF](docs/porting.md) — the concept mapping in prose
-- [Comparison vs. FPDF / TCPDF / tc-lib-pdf / PDFBlocks](docs/comparison.md) — feature matrix, trade-offs
-- [PDFBlocks vs. this library](docs/pdfblocks-vs-declarative.md) — Swift SwiftUI-style PDF, syntax side by side
-- [Architecture](docs/architecture.md) — the pipeline
-
-Not yet implemented (see [`docs/roadmap.md`](docs/roadmap.md) for the full list,
-sized and prioritised):
-
-- dash arrays, per-subpath paint and node transforms (solid + gradient `Path`,
-  clipping and charts have shipped)
-- full document-to-document PDF merge (bookmarks, links, forms) — shell out to
-  `qpdf` for that; the built-in importer is single-page-as-XObject
-- font subsetting for CFF, tagged PDF / PDF-A, XMP metadata, encryption
-- import from encrypted PDFs
-- FDF / XFDF read and write (the native submit / reset buttons already exist)
+Not yet implemented — see the [roadmap](docs/roadmap.md): CFF font subsetting,
+tagged PDF / PDF-A, XMP metadata, encryption, full document-to-document merge,
+FDF / XFDF, dash arrays.
 
 ## Development
 
-```
+```bash
 composer install
-composer test        # phpunit  (306 tests)
-composer stan        # phpstan  (level 6)
-php examples/showcase.php  # the grand tour; also: hello report media table styled html custom-font sheet detail-sheet shapes chart watermark merge form form-calc
-UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
+composer check          # phpstan (level 6) + phpunit
+composer test           # phpunit only
+composer stan           # phpstan only
+
+for f in examples/*.php; do php "$f"; done   # render every example
+UPDATE_GOLDENS=1 composer test               # regenerate golden PDFs after an intended change
 ```
 
-CI (`.github/workflows/ci.yml`) runs phpstan + phpunit on PHP 8.3 and 8.4, plus
-a structural job that renders every example and runs `qpdf --check` /
-`pdftotext` on the output.
+CI runs PHPStan + PHPUnit on PHP 8.3 and 8.4, plus a job that renders every
+example and runs `qpdf --check` / `pdftotext` on the output. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-## Attribution & licence
+## Embedded fonts
 
-This is a from-scratch reimagining of FPDF. The high-level API and layout
-engine are original; the low-level PDF writer, font metrics/embedding, ToUnicode
-CMaps and image decoders were ported from FPDF 1.9 (comment citations
-`fpdf.php:NNN` refer to that release). See [`NOTICE`](NOTICE).
+`tools/makefont/` is FPDF's offline builder for custom-font definitions:
 
-Released under the MIT licence ([`LICENSE`](LICENSE)). The ported portions and
-`tools/makefont/` retain FPDF's permissive licence, and the fonts bundled for
-the examples and tests are under the SIL Open Font License 1.1 — both are
-reproduced in [`NOTICE`](NOTICE). All seven original FPDF tutorials are ported
-to `examples/`.
+```bash
+php tools/makefont/makefont.php MyFont.ttf cp1252
+# -> MyFont.json (+ MyFont.z); then:
+#    $fonts->register('MyFont', FontFace::regular(), 'MyFont.json');
 
-`tools/makefont/` is FPDF's offline builder for custom-font `.json` definitions:
-
+php tools/makefont/makefont.php MyFont.otf cp1252
+# PostScript (CFF) outlines -> MyFont.json (+ MyFont.cff.z), embedded whole
 ```
-php tools/makefont/makefont.php  MyFont.ttf  cp1252
-# -> MyFont.json (+ MyFont.z) ; then FontRepository::register('MyFont', $style, 'MyFont.json')
 
-php tools/makefont/makefont.php  MyFont.otf  cp1252
-# PostScript (CFF) outlines -> MyFont.json (+ MyFont.cff.z), embedded whole (no subsetting)
-```
+## Licence & attribution
+
+MIT ([`LICENSE`](LICENSE)). This is a from-scratch reimagining of FPDF 1.9 —
+the high-level API and layout engine are original; the byte-level PDF writer,
+font metrics / embedding, ToUnicode CMaps and image decoders were ported from
+FPDF (source comments citing `fpdf.php:NNN` refer to that release). FPDF's
+permissive licence and the SIL Open Font License covering the bundled test /
+example fonts are reproduced in [`NOTICE`](NOTICE).
