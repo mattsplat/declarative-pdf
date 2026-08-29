@@ -81,7 +81,7 @@ footer(Closure(PageContext): (BlockNode | iterable<BlockNode>))
 | `pageBreak()` | `PageBreak` |
 | `anchor(string $name)` | `Anchor` (internal-link target) |
 | `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI |
-| `container(iterable<BlockNode>, StylePatch = new)` | `Container` (padding/border/background via the patch) |
+| `container(iterable<BlockNode>, StylePatch = new)` | `Container` — the patch adds padding/border/background *and* cascades its inheriting style (font, colour, alignment, …) to descendants |
 | `bulletList(iterable<ListItem\|string>, StylePatch = new)` | `BulletList` |
 | `orderedList(iterable<ListItem\|string>, int $start = 1, StylePatch = new)` | `OrderedList` |
 | `columns(iterable<BlockNode>, int $count = 2, float $gutterPt = 14.0)` | `Columns` |
