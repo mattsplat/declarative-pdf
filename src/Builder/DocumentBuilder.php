@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Pdf\Builder;
 
+use Pdf\Color\Color;
 use Pdf\Node\Document;
 use Pdf\Node\Meta;
 use Pdf\Node\Page;
+use Pdf\Node\Watermark;
 use Pdf\Output\PdfOutput;
 use Pdf\Render\DocumentRenderer;
 use Pdf\Style\Style;
 use Pdf\Style\Stylesheet;
+use Pdf\Style\TextAlign;
 
 /**
  * Fluent entry point for building a document tree and rendering it.
@@ -32,6 +35,9 @@ final class DocumentBuilder
     private ?Stylesheet $stylesheet = null;
 
     private ?DocumentRenderer $renderer = null;
+
+    /** @var list<\Closure(PageBuilder): void> applied to every page before its configurator */
+    private array $pageDefaults = [];
 
     public function __construct()
     {
@@ -73,6 +79,37 @@ final class DocumentBuilder
     public function stylesheet(Stylesheet $stylesheet): self
     {
         $this->stylesheet = $stylesheet;
+
+        return $this;
+    }
+
+    /**
+     * Stamp a word across every page built with `page()` — `'CONFIDENTIAL'`, or a
+     * configured {@see Watermark}. A page may still override with its own
+     * `PageBuilder::watermark()`.
+     */
+    public function watermark(string|Watermark $watermark): self
+    {
+        $this->pageDefaults[] = static fn (PageBuilder $p) => $p->watermark($watermark);
+
+        return $this;
+    }
+
+    /** Page numbers on every page built with `page()`; see {@see PageBuilder::pageNumbers()}. */
+    public function pageNumbers(
+        string $format = 'Page {n} of {N}',
+        TextAlign $align = TextAlign::Center,
+        float $fontSizePt = 9.0,
+        ?Color $color = null,
+        bool $inHeader = false,
+    ): self {
+        $this->pageDefaults[] = static fn (PageBuilder $p) => $p->pageNumbers(
+            $format,
+            $align,
+            $fontSizePt,
+            $color,
+            $inHeader,
+        );
 
         return $this;
     }
@@ -126,6 +163,9 @@ final class DocumentBuilder
             }
 
             $builder = new PageBuilder($measurer, $baseStyle);
+            foreach ($this->pageDefaults as $applyDefault) {
+                $applyDefault($builder);
+            }
             $source($builder);
             $pages[] = $builder->build();
         }

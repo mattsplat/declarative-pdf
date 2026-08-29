@@ -27,7 +27,9 @@ use Pdf\Node\OrderedList;
 use Pdf\Node\Page;
 use Pdf\Node\PageBreak;
 use Pdf\Node\PageMaster;
+use Pdf\Layout\PageContext;
 use Pdf\Node\Paragraph;
+use Pdf\Node\Watermark;
 use Pdf\Node\Placement;
 use Pdf\Node\Placement\Blocks;
 use Pdf\Node\Placement\Frame;
@@ -53,6 +55,7 @@ final class PageBuilder
     private Edges $marginsPt;
     private ?\Closure $header = null;
     private ?\Closure $footer = null;
+    private ?Watermark $watermark = null;
 
     /** @var list<BlockNode> */
     private array $children = [];
@@ -131,6 +134,39 @@ final class PageBuilder
     public function footer(\Closure $factory): self
     {
         $this->footer = $factory;
+
+        return $this;
+    }
+
+    /**
+     * A page number in the footer (or header). `{n}` is the current page, `{N}`
+     * the total. Shorthand for a `footer()` closure.
+     */
+    public function pageNumbers(
+        string $format = 'Page {n} of {N}',
+        TextAlign $align = TextAlign::Center,
+        float $fontSizePt = 9.0,
+        ?Color $color = null,
+        bool $inHeader = false,
+    ): self {
+        $band = static fn (PageContext $c): Paragraph => new Paragraph(
+            strtr($format, ['{n}' => (string) $c->pageNumber, '{N}' => (string) $c->pageCount]),
+            new StylePatch(
+                fontSizePt: $fontSizePt,
+                color: $color ?? Color::gray(110),
+                align: $align,
+                spaceBeforePt: 0.0,
+                spaceAfterPt: 0.0,
+            ),
+        );
+
+        return $inHeader ? $this->header($band) : $this->footer($band);
+    }
+
+    /** Stamp a word across every sheet — `'DRAFT'`, or a configured {@see Watermark}. */
+    public function watermark(string|Watermark $watermark): self
+    {
+        $this->watermark = $watermark instanceof Watermark ? $watermark : new Watermark($watermark);
 
         return $this;
     }
@@ -395,6 +431,7 @@ final class PageBuilder
             $this->marginsPt,
             $this->header,
             $this->footer,
+            $this->watermark,
         );
 
         return new Page($master, $this->children, placements: $this->placements);

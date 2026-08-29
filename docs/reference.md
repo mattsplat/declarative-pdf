@@ -39,6 +39,8 @@ immutable tree.
 | `addPage(Pdf\Node\Page)` | append a pre-built page |
 | `baseStyle(Pdf\Style\Style)` | document-wide defaults (default `Style::default()`) |
 | `stylesheet(Pdf\Style\Stylesheet)` | per-node-type rules |
+| `pageNumbers(string $format = 'Page {n} of {N}', TextAlign = Center, float $fontSizePt = 9, ?Color = null, bool $inHeader = false)` | page numbers on every `page()` |
+| `watermark(string\|Pdf\Node\Watermark)` | stamp on every `page()`; a page may override |
 | `using(Pdf\Render\DocumentRenderer)` | custom renderer (fonts, clock, compression, producer) |
 | `build() : Pdf\Node\Document` | the immutable tree |
 | `toString() : string` | render to PDF bytes |
@@ -59,15 +61,25 @@ immutable tree.
 | `margins(Edges $marginsPt)` | per-edge, in points |
 | `units(Unit)` | the unit used by `place*()` / `frame()` coordinates (default `Mm`) |
 
-### Header / footer
+### Header / footer / page numbers / watermark
 
 ```php
 header(Closure(PageContext): (BlockNode | iterable<BlockNode>))
 footer(Closure(PageContext): (BlockNode | iterable<BlockNode>))
+pageNumbers(string $format = 'Page {n} of {N}', TextAlign = Center,
+            float $fontSizePt = 9, ?Color = null, bool $inHeader = false) : self
+watermark(string | Pdf\Node\Watermark) : self
 ```
 
 `Pdf\Layout\PageContext` — `int $pageNumber`, `int $pageCount`,
-`float $contentWidthPt`.
+`float $contentWidthPt`. In a `pageNumbers()` format, `{n}` is the current page
+and `{N}` the total.
+
+`Pdf\Node\Watermark(string $text, Color $color = gray(120), float $opacity = 0.12,
+float $angleDeg = 45, ?float $fontSizePt = null, string $fontFamily = 'Helvetica',
+FontFace $fontFace = new FontFace(700), bool $overlay = true)` — drawn once per
+sheet, centred on the whole page and rotated; `opacity` below 1 emits an
+`/ExtGState`, `fontSizePt` null auto-fits the page diagonal.
 
 ### Content
 

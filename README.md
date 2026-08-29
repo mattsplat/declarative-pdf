@@ -135,9 +135,9 @@ sized and prioritised):
 
 ```
 composer install
-composer test        # phpunit  (135 tests)
+composer test        # phpunit  (194 tests)
 composer stan        # phpstan  (level 6)
-php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet
+php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet watermark
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
 ```
 
