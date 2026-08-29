@@ -30,6 +30,7 @@ use Pdf\Node\PageBreak;
 use Pdf\Node\PageMaster;
 use Pdf\Layout\PageContext;
 use Pdf\Node\Paragraph;
+use Pdf\Node\Path;
 use Pdf\Node\Watermark;
 use Pdf\Node\Placement;
 use Pdf\Node\Placement\Blocks;
@@ -203,6 +204,12 @@ final class PageBuilder
     public function rule(float $thicknessPt = 0.5, ?Color $color = null): self
     {
         return $this->add(new Rule($thicknessPt, $color));
+    }
+
+    /** Add vector linework — see the {@see Path} factories for the common shapes. */
+    public function path(Path $path): self
+    {
+        return $this->add($path);
     }
 
     public function pageBreak(): self
