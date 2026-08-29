@@ -5,7 +5,7 @@
 - **[Cookbook](cookbook.md)** — task-oriented recipes: headers/footers, tables,
   pagination, lists, columns, inline formatting, internal links, bookmarks,
   images, large-format sheets, text/block measurement, reusable components,
-  PDF import, custom fonts, house styles.
+  PDF import, custom fonts, house styles with named class rules.
 - **[API reference](reference.md)** — every builder method, node constructor,
   style option, enum, and the `Pdf\Import\*` reader API.
 - **[FPDF vs. declarative — side by side](fpdf-vs-declarative.md)** — the seven

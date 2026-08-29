@@ -8,11 +8,12 @@ Status today (Phases 1–5): typed writer, core + embedded fonts (TrueType and
 OpenType/CFF) with named / numeric weights (`FontFace`), style resolution,
 greedy line breaking, box-model pagination (split / keep-together /
 widow-orphan / keep-with-next), headers/footers, images (JPEG/PNG/GIF/WebP with
-SMask, from a path / URL / `data:` URI), internal + external links, multi-column
-blocks, auto-sized tables with repeating headers, UTF-8 encoding, inline
-decorations, inline HTML, named stylesheets, large-format sheets, absolute area
-placement (`place()` with `ShrinkMode` geometric or font-size fit), page-number
-and watermark helpers, public text / block measurement helpers
+SMask, from a path / URL / `data:` URI), internal + external links, outline
+bookmarks, multi-column blocks, auto-sized tables with repeating headers, UTF-8
+encoding, inline decorations, inline HTML, named stylesheets with class rules,
+large-format sheets, absolute area placement (`place()` with `ShrinkMode`
+geometric or font-size fit), page-number and watermark helpers, public text /
+block measurement helpers
 (`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
 reusable `Component` nodes, and a pure-PHP single-page PDF importer emitting
 vector Form XObjects.
@@ -418,11 +419,14 @@ groups (the plan flags "keep-together at scale").
 
 ## Tooling & developer experience
 
-### Stylesheet class selectors — **S**
+### Stylesheet class selectors — **done**
 
-`->class('lead')` on a node, `(new Stylesheet())->class('lead', $patch)` — a
-named rule beside today's per-node-type ones. `StyleResolver` already has the
-hook point between inheritance and inline patch.
+`StylePatch(class: 'lead callout')` on any block, `(new Stylesheet())->class('lead',
+$patch)` for the rule. `StyleResolver::selectorsFor()` appends a block's classes
+after its type selector, so a class rule beats the type rule, a later class beats
+an earlier one, and the node's own patch still wins over all of them. Class-rule
+keys are namespaced (`.lead`) so they can't collide with node-type selectors.
+Block-level only — `resolveInline()` does not consult the stylesheet.
 
 ### Markdown → document — **M**
 
@@ -459,13 +463,12 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 
 ## Suggested near-term order
 
-1. **Stylesheet class selectors** (S) — `->class('lead')` beside the per-type rules.
-2. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
-3. **AcroForm fields with generated appearance streams** (L) — works in every
+1. **Drawing primitives** (M) — unblocks charts and better table / frame borders.
+2. **AcroForm fields with generated appearance streams** (L) — works in every
    viewer without JavaScript.
-4. **Document / field JavaScript** (M) — opt-in layer on top of #3 for Acrobat
+3. **Document / field JavaScript** (M) — opt-in layer on top of #2 for Acrobat
    workflows, with the viewer-support caveat documented.
-5. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+4. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-6. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+5. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.
