@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a capability or an API change
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you want to do
+      description: The document or outcome you are trying to produce.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What is missing today
+      description: What have you tried, and where does it fall short?
+  - type: textarea
+    id: shape
+    attributes:
+      label: Rough API shape (optional)
+      render: php
+  - type: input
+    id: roadmap
+    attributes:
+      label: Related roadmap item
+      description: If it is already listed in docs/roadmap.md, link the section.
