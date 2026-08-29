@@ -112,6 +112,10 @@ Implemented:
   `frame()` position content in explicit rectangles with `Fit` + `BoxAlign`
   (blueprint / poster / plan-set layout). Over-tall placed blocks shrink to
   fit — geometrically, or `ShrinkMode::FontSize` to drop point size and re-wrap.
+- **Vector drawing** — `Pdf\Node\Path` with `moveTo` / `lineTo` / `curveTo` /
+  `close`, solid fill and stroke, nonzero / even-odd fill rule, cap and join;
+  `Path::line()` / `rectangle()` / `ellipse()` / `polygon()` factories. A block
+  node, so it flows or goes in a `place()` rectangle (`examples/shapes.php`).
 - **PDF page import** — `$page->placePdf('drawing.pdf', page: 1)` imports one
   page of an external (trusted, unencrypted) PDF as a **vector Form XObject**,
   copying its fonts/images/resources. `Pdf\Import\PdfReader` handles classic
@@ -133,7 +137,7 @@ Not yet implemented (see [`docs/roadmap.md`](docs/roadmap.md) for the full list,
 sized and prioritised):
 
 - interactive forms (AcroForm) and embedded JavaScript
-- vector drawing primitives (paths / arcs / dashes) for authoring linework
+- gradients, clipping paths and dash arrays (solid-paint `Path` has shipped)
 - full document-to-document PDF merge (bookmarks, links, forms) — shell out to
   `qpdf` for that; the built-in importer is single-page-as-XObject
 - outlines / bookmarks, tagged PDF / PDF-A, font subsetting, encryption
@@ -144,9 +148,9 @@ sized and prioritised):
 
 ```
 composer install
-composer test        # phpunit  (201 tests)
+composer test        # phpunit  (239 tests)
 composer stan        # phpstan  (level 6)
-php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet watermark merge
+php examples/hello.php  # also: report media table styled html custom-font sheet detail-sheet shapes watermark merge
 UPDATE_GOLDENS=1 composer test   # refresh golden PDFs after an intended change
 ```
 

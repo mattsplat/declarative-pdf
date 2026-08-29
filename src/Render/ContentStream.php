@@ -7,9 +7,11 @@ namespace Pdf\Render;
 use Pdf\Color\Color;
 use Pdf\Geometry\Edges;
 use Pdf\Geometry\PageGeometry;
+use Pdf\Geometry\PathCommand;
 use Pdf\Layout\AnchorMark;
 use Pdf\Layout\Canvas;
 use Pdf\Layout\LinkRect;
+use Pdf\Style\Paint;
 
 /**
  * Accumulates the content-stream operators for a single page and satisfies the
@@ -122,6 +124,56 @@ final class ContentStream implements Canvas
     {
         $left = min($x1Pt, $x2Pt);
         $this->fillRect($left, $yPt - $lineWidthPt / 2, abs($x2Pt - $x1Pt), $lineWidthPt, $color);
+    }
+
+    /**
+     * Emit a painted path. Each operand is translated by ($xPt, $yTopPt) and
+     * then flipped, so the caller only ever thinks top-down.
+     *
+     * @param list<PathCommand> $commands
+     */
+    public function path(array $commands, float $xPt, float $yTopPt, Paint $paint): void
+    {
+        $painter = $paint->operator();
+        if ($painter === null || $commands === []) {
+            return;
+        }
+
+        $stroke = $paint->strokes() ? $paint->stroke : null;
+
+        $state = '';
+        if ($paint->fill !== null) {
+            $state .= $paint->fill->fillOp() . ' ';
+        }
+        if ($stroke !== null) {
+            // The page preamble leaves `2 J` in effect, so the cap and join are
+            // always stated rather than inherited.
+            $state .= sprintf(
+                '%s %.2F w %d J %d j ',
+                $stroke->strokeOp(),
+                $paint->strokeWidthPt,
+                $paint->lineCap->value,
+                $paint->lineJoin->value,
+            );
+        }
+
+        $lines = ['q ' . rtrim($state)];
+
+        foreach ($commands as $command) {
+            $operands = '';
+            foreach ($command->points as $point) {
+                $operands .= sprintf(
+                    '%.2F %.2F ',
+                    $xPt + $point->x,
+                    $this->geometry->flipY($yTopPt + $point->y),
+                );
+            }
+            $lines[] = $operands . $command->op->operator();
+        }
+
+        $lines[] = $painter;
+        $lines[] = 'Q';
+        $this->raw(implode("\n", $lines));
     }
 
     /**

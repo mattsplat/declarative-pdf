@@ -37,6 +37,14 @@ interface Canvas
 
     public function horizontalLine(float $x1Pt, float $x2Pt, float $yPt, float $lineWidthPt, Color $color): void;
 
+    /**
+     * Draw arbitrary linework. Command coordinates are relative to
+     * ($xPt, $yTopPt) and painted in one `q … Q` group.
+     *
+     * @param list<\Pdf\Geometry\PathCommand> $commands
+     */
+    public function path(array $commands, float $xPt, float $yTopPt, \Pdf\Style\Paint $paint): void;
+
     /** Draw image resource `/I{imageIndex}` into the given box. */
     public function image(int $imageIndex, float $xPt, float $yTopPt, float $widthPt, float $heightPt): void;
 

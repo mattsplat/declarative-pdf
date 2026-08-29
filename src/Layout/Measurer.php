@@ -13,6 +13,7 @@ use Pdf\Layout\Box\ContainerBox;
 use Pdf\Layout\Box\ImageBox;
 use Pdf\Layout\Box\ListItemBox;
 use Pdf\Layout\Box\PageBreakBox;
+use Pdf\Layout\Box\PathBox;
 use Pdf\Layout\Box\RuleBox;
 use Pdf\Layout\Box\SpacerBox;
 use Pdf\Layout\Box\StackBox;
@@ -32,6 +33,7 @@ use Pdf\Node\ListItem;
 use Pdf\Node\OrderedList;
 use Pdf\Node\PageBreak;
 use Pdf\Node\Paragraph;
+use Pdf\Node\Path;
 use Pdf\Node\Rule;
 use Pdf\Node\Spacer;
 use Pdf\Node\Table;
@@ -129,6 +131,7 @@ final class Measurer
             $node instanceof Spacer => new SpacerBox($node->heightPt),
             $node instanceof PageBreak => new PageBreakBox(),
             $node instanceof Rule => $this->measureRule($node, $parentStyle),
+            $node instanceof Path => $this->measurePath($node, $parentStyle),
             $node instanceof Container => $this->measureContainer($node, $widthPt, $parentStyle),
             $node instanceof BulletList, $node instanceof OrderedList => $this->measureList($node, $widthPt, $parentStyle),
             $node instanceof ImageBlock => $this->measureImage($node, $widthPt, $parentStyle),
@@ -198,6 +201,20 @@ final class Measurer
         $marginAfter = $style->spaceAfterPt > 0.0 ? $style->spaceAfterPt : 6.0;
 
         return new RuleBox($node->thicknessPt, $node->color ?? $style->color, $marginBefore, $marginAfter);
+    }
+
+    private function measurePath(Path $node, Style $parentStyle): PathBox
+    {
+        $style = $this->styles->resolveBlock($node, $parentStyle);
+
+        return new PathBox(
+            $node->commands,
+            $node->widthPt,
+            $node->heightPt,
+            $node->paint,
+            $style->spaceBeforePt,
+            $style->spaceAfterPt,
+        );
     }
 
     private function measureContainer(Container $node, float $widthPt, Style $parentStyle): ContainerBox
