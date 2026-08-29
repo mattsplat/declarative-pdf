@@ -11,6 +11,7 @@ use Pdf\Geometry\PathCommand;
 use Pdf\Layout\AnchorMark;
 use Pdf\Layout\Canvas;
 use Pdf\Layout\LinkRect;
+use Pdf\Layout\WidgetRect;
 use Pdf\Style\Paint;
 
 /**
@@ -30,6 +31,9 @@ final class ContentStream implements Canvas
 
     /** @var list<AnchorMark> */
     private array $anchors = [];
+
+    /** @var list<WidgetRect> */
+    private array $widgets = [];
 
     public function __construct(
         private readonly PageGeometry $geometry,
@@ -219,6 +223,17 @@ final class ContentStream implements Canvas
     public function anchor(string $name, float $yTopPt): void
     {
         $this->anchors[] = new AnchorMark($name, $yTopPt);
+    }
+
+    public function widget(WidgetRect $widget): void
+    {
+        $this->widgets[] = $widget;
+    }
+
+    /** @return list<WidgetRect> */
+    public function collectedWidgets(): array
+    {
+        return $this->widgets;
     }
 
     /** @return list<LinkRect> */

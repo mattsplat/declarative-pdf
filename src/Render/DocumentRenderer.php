@@ -14,6 +14,7 @@ use Pdf\Layout\LinkRect;
 use Pdf\Layout\Measurer;
 use Pdf\Layout\Paginator;
 use Pdf\Layout\PhysicalPage;
+use Pdf\Layout\WidgetRect;
 use Pdf\Exception\PdfException;
 use Pdf\Node\Document;
 use Pdf\Node\Watermark;
@@ -96,7 +97,7 @@ final class DocumentRenderer
         }
 
         // --- Pass A: render content streams, collect links + anchors ---
-        /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered */
+        /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, widgets: list<WidgetRect>}> $rendered */
         $rendered = [];
         foreach ($pages as $page) {
             $stream = new ContentStream($page->geometry);
@@ -123,6 +124,7 @@ final class DocumentRenderer
                 'content' => $stream->toString(),
                 'links' => $stream->collectedLinks(),
                 'anchors' => $stream->collectedAnchors(),
+                'widgets' => $stream->collectedWidgets(),
             ];
         }
 
@@ -135,9 +137,17 @@ final class DocumentRenderer
             }
         }
 
+        $hasWidgets = false;
+        foreach ($rendered as $r) {
+            if ($r['widgets'] !== []) {
+                $hasWidgets = true;
+                break;
+            }
+        }
+
         $registry = new ObjectRegistry(2);
         $writer = new PdfWriter($registry, $this->compress);
-        $writer->header($images->requiresPdf14() || !$imports->isEmpty() ? '1.4' : '1.3');
+        $writer->header($images->requiresPdf14() || !$imports->isEmpty() || $hasWidgets ? '1.4' : '1.3');
         $withAlpha = $images->hasAlpha();
 
         // --- Pre-allocate per-page object numbers, in FPDF's order ---
@@ -149,6 +159,20 @@ final class DocumentRenderer
             $pageObjects[$index] = $registry->allocate();
             $contentObjects[$index] = $registry->allocate();
             $linkObjects[$index] = array_map(static fn () => $registry->allocate(), $r['links']);
+        }
+
+        // Interactive form: allocate widget / field / appearance objects now so
+        // each page's /Annots array can reference them below.
+        $acroForm = new AcroFormWriter($writer);
+        if ($hasWidgets) {
+            $acroForm->plan(array_map(
+                static fn (int $index): array => [
+                    'geometry' => $rendered[$index]['geometry'],
+                    'pageObject' => $pageObjects[$index],
+                    'widgets' => $rendered[$index]['widgets'],
+                ],
+                array_keys($rendered),
+            ));
         }
 
         $defaultGeometry = $rendered[0]['geometry'];
@@ -169,8 +193,9 @@ final class DocumentRenderer
             if ($withAlpha) {
                 $writer->line('/Group <</Type /Group /S /Transparency /CS /DeviceRGB>>');
             }
-            if ($linkObjects[$index] !== []) {
-                $refs = implode(' ', array_map(static fn (int $n) => $n . ' 0 R', $linkObjects[$index]));
+            $annots = [...$linkObjects[$index], ...$acroForm->annotRefsForPage($index)];
+            if ($annots !== []) {
+                $refs = implode(' ', array_map(static fn (int $n) => $n . ' 0 R', $annots));
                 $writer->line('/Annots [' . $refs . ']');
             }
             $writer->line('/Contents ' . $contentObjects[$index] . ' 0 R>>');
@@ -211,6 +236,9 @@ final class DocumentRenderer
 
         // Document outline (bookmarks) — pre-allocated as a block, FPDF-style.
         $outlinesObject = $this->writeOutlines($writer, $document, $anchorMap, $pageObjects, $rendered);
+
+        // Interactive form objects, at the numbers reserved during planning.
+        $acroFormObject = $acroForm->write($fonts);
 
         // ExtGState objects for translucent watermarks.
         /** @var array<string, int> $gsObjects  gs name => object number */
@@ -267,6 +295,9 @@ final class DocumentRenderer
         $writer->line('/Pages 1 0 R');
         if ($outlinesObject !== null) {
             $writer->line('/Outlines ' . $outlinesObject . ' 0 R');
+        }
+        if ($acroFormObject !== null) {
+            $writer->line('/AcroForm ' . $acroFormObject . ' 0 R');
         }
         $writer->line('>>');
         $writer->endObject();
@@ -582,6 +613,9 @@ final class DocumentRenderer
         }
         foreach ($sub->collectedAnchors() as $anchor) {
             $stream->anchor($anchor->name, $originYTop + $scale * $anchor->yTopPt);
+        }
+        foreach ($sub->collectedWidgets() as $widget) {
+            $stream->widget($widget->scaled($scale, $originX, $originYTop));
         }
     }
 

@@ -16,7 +16,10 @@ geometric or font-size fit), page-number and watermark helpers, public text /
 block measurement helpers
 (`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
 reusable `Component` nodes, vector drawing (`Path` with solid fill / stroke),
-and a pure-PHP single-page PDF importer emitting vector Form XObjects.
+a pure-PHP single-page PDF importer emitting vector Form XObjects, and
+interactive **AcroForm fields** with self-drawn appearance streams (text,
+checkbox, radio, dropdown, list box, push / submit / reset buttons, signature
+placeholders).
 
 The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
 OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -31,41 +34,40 @@ OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
 > model — with difficulty **and viewer-reach** ratings is in
 > [`interactive-pdf-feasibility.md`](interactive-pdf-feasibility.md).
 
-### AcroForm fields — **L**
+### AcroForm fields — **done**
 
 Native PDF form fields. New `Node` types placed in block flow *or* via
-`$page->place()`:
+`$page->place()` (they implement `Pdf\Node\FormField`):
 
 | Node | PDF field type | Notes |
 |---|---|---|
-| `TextField` | `/Tx` | single- / multi-line, max length, comb, password |
-| `Checkbox` | `/Btn` | on/off, export value |
-| `RadioGroup` / `RadioOption` | `/Btn` | shared field name, per-option export value |
-| `Dropdown` | `/Ch` combo | editable or fixed list |
+| `TextField` | `/Tx` | single- / multi-line, max length, comb, password, `/Q` alignment |
+| `Checkbox` | `/Btn` | on/off, export value, inline label |
+| `RadioGroup` / `RadioOption` | `/Btn` | shared field name, per-option export value, options stack one per row |
+| `Dropdown` | `/Ch` combo | editable or fixed list, `/Opt` pairs |
 | `ListBox` | `/Ch` list | single / multi select |
-| `PushButton` | `/Btn` | triggers an action (submit / reset / JS) |
-| `SignatureField` | `/Sig` | empty placeholder; signing is separate — see below |
+| `PushButton` | `/Btn` | `ButtonKind::Push` / `Submit` (`/SubmitForm`) / `Reset` (`/ResetForm`) |
+| `SignatureField` | `/Sig` | empty placeholder; `/SigFlags 3`; signing is separate |
 
-What it touches:
+What it does:
 
-- `/AcroForm` dict in the catalog: `/Fields`, `/DR` (a default resource dict
-  with at least one font), `/DA` (default appearance string), `/NeedAppearances`.
-- Each field is a widget annotation (`/Subtype /Widget`) emitted on its page —
-  this reuses the existing per-page annotation path in `DocumentRenderer`
-  (`writeAnnotation()` already writes `/Annots`; widgets slot in beside links).
-- **Appearance streams.** Two options:
-  1. `/NeedAppearances true` and let the viewer draw the fields. Trivial to
-     emit, but Preview / pdf.js / Chrome render inconsistently and some printers
-     drop the field contents.
-  2. Generate `/AP /N` appearance XObjects ourselves — draw the border, the
-     background, and the value text with the box model we already have. Correct
-     everywhere, ~half the work of this line item. **Recommended.**
-- Field flags (`/Ff`): required, read-only, multiline, do-not-scroll, comb, etc.
-- `/AcroForm /CO` calculation-order array (only matters once JS calculations
-  exist).
+- Adds `/AcroForm` to the catalog: `/Fields`, `/DR` (default resource dict
+  listing every used font), `/DA` (default appearance), `/SigFlags` when a
+  signature field is present. `/NeedAppearances` is **not** emitted.
+- Each widget is a `/Subtype /Widget` annotation written through the same
+  per-page `/Annots` path as links (`AcroFormWriter::plan()` reserves the object
+  numbers before the page loop; `write()` emits the bodies afterwards). Widget
+  `/Rect` goes through `PageGeometry::flipY()`, like link annotations.
+- **Self-drawn `/AP /N` appearance XObjects** (`Pdf\Interactive\AppearanceStream`):
+  border, background and value text in the widget's own form space. Checkboxes
+  and radios carry `/Off` plus an on-state; the on-state paints a vector check
+  or dot. Correct in every viewer, no `/NeedAppearances`.
+- Field flags (`/Ff`) via `Pdf\Interactive\FieldFlag`: required, read-only,
+  multiline, password, do-not-scroll, comb, radio, combo, multi-select, sort.
+- `/AcroForm /CO` calculation-order array — wired but empty until JS lands.
 
-This is self-contained and does **not** require JavaScript — a fillable,
-saveable form works with appearance streams alone.
+Self-contained: a fillable, printable, saveable form needs no JavaScript.
+See `examples/form.php` and [`forms.md`](forms.md).
 
 ### Document & field JavaScript — **M** (on top of AcroForm)
 
@@ -476,11 +478,10 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 1. **Gradients + clipping paths** (M) — the rest of the drawing story now that
    solid-paint `Path` has shipped.
 2. **Charts / sparklines** (M) — a thin layer on the path API.
-3. **AcroForm fields with generated appearance streams** (L) — works in every
-   viewer without JavaScript.
-4. **Document / field JavaScript** (M) — opt-in layer on top of #3 for Acrobat
-   workflows, with the viewer-support caveat documented.
-5. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+3. **Document / field JavaScript** (M) — opt-in layer on top of the now-shipped
+   AcroForm fields for Acrobat workflows, with the viewer-support caveat
+   documented.
+4. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
    CFF both embed whole today).
-6. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+5. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

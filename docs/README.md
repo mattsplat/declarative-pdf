@@ -8,6 +8,9 @@
   PDF import, custom fonts, house styles with named class rules.
 - **[API reference](reference.md)** — every builder method, node constructor,
   style option, enum, and the `Pdf\Import\*` reader API.
+- **[Interactive forms](forms.md)** — AcroForm field nodes, self-drawn
+  appearance streams, submit / reset buttons, and the viewer-support caveat for
+  the optional JavaScript layer.
 - **[FPDF vs. declarative — side by side](fpdf-vs-declarative.md)** — the seven
   FPDF tutorials, each next to its declarative rewrite.
 - **[Porting from FPDF](porting.md)** — `Cell` / `MultiCell` / `AddPage` /

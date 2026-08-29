@@ -56,4 +56,7 @@ interface Canvas
 
     /** Record that a named destination anchor sits at this y on the page. */
     public function anchor(string $name, float $yTopPt): void;
+
+    /** Record a form-field widget annotation at this position. */
+    public function widget(\Pdf\Layout\WidgetRect $widget): void;
 }

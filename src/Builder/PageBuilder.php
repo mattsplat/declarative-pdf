@@ -21,6 +21,7 @@ use Pdf\Node\BulletList;
 use Pdf\Node\Columns;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
+use Pdf\Node\FormField;
 use Pdf\Node\Heading;
 use Pdf\Node\ImageBlock;
 use Pdf\Node\ListItem;
@@ -210,6 +211,17 @@ final class PageBuilder
     public function path(Path $path): self
     {
         return $this->add($path);
+    }
+
+    /**
+     * Add an interactive form field — a {@see \Pdf\Node\TextField},
+     * {@see \Pdf\Node\Checkbox}, {@see \Pdf\Node\RadioGroup},
+     * {@see \Pdf\Node\Dropdown}, {@see \Pdf\Node\ListBox},
+     * {@see \Pdf\Node\PushButton} or {@see \Pdf\Node\SignatureField}.
+     */
+    public function field(FormField $field): self
+    {
+        return $this->add($field);
     }
 
     public function pageBreak(): self

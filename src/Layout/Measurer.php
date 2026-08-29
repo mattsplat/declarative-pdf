@@ -11,6 +11,7 @@ use Pdf\Layout\Box\AnchorBox;
 use Pdf\Layout\Box\ColumnsBox;
 use Pdf\Layout\Box\ContainerBox;
 use Pdf\Layout\Box\ImageBox;
+use Pdf\Layout\Box\FieldBox;
 use Pdf\Layout\Box\ListItemBox;
 use Pdf\Layout\Box\PageBreakBox;
 use Pdf\Layout\Box\PathBox;
@@ -25,18 +26,33 @@ use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
 use Pdf\Node\Columns;
+use Pdf\Node\Checkbox;
 use Pdf\Node\Component;
 use Pdf\Node\Container;
+use Pdf\Node\Dropdown;
+use Pdf\Node\FormField;
 use Pdf\Node\Heading;
 use Pdf\Node\ImageBlock;
+use Pdf\Node\ListBox;
 use Pdf\Node\ListItem;
 use Pdf\Node\OrderedList;
 use Pdf\Node\PageBreak;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Path;
+use Pdf\Node\PushButton;
+use Pdf\Node\RadioGroup;
 use Pdf\Node\Rule;
+use Pdf\Node\SignatureField;
 use Pdf\Node\Spacer;
 use Pdf\Node\Table;
+use Pdf\Node\TextField;
+use Pdf\Font\ResolvedFont;
+use Pdf\Interactive\FieldAppearance;
+use Pdf\Interactive\FieldFlag;
+use Pdf\Interactive\FieldSpec;
+use Pdf\Interactive\FieldType;
+use Pdf\Color\Color;
+use Pdf\Style\TextAlign;
 use Pdf\Render\ImageRegistry;
 use Pdf\Render\ImportRegistry;
 use Pdf\Style\Border;
@@ -138,6 +154,7 @@ final class Measurer
             $node instanceof Columns => $this->measureColumns($node, $widthPt, $parentStyle),
             $node instanceof Table => $this->measureTable($node, $widthPt, $parentStyle),
             $node instanceof Anchor => new AnchorBox($node->name),
+            $node instanceof FormField => $this->measureFormField($node, $widthPt, $parentStyle),
             $node instanceof Component => $this->measureComponent($node, $widthPt, $parentStyle),
             default => throw new LayoutException('Unsupported block node: ' . $node::class),
         };
@@ -164,6 +181,202 @@ final class Measurer
         } finally {
             unset($this->componentPath[$id]);
         }
+    }
+
+    private function measureFormField(FormField $node, float $widthPt, Style $parentStyle): FieldBox
+    {
+        $style = $this->styles->resolveBlock($node, $parentStyle);
+        $font = $this->fonts->use($style->fontFamily, $style->fontFace);
+        $encoding = $font->definition->encoding;
+        $available = max(1.0, $widthPt);
+
+        $spec = $this->buildFieldSpec($node, $style, $font);
+        [$widgetW, $widgetH, $rows, $rowH, $rowGap] = $this->fieldGeometry($node, $style, $font, $available);
+
+        $label = $node->fieldLabel();
+        $labelEncoded = $label !== null && $label !== ''
+            ? Encoding::forFont($label, $encoding)
+            : null;
+
+        return new FieldBox(
+            $spec,
+            $widgetW,
+            $widgetH,
+            $labelEncoded,
+            $font,
+            $style->fontSizePt,
+            $style->color,
+            $style->fontSizePt * 1.3,
+            $style->spaceBeforePt > 0.0 ? $style->spaceBeforePt : 6.0,
+            $style->spaceAfterPt > 0.0 ? $style->spaceAfterPt : 6.0,
+            $rows,
+            $rowH,
+            $rowGap,
+        );
+    }
+
+    private function buildFieldSpec(FormField $node, Style $style, ResolvedFont $font): FieldSpec
+    {
+        $border = Color::gray(128);
+        $subtleFill = Color::gray(247);
+        $common = ($node->isRequired() ? FieldFlag::REQUIRED : 0)
+            | ($node->isReadOnly() ? FieldFlag::READ_ONLY : 0);
+
+        $appearance = static fn (int $quad, ?Color $b, ?Color $bg, float $bw): FieldAppearance
+            => new FieldAppearance($font, 0.0, $style->color, $b, $bg, $bw, $quad);
+
+        return match (true) {
+            $node instanceof TextField => new FieldSpec(
+                FieldType::Text,
+                $node->name,
+                $common
+                    | ($node->multiline ? FieldFlag::MULTILINE : 0)
+                    | ($node->password ? FieldFlag::PASSWORD : 0)
+                    | ($node->comb && $node->maxLength !== null ? FieldFlag::COMB | FieldFlag::DO_NOT_SCROLL : 0),
+                new FieldAppearance($font, $node->fontSizePt, $style->color, $border, $subtleFill, 0.75, $this->quadding($node->align)),
+                $node->tooltip,
+                $node->value !== '' ? $node->value : null,
+                null,
+                $node->maxLength,
+            ),
+            $node instanceof Checkbox => new FieldSpec(
+                FieldType::Checkbox,
+                $node->name,
+                $common,
+                $appearance(0, $border, Color::white(), 0.75),
+                $node->tooltip,
+                $node->checked ? $node->exportValue : 'Off',
+                null,
+                null,
+                [],
+                $node->exportValue,
+            ),
+            $node instanceof RadioGroup => new FieldSpec(
+                FieldType::Radio,
+                $node->name,
+                $common | FieldFlag::RADIO,
+                $appearance(0, $border, Color::white(), 0.75),
+                $node->tooltip,
+                $node->value !== '' ? $node->value : null,
+                null,
+                null,
+                array_map(static fn ($o): array => ['export' => $o->export, 'label' => $o->label], $node->options),
+            ),
+            $node instanceof Dropdown => new FieldSpec(
+                FieldType::Dropdown,
+                $node->name,
+                $common | FieldFlag::COMBO
+                    | ($node->editable ? FieldFlag::EDIT : 0)
+                    | ($node->sort ? FieldFlag::SORT : 0),
+                $appearance(0, $border, $subtleFill, 0.75),
+                $node->tooltip,
+                $node->value !== '' ? $node->value : null,
+                null,
+                null,
+                $node->options,
+            ),
+            $node instanceof ListBox => new FieldSpec(
+                FieldType::ListBox,
+                $node->name,
+                $common
+                    | ($node->multiSelect ? FieldFlag::MULTI_SELECT : 0)
+                    | ($node->sort ? FieldFlag::SORT : 0),
+                $appearance(0, $border, $subtleFill, 0.75),
+                $node->tooltip,
+                $node->selected[0] ?? null,
+                null,
+                null,
+                $node->options,
+            ),
+            $node instanceof PushButton => new FieldSpec(
+                FieldType::PushButton,
+                $node->name,
+                $common | FieldFlag::PUSHBUTTON,
+                $appearance(1, Color::gray(110), Color::gray(224), 1.0),
+                $node->tooltip,
+                null,
+                null,
+                null,
+                [],
+                'Yes',
+                $node->label,
+                $node->kind,
+                $node->submitUrl,
+                $node->submitFormat,
+            ),
+            $node instanceof SignatureField => new FieldSpec(
+                FieldType::Signature,
+                $node->name,
+                $common,
+                $appearance(0, Color::gray(140), Color::gray(242), 1.0),
+                $node->tooltip,
+            ),
+            default => throw new LayoutException('Unsupported form field: ' . $node::class),
+        };
+    }
+
+    /**
+     * @return array{0: float, 1: float, 2: list<array{export: string, label: string}>, 3: float, 4: float}
+     */
+    private function fieldGeometry(FormField $node, Style $style, ResolvedFont $font, float $available): array
+    {
+        $line = $style->fontSizePt * 1.3;
+        $box = static fn (?float $w): float => min($w ?? $available, $available);
+
+        if ($node instanceof Checkbox) {
+            $size = max(10.0, $node->sizePt ?? $style->fontSizePt);
+
+            return [$size, $size, [], 16.0, 4.0];
+        }
+
+        return match (true) {
+            $node instanceof RadioGroup => [
+                $node->rowHeightPt,
+                $node->rowHeightPt,
+                array_map(
+                    static fn ($o): array => [
+                        'export' => $o->export,
+                        'label' => Encoding::forFont($o->label, $font->definition->encoding),
+                    ],
+                    $node->options,
+                ),
+                $node->rowHeightPt,
+                $node->rowGapPt,
+            ],
+            $node instanceof TextField => [
+                $box($node->widthPt),
+                $node->heightPt ?? ($node->multiline ? 3.0 * $line + 6.0 : max(14.0, $line + 4.0)),
+                [],
+                16.0,
+                4.0,
+            ],
+            $node instanceof Dropdown => [$box($node->widthPt), $node->heightPt ?? ($line + 8.0), [], 16.0, 4.0],
+            $node instanceof ListBox => [$box($node->widthPt), $node->heightPt ?? (4.0 * $line), [], 16.0, 4.0],
+            $node instanceof PushButton => [
+                min(
+                    $node->widthPt ?? ($font->metrics->stringWidth(
+                        Encoding::forFont($node->label, $font->definition->encoding),
+                        $style->fontSizePt,
+                    ) + 28.0),
+                    $available,
+                ),
+                $node->heightPt ?? ($line + 10.0),
+                [],
+                16.0,
+                4.0,
+            ],
+            $node instanceof SignatureField => [$box($node->widthPt ?? 200.0), $node->heightPt ?? 48.0, [], 16.0, 4.0],
+            default => [$available, 20.0, [], 16.0, 4.0],
+        };
+    }
+
+    private function quadding(TextAlign $align): int
+    {
+        return match ($align) {
+            TextAlign::Center => 1,
+            TextAlign::Right => 2,
+            default => 0,
+        };
     }
 
     private function measureText(Heading|Paragraph $node, float $widthPt, Style $parentStyle): TextBox
@@ -458,7 +671,7 @@ final class Measurer
     private function resolveInlineImage(
         \Pdf\Text\TextRun $run,
         Style $runStyle,
-        \Pdf\Font\ResolvedFont $font,
+        ResolvedFont $font,
     ): ResolvedRun {
         $resource = $this->images->fromPath((string) $run->imagePath);
         $resolved = $this->imageRegistry->use($resource);

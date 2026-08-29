@@ -1,0 +1,687 @@
+%PDF-1.4
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Annots [5 0 R 7 0 R 9 0 R 11 0 R 15 0 R 18 0 R 21 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R]
+/Contents 4 0 R>>
+endobj
+4 0 obj
+<</Length 588>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Registration) Tj ET
+BT /F2 12.00 Tf 28.35 764.34 Td (Full name) Tj ET
+BT /F2 12.00 Tf 28.35 723.14 Td (Notes) Tj ET
+BT /F2 12.00 Tf 28.35 653.54 Td (PIN) Tj ET
+BT /F2 12.00 Tf 46.35 611.54 Td (Email me product updates) Tj ET
+BT /F2 12.00 Tf 28.35 590.74 Td (Plan) Tj ET
+BT /F2 12.00 Tf 50.35 574.14 Td (Free) Tj ET
+BT /F2 12.00 Tf 50.35 554.14 Td (Pro) Tj ET
+BT /F2 12.00 Tf 50.35 534.14 Td (Team) Tj ET
+BT /F2 12.00 Tf 28.35 513.14 Td (Country) Tj ET
+BT /F2 12.00 Tf 28.35 467.94 Td (Languages) Tj ET
+BT /F2 12.00 Tf 28.35 383.94 Td (Signature) Tj ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R]
+/Count 1
+/MediaBox [0 0 595.28 841.89]
+>>
+endobj
+34 0 obj
+<</Length 675>>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo
+<</Registry (Adobe)
+/Ordering (UCS)
+/Supplement 0
+>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+6 beginbfrange
+<00> <7F> <0000>
+<86> <87> <2020>
+<91> <92> <2018>
+<93> <94> <201C>
+<96> <97> <2013>
+<A0> <FF> <00A0>
+endbfrange
+19 beginbfchar
+<80> <20AC>
+<82> <201A>
+<83> <0192>
+<84> <201E>
+<85> <2026>
+<88> <02C6>
+<89> <2030>
+<8A> <0160>
+<8B> <2039>
+<8C> <0152>
+<8E> <017D>
+<95> <2022>
+<98> <02DC>
+<99> <2122>
+<9A> <0161>
+<9B> <203A>
+<9C> <0153>
+<9E> <017E>
+<9F> <0178>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+35 0 obj
+<</Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 34 0 R
+>>
+endobj
+36 0 obj
+<</Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 34 0 R
+>>
+endobj
+6 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 538.58 19.6] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 186>>
+stream
+q
+0.969 g
+0 0 538.58 19.6 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 537.83 18.85 re S
+Q
+/Tx BMC
+q
+1.75 1.75 535.08 16.1 re W n
+BT
+/F2 12 Tf
+0.000 g
+13.8 TL
+2.75 6.2 Td
+(Ada Lovelace) Tj
+ET
+Q
+EMC
+endstream
+endobj
+5 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Tx
+/T (full_name)
+/V (Ada Lovelace)
+/DA (/F2 0 Tf 0.000 g)
+/Rect [28.35 741.14 566.93 760.74]
+/P 3 0 R
+/F 4
+/MK <</BG [0.969 0.969 0.969] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N 6 0 R>>
+>>
+endobj
+8 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 538.58 48] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 122>>
+stream
+q
+0.969 g
+0 0 538.58 48 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 537.83 47.25 re S
+Q
+/Tx BMC
+q
+1.75 1.75 535.08 44.5 re W n
+Q
+EMC
+endstream
+endobj
+7 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Tx
+/T (notes)
+/Ff 4096
+/DA (/F2 0 Tf 0.000 g)
+/Rect [28.35 671.54 566.93 719.54]
+/P 3 0 R
+/F 4
+/MK <</BG [0.969 0.969 0.969] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N 8 0 R>>
+>>
+endobj
+10 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 90 19.6] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 117>>
+stream
+q
+0.969 g
+0 0 90 19.6 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 89.25 18.85 re S
+Q
+/Tx BMC
+q
+1.75 1.75 86.5 16.1 re W n
+Q
+EMC
+endstream
+endobj
+9 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Tx
+/T (pin)
+/Ff 25165824
+/MaxLen 4
+/DA (/F2 0 Tf 0.000 g)
+/Rect [28.35 630.34 118.35 649.94]
+/P 3 0 R
+/F 4
+/MK <</BG [0.969 0.969 0.969] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N 10 0 R>>
+>>
+endobj
+12 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 12 12] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 72>>
+stream
+q
+1.000 g
+0 0 12 12 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 11.25 11.25 re S
+Q
+endstream
+endobj
+13 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 12 12] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 136>>
+stream
+q
+1.000 g
+0 0 12 12 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 11.25 11.25 re S
+Q
+q
+0.000 g
+0.000 G
+1.44 w
+2.64 6.24 m
+5.04 3.36 l
+9.6 9.12 l
+S
+Q
+endstream
+endobj
+11 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Btn
+/T (subscribe)
+/V /Yes
+/DV /Yes
+/Rect [28.35 610.54 40.35 622.54]
+/P 3 0 R
+/F 4
+/MK <</BG [1.000 1.000 1.000] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N <</Off 12 0 R /Yes 13 0 R>>>>
+/AS /Yes
+>>
+endobj
+16 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 16 16] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 72>>
+stream
+q
+1.000 g
+0 0 16 16 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 15.25 15.25 re S
+Q
+endstream
+endobj
+17 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 16 16] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 230>>
+stream
+q
+1.000 g
+0 0 16 16 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 15.25 15.25 re S
+Q
+q
+0.000 g
+0.000 G
+12.48 8 m
+12.48 10.47 10.47 12.48 8 12.48 c
+5.53 12.48 3.52 10.47 3.52 8 c
+3.52 5.53 5.53 3.52 8 3.52 c
+10.47 3.52 12.48 5.53 12.48 8 c
+f
+Q
+endstream
+endobj
+19 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 16 16] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 72>>
+stream
+q
+1.000 g
+0 0 16 16 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 15.25 15.25 re S
+Q
+endstream
+endobj
+20 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 16 16] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 230>>
+stream
+q
+1.000 g
+0 0 16 16 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 15.25 15.25 re S
+Q
+q
+0.000 g
+0.000 G
+12.48 8 m
+12.48 10.47 10.47 12.48 8 12.48 c
+5.53 12.48 3.52 10.47 3.52 8 c
+3.52 5.53 5.53 3.52 8 3.52 c
+10.47 3.52 12.48 5.53 12.48 8 c
+f
+Q
+endstream
+endobj
+22 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 16 16] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 72>>
+stream
+q
+1.000 g
+0 0 16 16 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 15.25 15.25 re S
+Q
+endstream
+endobj
+23 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 16 16] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 230>>
+stream
+q
+1.000 g
+0 0 16 16 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 15.25 15.25 re S
+Q
+q
+0.000 g
+0.000 G
+12.48 8 m
+12.48 10.47 10.47 12.48 8 12.48 c
+5.53 12.48 3.52 10.47 3.52 8 c
+3.52 5.53 5.53 3.52 8 3.52 c
+10.47 3.52 12.48 5.53 12.48 8 c
+f
+Q
+endstream
+endobj
+14 0 obj
+<<
+/FT /Btn
+/T (plan)
+/Ff 32768
+/V /pro
+/DV /pro
+/Kids [15 0 R 18 0 R 21 0 R]
+>>
+endobj
+15 0 obj
+<</Type /Annot /Subtype /Widget
+/Parent 14 0 R
+/Rect [28.35 571.14 44.35 587.14]
+/P 3 0 R
+/F 4
+/MK <</BG [1.000 1.000 1.000] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N <</Off 16 0 R /free 17 0 R>>>>
+/AS /Off
+>>
+endobj
+18 0 obj
+<</Type /Annot /Subtype /Widget
+/Parent 14 0 R
+/Rect [28.35 551.14 44.35 567.14]
+/P 3 0 R
+/F 4
+/MK <</BG [1.000 1.000 1.000] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N <</Off 19 0 R /pro 20 0 R>>>>
+/AS /pro
+>>
+endobj
+21 0 obj
+<</Type /Annot /Subtype /Widget
+/Parent 14 0 R
+/Rect [28.35 531.14 44.35 547.14]
+/P 3 0 R
+/F 4
+/MK <</BG [1.000 1.000 1.000] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N <</Off 22 0 R /team 23 0 R>>>>
+/AS /Off
+>>
+endobj
+25 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 538.58 23.6] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 188>>
+stream
+q
+0.969 g
+0 0 538.58 23.6 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 537.83 22.85 re S
+Q
+/Tx BMC
+q
+1.75 1.75 535.08 20.1 re W n
+BT
+/F2 12 Tf
+0.000 g
+13.8 TL
+2.75 8.2 Td
+(United Kingdom) Tj
+ET
+Q
+EMC
+endstream
+endobj
+24 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Ch
+/T (country)
+/Ff 131072
+/Opt [[(us) (United States)][(gb) (United Kingdom)]]
+/V (gb)
+/DA (/F2 0 Tf 0.000 g)
+/Rect [28.35 485.94 566.93 509.54]
+/P 3 0 R
+/F 4
+/MK <</BG [0.969 0.969 0.969] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N 25 0 R>>
+>>
+endobj
+27 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 538.58 62.4] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 178>>
+stream
+q
+0.969 g
+0 0 538.58 62.4 re f
+Q
+q
+0.502 G
+0.75 w
+0.38 0.38 537.83 61.65 re S
+Q
+/Tx BMC
+q
+1.75 1.75 535.08 58.9 re W n
+BT
+/F2 12 Tf
+0.000 g
+13.8 TL
+2.75 27.6 Td
+(PHP) Tj
+ET
+Q
+EMC
+endstream
+endobj
+26 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Ch
+/T (languages)
+/Ff 2097152
+/Opt [[(php) (PHP)][(js) (JavaScript)][(py) (Python)]]
+/V (php)
+/DA (/F2 0 Tf 0.000 g)
+/Rect [28.35 401.94 566.93 464.34]
+/P 3 0 R
+/F 4
+/MK <</BG [0.969 0.969 0.969] /BC [0.502 0.502 0.502]>>
+/BS <</W 0.75 /S /S>>
+/AP <</N 27 0 R>>
+>>
+endobj
+29 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 200 48] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 63>>
+stream
+q
+0.949 g
+0 0 200 48 re f
+Q
+q
+0.549 G
+1 w
+0.5 0.5 199 47 re S
+Q
+endstream
+endobj
+28 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Sig
+/T (signature)
+/Rect [28.35 332.34 228.35 380.34]
+/P 3 0 R
+/F 4
+/MK <</BG [0.949 0.949 0.949] /BC [0.549 0.549 0.549]>>
+/BS <</W 1 /S /S>>
+/AP <</N 29 0 R>>
+>>
+endobj
+31 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 65.34 25.6] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 129>>
+stream
+q
+0.878 g
+0 0 65.34 25.6 re f
+Q
+q
+0.431 G
+1 w
+0.5 0.5 64.34 24.6 re S
+Q
+q
+BT
+/F2 12 Tf
+0.000 g
+13.8 TL
+14 9.2 Td
+(Submit) Tj
+ET
+Q
+endstream
+endobj
+30 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Btn
+/T (submit)
+/Ff 65536
+/Rect [28.35 300.74 93.69 326.34]
+/P 3 0 R
+/F 4
+/MK <</BG [0.878 0.878 0.878] /BC [0.431 0.431 0.431] /CA (Submit)>>
+/BS <</W 1 /S /S>>
+/A <</S /SubmitForm /F <</FS /URL /F (https://example.com/register)>> /Flags 0>>
+/AP <</N 31 0 R>>
+>>
+endobj
+33 0 obj
+<</Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 59.34 25.6] /Resources <</ProcSet [/PDF /Text] /Font <</F2 36 0 R>>>> /Length 128>>
+stream
+q
+0.878 g
+0 0 59.34 25.6 re f
+Q
+q
+0.431 G
+1 w
+0.5 0.5 58.34 24.6 re S
+Q
+q
+BT
+/F2 12 Tf
+0.000 g
+13.8 TL
+14 9.2 Td
+(Reset) Tj
+ET
+Q
+endstream
+endobj
+32 0 obj
+<</Type /Annot /Subtype /Widget
+/FT /Btn
+/T (reset)
+/Ff 65536
+/Rect [28.35 269.14 87.69 294.74]
+/P 3 0 R
+/F 4
+/MK <</BG [0.878 0.878 0.878] /BC [0.431 0.431 0.431] /CA (Reset)>>
+/BS <</W 1 /S /S>>
+/A <</S /ResetForm>>
+/AP <</N 33 0 R>>
+>>
+endobj
+37 0 obj
+<<
+/Fields [5 0 R 7 0 R 9 0 R 11 0 R 14 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R]
+/DR <</Font <</F1 35 0 R /F2 36 0 R>>>>
+/DA (/F2 0 Tf 0 g)
+/SigFlags 3
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 35 0 R
+/F2 36 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+38 0 obj
+<<
+/Producer (fpdf/pdf-test)
+/Title (Registration form)
+/CreationDate (D:20260826120000+00'00')
+>>
+endobj
+39 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/AcroForm 37 0 R
+>>
+endobj
+xref
+0 40
+0000000000 65535 f 
+0000000815 00000 n 
+0000010237 00000 n 
+0000000009 00000 n 
+0000000178 00000 n 
+0000002220 00000 n 
+0000001861 00000 n 
+0000002771 00000 n 
+0000002478 00000 n 
+0000003303 00000 n 
+0000003016 00000 n 
+0000004104 00000 n 
+0000003561 00000 n 
+0000003800 00000 n 
+0000006281 00000 n 
+0000006378 00000 n 
+0000004370 00000 n 
+0000004609 00000 n 
+0000006619 00000 n 
+0000005007 00000 n 
+0000005246 00000 n 
+0000006859 00000 n 
+0000005644 00000 n 
+0000005883 00000 n 
+0000007462 00000 n 
+0000007100 00000 n 
+0000008126 00000 n 
+0000007774 00000 n 
+0000008675 00000 n 
+0000008444 00000 n 
+0000009194 00000 n 
+0000008892 00000 n 
+0000009812 00000 n 
+0000009511 00000 n 
+0000000901 00000 n 
+0000001626 00000 n 
+0000001746 00000 n 
+0000010067 00000 n 
+0000010353 00000 n 
+0000010468 00000 n 
+trailer
+<<
+/Size 40
+/Root 39 0 R
+/Info 38 0 R
+>>
+startxref
+10535
+%%EOF
