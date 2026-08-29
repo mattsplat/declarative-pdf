@@ -4,19 +4,22 @@ Where the library could go next. Ordered loosely by how well each fits the
 current architecture. Effort is a rough T-shirt size: **S** ≈ a day, **M** ≈ a
 few days, **L** ≈ a week+, **XL** ≈ a project of its own.
 
-Status today (Phases 1–5): typed writer, core + embedded fonts, style
-resolution, greedy line breaking, box-model pagination (split / keep-together /
+Status today (Phases 1–5): typed writer, core + embedded fonts (TrueType and
+OpenType/CFF) with named / numeric weights (`FontFace`), style resolution,
+greedy line breaking, box-model pagination (split / keep-together /
 widow-orphan / keep-with-next), headers/footers, images (JPEG/PNG/GIF/WebP with
-SMask), internal + external links, multi-column blocks, auto-sized tables with
-repeating headers, UTF-8 encoding, inline decorations, inline HTML, named
-stylesheets, large-format sheets, absolute area placement, public text / block
-measurement helpers (`PageBuilder::textWidth()` / `measureBlocks()`,
-`Pdf\Text\TextMeasurer`), and a pure-PHP single-page PDF importer emitting
+SMask, from a path / URL / `data:` URI), internal + external links, multi-column
+blocks, auto-sized tables with repeating headers, UTF-8 encoding, inline
+decorations, inline HTML, named stylesheets, large-format sheets, absolute area
+placement (`place()` with `ShrinkMode` geometric or font-size fit), page-number
+and watermark helpers, public text / block measurement helpers
+(`PageBuilder::textWidth()` / `measureBlocks()`, `Pdf\Text\TextMeasurer`),
+reusable `Component` nodes, and a pure-PHP single-page PDF importer emitting
 vector Form XObjects.
 
-A worked implementation plan for the font + measurement cluster (OTF/CFF
-embedding, named weights, `place()` shrink-to-fit, `textWidth` /
-`measureBlocks`) is in [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md).
+The [`plans/fonts-and-measurement.md`](plans/fonts-and-measurement.md) plan —
+OpenType/CFF embedding, named weights, `place()` shrink-to-fit, `textWidth` /
+`measureBlocks` — has shipped; it stays as a design record.
 
 ---
 
@@ -152,13 +155,17 @@ glyphs, WinAnsi + `/Differences`. What is left:
 - **CID-keyed CFF / `/CIDFontType0`** — part of the XL below; the tool rejects
   those files with a clear error.
 
-### Named / numeric font weights — **M**
+### Named / numeric font weights — **done**
 
-`FontStyle` is a 4-value enum (Regular / Bold / Italic / BoldItalic). Real
-families ship Light / Semibold / Black / etc. — the detail sheet needs Semibold
-as a distinct cut and has to alias it as a separate family today. Add a
-`weight: 100–900` (or free-form named styles) to `FontStyle` / `StylePatch` and
-let `FontRepository` resolve `(family, weight, italic)`.
+`Pdf\Font\FontFace(int $weight = 400, bool $italic = false)` is the resolution
+key; `StylePatch(weight: 600)` (and `bold: true` ≡ 700) select a cut, and
+`FontRepository::register('Family', new FontFace(600), …)` registers one.
+Unregistered weights fall down a nearest-cut ladder; core families keep their
+bundled bold/italic. What is left:
+
+- **Synthetic bold / oblique** — **M**: faux-bold via text render mode 2, faux
+  oblique via a shear, for a family that ships only one cut (there is a `// TODO`
+  on `FontRepository::registeredPath()`).
 
 ### OpenType shaping & complex scripts — **XL**
 
@@ -361,14 +368,14 @@ header is embedded once. Optional DPI ceiling that downsamples on the way in.
 
 ## Layout engine
 
-### `place()` shrink-to-fit by font size — **M**
+### Context-aware components — **M**
 
-`place()` currently fits over-tall content by scaling the rendered block with a
-`cm` transform (geometry — the text gets literally smaller *and* thinner).
-Detail sheets and cutsheets instead want "reduce the point size and re-flow":
-`examples/detail-sheet.php`'s source does exactly this for its legend (a 0.9×
-loop on size + spacing until it fits). Add a `ShrinkMode::FontSize` /
-`place(..., shrink: …)` that re-measures at each step.
+`Component` expands once, statically. A `PageAware` variant —
+`body(PageContext $ctx): BlockNode|iterable` expanded per physical sheet by the
+`Paginator`, the same path headers/footers use — would unlock "Page X of Y"
+*inside body flow*, running headers pulled from the last heading on the page,
+and a generated table of contents. Bigger than plain `Component` because it
+interacts with the two-pass page-count model.
 
 ### Absolutely / relatively positioned blocks in flow — **M**
 
@@ -445,12 +452,11 @@ matters for 10,000-page batch jobs. Conflicts somewhat with the two-pass
 1. **Outlines / bookmarks** (S) — reuses anchor resolution, high value, cheap.
 2. **Stylesheet class selectors** (S) — closes the last plan gap.
 3. **Drawing primitives** (M) — unblocks charts, watermarks, better tables.
-4. **OpenType/CFF embedding + named weights** (L + M) — the blocker for
-   brand-font work; see `examples/detail-sheet.php`.
-5. **AcroForm fields with generated appearance streams** (L) — the big one from
-   this request; works in every viewer without JavaScript.
-6. **Document / field JavaScript** (M) — opt-in layer on top of #5 for Acrobat
+4. **AcroForm fields with generated appearance streams** (L) — works in every
+   viewer without JavaScript.
+5. **Document / field JavaScript** (M) — opt-in layer on top of #4 for Acrobat
    workflows, with the viewer-support caveat documented.
-7. **Font subsetting** (L) — shrinks every embedded-font document.
-8. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
+6. **Font subsetting** (L) — shrinks every embedded-font document (TrueType and
+   CFF both embed whole today).
+7. **XMP + tagged PDF + PDF/A** (L–XL) — the compliance track, if the audience
    needs it.

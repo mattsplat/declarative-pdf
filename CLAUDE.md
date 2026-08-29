@@ -126,7 +126,7 @@ Breaking any of these is a bug even if the tests pass:
 Run these — do not write throwaway verification scripts:
 
 ```
-composer test                      # vendor/bin/phpunit  — 194 tests
+composer test                      # vendor/bin/phpunit  — 201 tests
 composer stan                      # vendor/bin/phpstan analyse  — level 6
 for f in examples/*.php; do php "$f"; done   # render all 10 examples
 UPDATE_GOLDENS=1 composer test     # regenerate goldens after an intended change

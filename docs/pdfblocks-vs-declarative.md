@@ -144,9 +144,12 @@ VStack(spacing: .flex) {
 .border(Color.black, width: 8)
 ```
 
-**Declarative** — `Container` (a padded / bordered / backed box) and `Columns`;
-inherited style comes from the document base style or a `Stylesheet`, not from
-wrapping:
+**Declarative** — `Container` (a padded / bordered / backed box) and `Columns`.
+A `Container`'s `StylePatch` cascades its **inheriting** properties (font family /
+weight / slope / size, colour, alignment, line-height, underline, strikethrough)
+to descendants, the same as a PDFBlocks modifier — a child overrides with its
+own patch. The **box** properties (padding, border, background) are the
+container's own frame, not inherited:
 
 ```php
 use Pdf\Node\{Container, Columns, Paragraph};
@@ -156,15 +159,16 @@ new Container([
     // no HStack — a one-row Table or place() gives side-by-side
     new Columns([new Paragraph($longText)], count: 2, gutterPt: 36),
 ], new StylePatch(
-    italic: true,
-    border: Border::uniform(8),
+    italic: true,                       // every descendant paragraph is italic
+    border: Border::uniform(8),         // the container's own border
     paddingPt: Edges::all(6),
 ));
 ```
 
-Two gaps to note: this library has **no `HStack`** (use a 1-row borderless
-`Table`, or absolute `place()`), and **no `ZStack`** (use `place()` /
-`frame()` overlays). PDFBlocks has both, plus `VGrid`.
+Where it differs from PDFBlocks: there is no `HStack` (use a 1-row borderless
+`Table`, or absolute `place()`), no `ZStack` (use `place()` / `frame()`
+overlays), and no `.opacity` / `.rotationEffect` / `.scaleEffect` to cascade —
+those effects don't exist here. PDFBlocks also has `VGrid`.
 
 ---
 
@@ -394,7 +398,7 @@ the [roadmap](roadmap.md).
 | `Text("…")` | `Paragraph` / `Heading` / `InlineSequence` |
 | `Text(a) + Text(b).bold()` | `InlineSequence::of($a)->withBold($b)` |
 | `.font()` / `.bold()` / `.fontSize()` / `.foregroundColor()` (chained) | one `StylePatch(bold: …, fontSizePt: …, color: …)` |
-| modifier on a container cascades to children | document base style / `Stylesheet` rules |
+| modifier on a container cascades to children | a `Container` / `Columns` `StylePatch` cascades its inheriting properties; also document base style + `Stylesheet` rules |
 | `VStack` | the default block flow / `Container` |
 | `HStack` | — (1-row `Table`, or `place()`) |
 | `ZStack` | — (`place()` / `frame()` overlays) |

@@ -19,6 +19,7 @@ use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
 use Pdf\Node\Columns;
+use Pdf\Node\Component;
 use Pdf\Node\Container;
 use Pdf\Node\Heading;
 use Pdf\Node\ImageBlock;
@@ -230,6 +231,12 @@ final class PageBuilder
     public function container(iterable $children, StylePatch $patch = new StylePatch()): self
     {
         return $this->add(new Container($children, $patch));
+    }
+
+    /** Add a reusable {@see Component}; it expands to its `body()` during layout. */
+    public function component(Component $component): self
+    {
+        return $this->add($component);
     }
 
     /**

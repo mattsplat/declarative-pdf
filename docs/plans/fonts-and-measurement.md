@@ -1,7 +1,13 @@
 # Plan — fonts & measurement
 
+> **Status: shipped.** All four items landed (`FontFace` / numeric weights,
+> `PageBuilder::textWidth()` / `measureBlocks()` / `TextMeasurer`,
+> `ShrinkMode::FontSize`, OpenType/CFF embedding). This page stays as a design
+> record; open follow-ups (CFF subsetting, synthetic bold/oblique, table-cell
+> patch scaling under `ShrinkMode::FontSize`) are in [`../roadmap.md`](../roadmap.md).
+
 Implementation plan for the four gaps surfaced rebuilding `examples/detail-sheet.php`
-against Schier's `DetailBuilderService.ts`. Tracked in [`../roadmap.md`](../roadmap.md).
+against Schier's `DetailBuilderService.ts`.
 
 | # | Feature | Effort | Delivers |
 |---|---|---|---|
