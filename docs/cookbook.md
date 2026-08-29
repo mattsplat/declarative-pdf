@@ -173,6 +173,30 @@ $p->anchor('methods')->heading(2, 'Methods');
 The anchor's position is resolved after layout and travels with its heading
 across page breaks.
 
+## Bookmarks (document outline)
+
+`bookmark()` adds an entry to the viewer's outline / bookmarks panel. It points
+at an `anchor()` by name and inherits its resolved page and scroll position.
+`level` nests entries: a `level` 1 item is a child of the nearest preceding
+`level` 0 item, in call order.
+
+```php
+Document::create()
+    ->page(fn ($p) => $p->anchor('intro')->heading(1, 'Introduction')->paragraph('…'))
+    ->page(fn ($p) => $p
+        ->anchor('methods')->heading(1, 'Methods')->paragraph('…')
+        ->anchor('methods-data')->heading(2, 'Data sources')->paragraph('…'))
+    ->page(fn ($p) => $p->anchor('results')->heading(1, 'Results')->paragraph('…'))
+    ->bookmark('Introduction', 'intro')
+    ->bookmark('Methods', 'methods')
+    ->bookmark('Data sources', 'methods-data', level: 1)
+    ->bookmark('Results', 'results')
+    ->save('report.pdf');
+```
+
+A bookmark whose anchor is never placed throws `Pdf\Exception\PdfException`.
+All entries render open; auto-generation from headings is not yet available.
+
 ## Images
 
 ```php
