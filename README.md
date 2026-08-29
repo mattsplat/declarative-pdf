@@ -177,9 +177,11 @@ engine are original; the low-level PDF writer, font metrics/embedding, ToUnicode
 CMaps and image decoders were ported from FPDF 1.9 (comment citations
 `fpdf.php:NNN` refer to that release). See [`NOTICE`](NOTICE).
 
-Released under the MIT licence ([`LICENSE`](LICENSE)); the ported portions and
-`tools/makefont/` retain FPDF's permissive licence ([`LICENSE-FPDF.txt`](LICENSE-FPDF.txt)).
-All seven original FPDF tutorials are ported to `examples/`.
+Released under the MIT licence ([`LICENSE`](LICENSE)). The ported portions and
+`tools/makefont/` retain FPDF's permissive licence, and the fonts bundled for
+the examples and tests are under the SIL Open Font License 1.1 — both are
+reproduced in [`NOTICE`](NOTICE). All seven original FPDF tutorials are ported
+to `examples/`.
 
 `tools/makefont/` is FPDF's offline builder for custom-font `.json` definitions:
 

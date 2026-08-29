@@ -2,8 +2,8 @@ MIT License
 
 Copyright (c) 2026 the fpdf/pdf contributors
 
-Portions ported from FPDF 1.9 (c) Olivier Plathey, distributed under a
-permissive licence — see LICENSE-FPDF.txt and NOTICE.
+Portions ported from FPDF 1.9 (c) Olivier Plathey, and the fonts bundled for
+the examples and tests, are covered by third-party licences — see NOTICE.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
