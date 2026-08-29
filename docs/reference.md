@@ -139,6 +139,23 @@ sheet** of the logical page, on top of the flow content.
 | `Table` | `(iterable<TableRow> $rows, ?ColumnWidth[] $columns = null, ?float $totalWidthPt = null, int $headerRows = 0, bool $repeatHeader = true, float $borderWidthPt = 0.5, Color $borderColor = black, Edges $cellPaddingPt = 3/4/3/4, ?Color $headerBackground = null, StylePatch)` |
 | `TableRow` | `(iterable<TableCell\|string\|InlineSequence> $cells)` |
 | `TableCell` | `(string\|InlineSequence\|iterable<BlockNode> $content, int $colspan = 1, VerticalAlign = Top, StylePatch, ?Color $background = null)` |
+| `Component` | `abstract` — subclass it; see below |
+
+### `Pdf\Node\Component`
+
+A reusable block. Subclass, take parameters in the constructor, return the tree
+from `body()`:
+
+```php
+abstract public function body() : BlockNode | iterable<BlockNode>   // the expansion
+public function patch() : StylePatch                                // optional: wraps body() like a Container
+```
+
+A component composes anywhere a `BlockNode` does and expands during the measure
+pass; a non-empty `patch()` frames its `body()` (padding / border / background /
+inherited style). `body()` must be pure — it is called more than once per
+render. `$page->component($x)` is sugar for `$page->add($x)`. See the
+[cookbook recipe](cookbook.md#reusable-components).
 
 ### `Pdf\Node\Document`, `Page`, `PageMaster`, `Meta`
 

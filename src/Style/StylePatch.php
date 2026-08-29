@@ -50,6 +50,12 @@ final readonly class StylePatch
         return new self();
     }
 
+    /** True when this patch overrides nothing — every field is `null`. */
+    public function isEmpty(): bool
+    {
+        return $this == self::none();
+    }
+
     /** Superscript: smaller text raised above the baseline. */
     public static function superscript(): self
     {

@@ -11,8 +11,8 @@ SMask), internal + external links, multi-column blocks, auto-sized tables with
 repeating headers, UTF-8 encoding, inline decorations, inline HTML, named
 stylesheets, large-format sheets, absolute area placement, public text / block
 measurement helpers (`PageBuilder::textWidth()` / `measureBlocks()`,
-`Pdf\Text\TextMeasurer`), and a pure-PHP single-page PDF importer emitting
-vector Form XObjects.
+`Pdf\Text\TextMeasurer`), reusable `Component` nodes, and a pure-PHP single-page
+PDF importer emitting vector Form XObjects.
 
 A worked implementation plan for the font + measurement cluster (OTF/CFF
 embedding, named weights, `place()` shrink-to-fit, `textWidth` /
@@ -361,14 +361,14 @@ header is embedded once. Optional DPI ceiling that downsamples on the way in.
 
 ## Layout engine
 
-### `place()` shrink-to-fit by font size — **M**
+### Context-aware components — **M**
 
-`place()` currently fits over-tall content by scaling the rendered block with a
-`cm` transform (geometry — the text gets literally smaller *and* thinner).
-Detail sheets and cutsheets instead want "reduce the point size and re-flow":
-`examples/detail-sheet.php`'s source does exactly this for its legend (a 0.9×
-loop on size + spacing until it fits). Add a `ShrinkMode::FontSize` /
-`place(..., shrink: …)` that re-measures at each step.
+`Component` expands once, statically. A `PageAware` variant —
+`body(PageContext $ctx): BlockNode|iterable` expanded per physical sheet by the
+`Paginator`, the same path headers/footers use — would unlock "Page X of Y"
+*inside body flow*, running headers pulled from the last heading on the page,
+and a generated table of contents. Bigger than plain `Component` because it
+interacts with the two-pass page-count model.
 
 ### Absolutely / relatively positioned blocks in flow — **M**
 

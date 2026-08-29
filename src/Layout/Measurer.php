@@ -24,6 +24,7 @@ use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
 use Pdf\Node\BulletList;
 use Pdf\Node\Columns;
+use Pdf\Node\Component;
 use Pdf\Node\Container;
 use Pdf\Node\Heading;
 use Pdf\Node\ImageBlock;
@@ -52,6 +53,9 @@ use Pdf\Text\InlineSequence;
  */
 final class Measurer
 {
+    /** Guards against a {@see Component} whose `body()` reaches itself. */
+    private int $componentDepth = 0;
+
     public function __construct(
         private readonly StyleResolver $styles,
         private readonly FontRegistry $fonts,
@@ -125,8 +129,30 @@ final class Measurer
             $node instanceof Columns => $this->measureColumns($node, $widthPt, $parentStyle),
             $node instanceof Table => $this->measureTable($node, $widthPt, $parentStyle),
             $node instanceof Anchor => new AnchorBox($node->name),
+            $node instanceof Component => $this->measureComponent($node, $widthPt, $parentStyle),
             default => throw new LayoutException('Unsupported block node: ' . $node::class),
         };
+    }
+
+    private function measureComponent(Component $node, float $widthPt, Style $parentStyle): Box
+    {
+        if ($this->componentDepth >= 64) {
+            throw new LayoutException(sprintf('Component %s expands too deeply — a cycle?', $node::class));
+        }
+
+        $this->componentDepth++;
+        try {
+            $body = $node->body();
+            $children = $body instanceof BlockNode ? [$body] : $body;
+
+            // A non-empty patch wraps the body like an implicit Container, so
+            // padding / border / background / inheritance all reuse that path.
+            return $node->patch()->isEmpty()
+                ? $this->measureStack($children, $widthPt, $parentStyle)
+                : $this->measureContainer(new Container($children, $node->patch()), $widthPt, $parentStyle);
+        } finally {
+            $this->componentDepth--;
+        }
     }
 
     private function measureText(Heading|Paragraph $node, float $widthPt, Style $parentStyle): TextBox
