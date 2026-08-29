@@ -15,14 +15,22 @@ final readonly class Document
     /** @var list<Page> */
     public array $pages;
 
-    /** @param iterable<Page> $pages */
+    /** @var list<Bookmark> */
+    public array $bookmarks;
+
+    /**
+     * @param iterable<Page> $pages
+     * @param iterable<Bookmark> $bookmarks
+     */
     public function __construct(
         iterable $pages,
         public Meta $meta = new Meta(),
         public ?Style $baseStyle = null,
         public ?Stylesheet $stylesheet = null,
+        iterable $bookmarks = [],
     ) {
         $this->pages = is_array($pages) ? array_values($pages) : iterator_to_array($pages, false);
+        $this->bookmarks = is_array($bookmarks) ? array_values($bookmarks) : iterator_to_array($bookmarks, false);
     }
 
     public function style(): Style

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Builder;
 
 use Pdf\Color\Color;
+use Pdf\Node\Bookmark;
 use Pdf\Node\Document;
 use Pdf\Node\Meta;
 use Pdf\Node\Page;
@@ -33,6 +34,9 @@ final class DocumentBuilder
     private ?Style $baseStyle = null;
 
     private ?Stylesheet $stylesheet = null;
+
+    /** @var list<Bookmark> */
+    private array $bookmarks = [];
 
     private ?DocumentRenderer $renderer = null;
 
@@ -114,6 +118,18 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Add an outline entry (a bookmark in the viewer's sidebar) pointing at an
+     * existing {@see \Pdf\Node\Anchor}. `$level` 0 is top-level; deeper items
+     * nest under the nearest preceding item of a lower level, in call order.
+     */
+    public function bookmark(string $title, string $anchor, int $level = 0): self
+    {
+        $this->bookmarks[] = new Bookmark($title, $anchor, $level);
+
+        return $this;
+    }
+
     public function using(DocumentRenderer $renderer): self
     {
         $this->renderer = $renderer;
@@ -145,7 +161,13 @@ final class DocumentBuilder
 
     private function buildWith(DocumentRenderer $renderer): Document
     {
-        return new Document($this->resolvePages($renderer), $this->meta, $this->baseStyle, $this->stylesheet);
+        return new Document(
+            $this->resolvePages($renderer),
+            $this->meta,
+            $this->baseStyle,
+            $this->stylesheet,
+            $this->bookmarks,
+        );
     }
 
     /** @return list<Page> */

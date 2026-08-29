@@ -41,6 +41,7 @@ immutable tree.
 | `stylesheet(Pdf\Style\Stylesheet)` | per-node-type and named class rules |
 | `pageNumbers(string $format = 'Page {n} of {N}', TextAlign = Center, float $fontSizePt = 9, ?Color = null, bool $inHeader = false)` | page numbers on every `page()` |
 | `watermark(string\|Pdf\Node\Watermark)` | stamp on every `page()`; a page may override |
+| `bookmark(string $title, string $anchor, int $level = 0)` | add an outline entry pointing at an existing `anchor()`; `$level` 0 is top-level, deeper items nest under the nearest preceding lower level in call order. Unresolved anchor → `PdfException` |
 | `using(Pdf\Render\DocumentRenderer)` | custom renderer (fonts, clock, compression, producer) |
 | `build() : Pdf\Node\Document` | the immutable tree |
 | `toString() : string` | render to PDF bytes |
@@ -221,7 +222,8 @@ arrays and per-subpath paint are not implemented — see
 ### `Pdf\Node\Document`, `Page`, `PageMaster`, `Meta`
 
 ```php
-new Document(iterable<Page> $pages, Meta $meta = new, ?Style $baseStyle = null, ?Stylesheet $stylesheet = null)
+new Document(iterable<Page> $pages, Meta $meta = new, ?Style $baseStyle = null, ?Stylesheet $stylesheet = null, iterable<Bookmark> $bookmarks = [])
+new Bookmark(string $title, string $anchor, int $level = 0)   // outline entry; $anchor names an Pdf\Node\Anchor
 new Page(PageMaster $master = new, iterable<BlockNode> $children = [], StylePatch $patch = new, iterable<Placement> $placements = [])
 new PageMaster(PageSize $size = a4, Orientation = Portrait, Edges $marginsPt = 28.35, ?Closure $header = null, ?Closure $footer = null)
   PageMaster::of(PageSize, Orientation = Portrait, float $margin = 10, Unit $marginUnit = Mm)
