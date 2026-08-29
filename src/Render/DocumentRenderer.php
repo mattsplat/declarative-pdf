@@ -14,6 +14,7 @@ use Pdf\Layout\LinkRect;
 use Pdf\Layout\Measurer;
 use Pdf\Layout\Paginator;
 use Pdf\Layout\PhysicalPage;
+use Pdf\Exception\PdfException;
 use Pdf\Node\Document;
 use Pdf\Node\Watermark;
 use Pdf\Style\Stylesheet;
@@ -208,6 +209,9 @@ final class DocumentRenderer
         (new ImageWriter($writer))->write($images->used());
         (new FormXObjectWriter($writer))->write($imports->used());
 
+        // Document outline (bookmarks) — pre-allocated as a block, FPDF-style.
+        $outlinesObject = $this->writeOutlines($writer, $document, $anchorMap, $pageObjects, $rendered);
+
         // ExtGState objects for translucent watermarks.
         /** @var array<string, int> $gsObjects  gs name => object number */
         $gsObjects = [];
@@ -261,6 +265,9 @@ final class DocumentRenderer
         $writer->line('<<');
         $writer->line('/Type /Catalog');
         $writer->line('/Pages 1 0 R');
+        if ($outlinesObject !== null) {
+            $writer->line('/Outlines ' . $outlinesObject . ' 0 R');
+        }
         $writer->line('>>');
         $writer->endObject();
 
@@ -316,6 +323,87 @@ final class DocumentRenderer
 
         $writer->line($dict);
         $writer->endObject();
+    }
+
+    /**
+     * Write the `/Outlines` dictionary and one item dict per bookmark, returning
+     * the outline root's object number (or null when there are no bookmarks).
+     *
+     * Item objects are all allocated up front so `/Prev` / `/Next` / `/First` /
+     * `/Last` can reference siblings and children that come later in the block.
+     *
+     * @param array<string, array{0: int, 1: float}>                                                              $anchorMap
+     * @param list<int>                                                                                           $pageObjects
+     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered
+     */
+    private function writeOutlines(
+        PdfWriter $writer,
+        Document $document,
+        array $anchorMap,
+        array $pageObjects,
+        array $rendered,
+    ): ?int {
+        $tree = new OutlineTree($document->bookmarks);
+        if ($tree->isEmpty()) {
+            return null;
+        }
+
+        foreach ($tree->items as $bookmark) {
+            if (!isset($anchorMap[$bookmark->anchor])) {
+                throw new PdfException(sprintf(
+                    'Bookmark "%s" targets anchor "%s", which no Anchor node defines.',
+                    $bookmark->title,
+                    $bookmark->anchor,
+                ));
+            }
+        }
+
+        $registry = $writer->registry();
+        $rootObject = $registry->allocate();
+        $itemObjects = array_map(static fn () => $registry->allocate(), $tree->items);
+
+        $writer->beginObject($rootObject);
+        $writer->line('<</Type /Outlines');
+        $writer->line('/First ' . $itemObjects[$tree->roots[0]] . ' 0 R');
+        $writer->line('/Last ' . $itemObjects[$tree->roots[count($tree->roots) - 1]] . ' 0 R');
+        $writer->line('/Count ' . count($tree->items));
+        $writer->line('>>');
+        $writer->endObject();
+
+        foreach ($tree->items as $index => $bookmark) {
+            $siblings = $tree->siblings($index);
+            $position = (int) array_search($index, $siblings, true);
+            $parentObject = $tree->parents[$index] === -1
+                ? $rootObject
+                : $itemObjects[$tree->parents[$index]];
+
+            [$pageIndex, $destYTopPt] = $anchorMap[$bookmark->anchor];
+            $destGeometry = $rendered[$pageIndex]['geometry'];
+
+            $writer->beginObject($itemObjects[$index]);
+            $writer->line('<</Title ' . PdfString::text($bookmark->title));
+            $writer->line('/Parent ' . $parentObject . ' 0 R');
+            if ($position > 0) {
+                $writer->line('/Prev ' . $itemObjects[$siblings[$position - 1]] . ' 0 R');
+            }
+            if ($position < count($siblings) - 1) {
+                $writer->line('/Next ' . $itemObjects[$siblings[$position + 1]] . ' 0 R');
+            }
+            $childIndices = $tree->children[$index];
+            if ($childIndices !== []) {
+                $writer->line('/First ' . $itemObjects[$childIndices[0]] . ' 0 R');
+                $writer->line('/Last ' . $itemObjects[$childIndices[count($childIndices) - 1]] . ' 0 R');
+                $writer->line('/Count ' . $tree->counts[$index]);
+            }
+            $writer->line(sprintf(
+                '/Dest [%d 0 R /XYZ 0 %.2F null]>>',
+                $pageObjects[$pageIndex],
+                $destGeometry->flipY($destYTopPt),
+            ));
+            $writer->endObject();
+        }
+
+        return $rootObject;
     }
 
     private function renderArea(ContentStream $stream, PageGeometry $geometry, \Pdf\Layout\PlacedArea $area): void
