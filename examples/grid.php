@@ -13,7 +13,6 @@ use Pdf\Geometry\Orientation;
 use Pdf\Geometry\PageSize;
 use Pdf\Geometry\ShrinkMode;
 use Pdf\Geometry\Unit;
-use Pdf\Layout\Grid;
 use Pdf\Layout\Track;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Path;
@@ -23,16 +22,16 @@ use Pdf\Style\StylePatch;
 use Pdf\Support\Source;
 
 /*
- * The absolute-layout kit: carve the writable area into regions with Grid,
+ * The absolute-layout kit: carve the writable area into regions with a Grid,
  * frame each region with Panel, and rule the seams with hline()/vline() —
  * no hand-computed `$x + $w + $gutter` chains.
  *
- *   Grid::forPage($p, gutterPt: 14)
+ *   $p->grid(gutterPt: 14)
  *     -> rowTracks([Track::pt(52), Track::fr(1)])   // fixed banner + flexible body
  *     -> the body splits 2:1 into a main column and a sidebar
  *     -> the main column splits into a drawing panel and a notes panel
  *
- * Everything is in points (Grid's native unit); Panel::in() takes the point
+ * Everything is in points (the Grid's native unit); Panel::in() takes the point
  * rectangles straight from the grid.
  */
 
@@ -64,8 +63,7 @@ Document::create()
     ->page(function (PageBuilder $p) use ($drawingSource, $rule): void {
         $p->size(PageSize::letter())->landscape()->units(Unit::Pt)->margin(28);
 
-        $grid = Grid::forPage($p, gutterPt: 14);
-        [$banner, $body] = $grid->rowTracks([Track::pt(52), Track::fr(1)]);
+        [$banner, $body] = $p->grid(gutterPt: 14)->rowTracks([Track::pt(52), Track::fr(1)]);
         [$main, $sidebar] = $body->columns(2, 1);
         [$drawingCell, $notesCell] = $main->rows(3, 1);
 

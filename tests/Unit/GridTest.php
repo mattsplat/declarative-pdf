@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pdf\Tests\Unit;
 
 use Pdf\Builder\PageBuilder;
+use Pdf\Exception\LayoutException;
 use Pdf\Exception\PdfException;
 use Pdf\Geometry\Orientation;
 use Pdf\Geometry\PageSize;
@@ -110,14 +111,24 @@ final class GridTest extends TestCase
         self::assertEqualsWithDelta(20.0, $b->rect()->width, 1e-9);
     }
 
-    public function test_for_page_uses_the_writable_rect_in_points(): void
+    public function test_zero_width_fraction_slice_when_fixed_tracks_fill_the_space(): void
+    {
+        [$fixed, $rest] = Grid::inside(new Rect(0.0, 0.0, 100.0, 40.0))
+            ->columnTracks([Track::pt(100.0), Track::fr(1)]);
+
+        self::assertEqualsWithDelta(100.0, $fixed->rect()->width, 1e-9);
+        self::assertEqualsWithDelta(0.0, $rest->rect()->width, 1e-9);
+        self::assertEqualsWithDelta(100.0, $rest->rect()->x, 1e-9);
+    }
+
+    public function test_page_builder_grid_uses_the_writable_rect_in_points(): void
     {
         $page = (new PageBuilder())
             ->size(PageSize::a4())
             ->orientation(Orientation::Landscape)
             ->margin(10.0, Unit::Mm);
 
-        $rect = Grid::forPage($page)->rect();
+        $rect = $page->grid()->rect();
         $marginPt = Unit::Mm->toPoints(10.0);
 
         self::assertEqualsWithDelta($marginPt, $rect->x, 1e-9);
@@ -129,7 +140,7 @@ final class GridTest extends TestCase
 
     public function test_overfull_fixed_tracks_are_rejected(): void
     {
-        $this->expectException(PdfException::class);
+        $this->expectException(LayoutException::class);
 
         Grid::inside(new Rect(0.0, 0.0, 100.0, 100.0))
             ->columnTracks([Track::pt(80.0), Track::pt(80.0)]);
@@ -137,9 +148,23 @@ final class GridTest extends TestCase
 
     public function test_empty_split_is_rejected(): void
     {
-        $this->expectException(PdfException::class);
+        $this->expectException(LayoutException::class);
 
         Grid::inside(new Rect(0.0, 0.0, 100.0, 100.0))->rowTracks([]);
+    }
+
+    public function test_negative_gutter_is_rejected(): void
+    {
+        $this->expectException(LayoutException::class);
+
+        Grid::inside(new Rect(0.0, 0.0, 100.0, 100.0), gutterPt: -1.0);
+    }
+
+    public function test_negative_gutter_override_is_rejected(): void
+    {
+        $this->expectException(LayoutException::class);
+
+        Grid::inside(new Rect(0.0, 0.0, 100.0, 100.0))->gutter(-5.0);
     }
 
     public function test_negative_track_size_is_rejected(): void
@@ -147,5 +172,12 @@ final class GridTest extends TestCase
         $this->expectException(PdfException::class);
 
         Track::pt(-1.0);
+    }
+
+    public function test_non_positive_fraction_weight_is_rejected(): void
+    {
+        $this->expectException(PdfException::class);
+
+        Track::fr(0.0);
     }
 }

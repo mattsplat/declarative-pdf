@@ -12,7 +12,6 @@ use Pdf\Geometry\Fit;
 use Pdf\Geometry\PageSize;
 use Pdf\Geometry\Rect;
 use Pdf\Geometry\Unit;
-use Pdf\Layout\Grid;
 use Pdf\Node\Paragraph;
 use Pdf\Style\Border;
 use Pdf\Tests\Support\Pdf;
@@ -96,6 +95,7 @@ final class PanelTest extends TestCase
         self::assertNotSame($base, $base->containing([new Paragraph('x')]));
         self::assertNotSame($base, $base->inset(5));
         self::assertNotSame($base, $base->fitted(Fit::Cover, BoxAlign::TopLeft));
+        self::assertNotSame($base, $base->aligned(BoxAlign::Center));
         self::assertNotSame($base, $base->framed(Border::uniform(1.0)));
     }
 
@@ -113,6 +113,88 @@ final class PanelTest extends TestCase
 
         // Bottom frame edge spans 144pt at x=72pt; flipped y = 841.89 - 216 = 625.89.
         self::assertMatchesRegularExpression('/72\.00 625\.89 144\.00 0\.75 re/', Pdf::contentText($pdf));
+    }
+
+    public function test_inset_on_a_point_space_panel_is_measured_in_points(): void
+    {
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->page(function (PageBuilder $p): void {
+                // A millimetre page: a naive inset would be read as 20mm (~57pt).
+                $p->size(PageSize::a4())->units(Unit::Mm)->margin(0);
+                Panel::in(new Rect(0, 0, 200, 200))
+                    ->inset(20)
+                    ->showing($this->source)
+                    ->drawOn($p);
+            })
+            ->toString();
+
+        // 20pt inset -> a 160x160pt inner area; the A4 source contain-fits at
+        // 160 / 841.89 = 0.19005. A 20mm inset would scale by ~0.10.
+        self::assertMatchesRegularExpression(
+            '/0\.19005 0\.00000 0\.00000 0\.19005 .* cm \/Import1 Do/',
+            Pdf::contentText($pdf),
+        );
+    }
+
+    public function test_block_content_defaults_to_top_left_alignment(): void
+    {
+        $render = function (?BoxAlign $align): string {
+            $panel = Panel::at(40, 40, 320, 260)->containing([new Paragraph('Short.')]);
+            if ($align !== null) {
+                $panel = $panel->aligned($align);
+            }
+
+            return Pdf::contentText(
+                Document::create()->using(Pdf::deterministicRenderer())
+                    ->page(function (PageBuilder $p) use ($panel): void {
+                        $p->size(PageSize::a4())->units(Unit::Pt)->margin(0);
+                        $panel->drawOn($p);
+                    })
+                    ->toString(),
+            );
+        };
+
+        self::assertSame($render(null), $render(BoxAlign::TopLeft), 'default matches TopLeft');
+        self::assertNotSame($render(null), $render(BoxAlign::Center), 'Center shifts the content');
+    }
+
+    public function test_showing_dispatches_by_extension_ignoring_case_and_query_string(): void
+    {
+        $upper = tempnam(sys_get_temp_dir(), 'panel') . '.PDF';
+        copy($this->source, $upper);
+
+        try {
+            $pdf = Document::create()->using(Pdf::deterministicRenderer())
+                ->page(function (PageBuilder $p) use ($upper): void {
+                    $p->size(PageSize::a4())->units(Unit::Pt)->margin(0);
+                    Panel::at(20, 20, 200, 200)->showing($upper)->drawOn($p);
+                })
+                ->toString();
+
+            self::assertStringContainsString('/Import1 Do', Pdf::contentText($pdf));
+        } finally {
+            @unlink($upper);
+        }
+
+        // The query string must not reach the extension sniff.
+        $method = new \ReflectionMethod(Panel::class, 'sourceExtension');
+        self::assertSame('pdf', $method->invoke(Panel::at(0, 0, 1, 1)->showing('https://h/x/plan.PDF?v=2')));
+        self::assertSame('png', $method->invoke(Panel::at(0, 0, 1, 1)->showing('https://h/logo.png#frag')));
+    }
+
+    public function test_showing_dispatches_a_data_uri_image_to_place_image(): void
+    {
+        $bytes = (string) file_get_contents(dirname(__DIR__) . '/fixtures/dot-rgba.png');
+        $dataUri = 'data:image/png;base64,' . base64_encode($bytes);
+
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->page(function (PageBuilder $p) use ($dataUri): void {
+                $p->size(PageSize::a4())->units(Unit::Pt)->margin(0);
+                Panel::at(100, 100, 200, 200)->showing($dataUri)->drawOn($p);
+            })
+            ->toString();
+
+        self::assertSame(1, substr_count(Pdf::contentText($pdf), '/I1 Do'));
     }
 
     public function test_showing_dispatches_an_image_source_to_place_image(): void
@@ -167,7 +249,7 @@ final class PanelTest extends TestCase
         $pdf = Document::create()->using(Pdf::deterministicRenderer())
             ->page(function (PageBuilder $p): void {
                 $p->size(PageSize::letter())->landscape()->units(Unit::Pt)->margin(18);
-                [$left, $right] = Grid::forPage($p, gutterPt: 12)->columns(2, 1);
+                [$left, $right] = $p->grid(gutterPt: 12)->columns(2, 1);
                 Panel::in($left->rect())->containing([new Paragraph('left')])->drawOn($p);
                 Panel::in($right->rect())->containing([new Paragraph('right')])->drawOn($p);
             })

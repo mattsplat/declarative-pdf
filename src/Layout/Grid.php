@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Pdf\Layout;
 
-use Pdf\Builder\PageBuilder;
-use Pdf\Exception\PdfException;
+use Pdf\Exception\LayoutException;
 use Pdf\Geometry\Rect;
 
 /**
@@ -15,12 +14,14 @@ use Pdf\Geometry\Rect;
  * Every split returns child grids over their own sub-rectangle, so a band can
  * be split again — a lower row divided into columns, say:
  *
- *   [$top, $bottom] = Grid::forPage($p, gutterPt: 12)->rows(3, 1);
+ *   [$top, $bottom] = $p->grid(gutterPt: 12)->rows(3, 1);
  *   [$left, $right] = $bottom->columns(1, 1);
  *   Panel::in($left->rect())->containing($blocks)->drawOn($p);
  *
- * Pure geometry, in points, top-down; it never touches the Y flip. The gutter
- * is carried into child grids — override it per level with {@see self::gutter()}.
+ * {@see \Pdf\Builder\PageBuilder::grid()} starts one over a page's writable
+ * area. Pure geometry, in points, top-down; it never touches the Y flip. The
+ * gutter is carried into child grids — override it per level with
+ * {@see self::gutter()}.
  */
 final readonly class Grid
 {
@@ -28,17 +29,14 @@ final readonly class Grid
         private Rect $area,
         private float $gutterPt,
     ) {
+        if ($gutterPt < 0.0) {
+            throw new LayoutException('Grid gutter must not be negative.');
+        }
     }
 
     public static function inside(Rect $area, float $gutterPt = 0.0): self
     {
         return new self($area, $gutterPt);
-    }
-
-    /** The writable area of a page (inside its margins), as a grid in points. */
-    public static function forPage(PageBuilder $page, float $gutterPt = 0.0): self
-    {
-        return new self($page->writableRectPt(), $gutterPt);
     }
 
     /** This (sub)grid's rectangle, in points. */
@@ -102,7 +100,7 @@ final readonly class Grid
     private function slice(array $tracks, bool $vertical): array
     {
         if ($tracks === []) {
-            throw new PdfException('A grid split needs at least one track.');
+            throw new LayoutException('A grid split needs at least one track.');
         }
 
         $extent = $vertical ? $this->area->height : $this->area->width;
@@ -120,7 +118,7 @@ final readonly class Grid
 
         $flexible = $free - $fixedTotal;
         if ($flexible < -1e-6) {
-            throw new PdfException(
+            throw new LayoutException(
                 'Fixed tracks and gutters exceed the grid ' . ($vertical ? 'height' : 'width') . '.',
             );
         }

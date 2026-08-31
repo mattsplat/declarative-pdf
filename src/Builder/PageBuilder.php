@@ -14,6 +14,7 @@ use Pdf\Geometry\Rect;
 use Pdf\Geometry\ShrinkMode;
 use Pdf\Geometry\Unit;
 use Pdf\Exception\LayoutException;
+use Pdf\Layout\Grid;
 use Pdf\Layout\Measurer;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
@@ -458,8 +459,14 @@ final class PageBuilder
 
     /**
      * The writable area — the page box inside the margins — in points, measured
-     * from the top edge. Pairs with {@see \Pdf\Layout\Grid::forPage()} to carve
-     * a sheet into regions without hand-computing offsets.
+     * from the top edge.
+     *
+     * A snapshot of the current {@see self::size()} / {@see self::orientation()}
+     * / {@see self::margin()}: call it after those are set. It is margins-only —
+     * it does not subtract any {@see self::header()} / {@see self::footer()}
+     * band, so a grid built from it can overlap a header or footer. Absolute
+     * placements draw over the flow content regardless, so this is usually fine
+     * for a full-sheet layout; inset the rectangle yourself if you keep a band.
      */
     public function writableRectPt(): Rect
     {
@@ -469,9 +476,20 @@ final class PageBuilder
     }
 
     /**
-     * A horizontal hairline `$length` long starting at `(x, y)` — a divider
-     * rule in an absolute layout. `$stroke` is the line thickness in points, or
-     * a {@see Border} whose widest edge and colour are used.
+     * A {@see \Pdf\Layout\Grid} over the writable area (see {@see
+     * self::writableRectPt()} for its caveats). `$gutterPt` is the gap left
+     * between sibling slices, in points.
+     */
+    public function grid(float $gutterPt = 0.0): Grid
+    {
+        return Grid::inside($this->writableRectPt(), $gutterPt);
+    }
+
+    /**
+     * A horizontal hairline `$length` long whose top edge starts at `(x, y)`
+     * (corner origin, not centreline) — a divider rule in an absolute layout.
+     * `$stroke` is the line thickness in points, or a {@see Border} whose widest
+     * edge and colour are used. `x`, `y` and `length` honour {@see self::units()}.
      */
     public function hline(float $x, float $y, float $length, Border|float $stroke = 0.5): self
     {
@@ -484,7 +502,10 @@ final class PageBuilder
         return $this;
     }
 
-    /** A vertical hairline `$length` long starting at `(x, y)`. See {@see self::hline()}. */
+    /**
+     * A vertical hairline `$length` long whose left edge starts at `(x, y)`
+     * (corner origin, not centreline). See {@see self::hline()}.
+     */
     public function vline(float $x, float $y, float $length, Border|float $stroke = 0.5): self
     {
         [$thicknessPt, $color] = $this->strokeSpec($stroke);
