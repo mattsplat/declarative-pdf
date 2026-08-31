@@ -56,6 +56,10 @@ final class Paginator
             $totalPages = $this->countPages($logical);
         }
 
+        // A document-level auto-advance applies to every sheet whose logical
+        // page did not set its own `->autoAdvance()`.
+        $documentAdvance = $document->presentationAdvanceSec;
+
         /** @var list<PhysicalPage> $physical */
         $physical = [];
         $pageNumber = 0;
@@ -91,6 +95,8 @@ final class Paginator
                     // Placements go on the first physical sheet of the logical page.
                     areas: $slot === 0 ? $this->resolveAreas($page, $pageStyle) : [],
                     watermark: $page->master->watermark,
+                    transition: $page->master->transition,
+                    autoAdvanceSec: $page->master->autoAdvanceSec ?? $documentAdvance,
                 );
             }
         }

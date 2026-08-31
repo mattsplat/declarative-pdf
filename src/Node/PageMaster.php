@@ -33,6 +33,8 @@ final readonly class PageMaster
     /**
      * @param BandFactory|null $header
      * @param BandFactory|null $footer
+     * @param float|null       $autoAdvanceSec seconds the viewer waits before advancing
+     *                                         past this page in presentation mode (`/Dur`)
      */
     public function __construct(
         public PageSize $size = new PageSize(595.28, 841.89),
@@ -41,6 +43,8 @@ final readonly class PageMaster
         ?\Closure $header = null,
         ?\Closure $footer = null,
         public ?Watermark $watermark = null,
+        public ?Transition $transition = null,
+        public ?float $autoAdvanceSec = null,
     ) {
         $this->header = $header;
         $this->footer = $footer;
@@ -57,17 +61,27 @@ final readonly class PageMaster
 
     public function withHeader(\Closure $header): self
     {
-        return new self($this->size, $this->orientation, $this->marginsPt, $header, $this->footer, $this->watermark);
+        return $this->with(header: $header);
     }
 
     public function withFooter(\Closure $footer): self
     {
-        return new self($this->size, $this->orientation, $this->marginsPt, $this->header, $footer, $this->watermark);
+        return $this->with(footer: $footer);
     }
 
     public function withWatermark(Watermark $watermark): self
     {
-        return new self($this->size, $this->orientation, $this->marginsPt, $this->header, $this->footer, $watermark);
+        return $this->with(watermark: $watermark);
+    }
+
+    public function withTransition(Transition $transition): self
+    {
+        return $this->with(transition: $transition);
+    }
+
+    public function withAutoAdvance(float $seconds): self
+    {
+        return $this->with(autoAdvanceSec: $seconds);
     }
 
     public function geometry(): PageGeometry
@@ -76,6 +90,27 @@ final readonly class PageMaster
             $this->size->forOrientation($this->orientation),
             $this->orientation,
             $this->marginsPt,
+        );
+    }
+
+    /** @param BandFactory|null $header
+     *  @param BandFactory|null $footer */
+    private function with(
+        ?\Closure $header = null,
+        ?\Closure $footer = null,
+        ?Watermark $watermark = null,
+        ?Transition $transition = null,
+        ?float $autoAdvanceSec = null,
+    ): self {
+        return new self(
+            $this->size,
+            $this->orientation,
+            $this->marginsPt,
+            $header ?? $this->header,
+            $footer ?? $this->footer,
+            $watermark ?? $this->watermark,
+            $transition ?? $this->transition,
+            $autoAdvanceSec ?? $this->autoAdvanceSec,
         );
     }
 }

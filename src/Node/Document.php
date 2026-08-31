@@ -30,6 +30,10 @@ final readonly class Document
      * @param iterable<Page> $pages
      * @param iterable<Bookmark> $bookmarks
      * @param array<string, string> $scripts
+     * @param bool  $presentation           open full-screen as a slideshow
+     *                                       (`/PageMode /FullScreen`)
+     * @param float|null $presentationAdvanceSec default seconds each sheet shows
+     *                                           before auto-advancing (`/Dur`)
      */
     public function __construct(
         iterable $pages,
@@ -38,6 +42,8 @@ final readonly class Document
         public ?Stylesheet $stylesheet = null,
         iterable $bookmarks = [],
         array $scripts = [],
+        public bool $presentation = false,
+        public ?float $presentationAdvanceSec = null,
     ) {
         $this->pages = is_array($pages) ? array_values($pages) : iterator_to_array($pages, false);
         $this->bookmarks = is_array($bookmarks) ? array_values($bookmarks) : iterator_to_array($bookmarks, false);
