@@ -37,6 +37,12 @@ $orders = [
 
 $money = static fn (mixed $value): string => '$' . number_format((float) $value, 0);
 $right = TextAlign::Right;
+$earliest = static function (array $rows): string {
+    $dates = array_column($rows, 'renews');
+    sort($dates);
+
+    return (string) ($dates[0] ?? '-');
+};
 
 $table = DataTable::of($orders)
     ->column('account', 'Account')
@@ -45,19 +51,13 @@ $table = DataTable::of($orders)
     ->column('renews', 'Renews', $right, ColumnWidth::fixed(78.0))
     ->groupBy('region', static fn (mixed $region): string => (string) $region . ' region')
     ->totals([
-        'account' => Total::label('Subtotal'),
+        // The first column labels itself ("Subtotal" per group, "Total" overall).
         'seats' => Total::sum(),
         'mrr' => Total::sum(),
-        'renews' => Total::of(static function (array $rows): string {
-            $dates = array_column($rows, 'renews');
-            sort($dates);
-
-            return (string) ($dates[0] ?? '-');
-        }),
+        'renews' => Total::of($earliest),
     ])
     ->headerBackground(Color::rgb(230, 236, 245))
-    ->borderColor(Color::gray(205))
-    ->build();
+    ->borderColor(Color::gray(205));
 
 Document::create()
     ->meta(fn ($m) => $m->title('Subscriptions by region')->subject('DataTable builder'))
@@ -76,7 +76,7 @@ Document::create()
             new StylePatch(spaceAfterPt: 8.0),
         );
 
-        $p->add($table);
+        $p->dataTable($table);
     })
     ->save(__DIR__ . '/data-table.pdf');
 

@@ -20,10 +20,10 @@ final class DataTableRenderTest extends TestCase
     private function orders(): array
     {
         return [
-            ['region' => 'Americas', 'account' => 'Northwind', 'seats' => 120, 'mrr' => 5400.0],
-            ['region' => 'Americas', 'account' => 'Contoso', 'seats' => 40, 'mrr' => 1800.0],
-            ['region' => 'EMEA', 'account' => 'Tailspin', 'seats' => 220, 'mrr' => 9900.0],
-            ['region' => 'EMEA', 'account' => 'Wingtip', 'seats' => 60, 'mrr' => 2700.0],
+            ['region' => 'Americas', 'account' => 'Northwind', 'seats' => 120, 'term' => 12, 'mrr' => 5400.0],
+            ['region' => 'Americas', 'account' => 'Contoso', 'seats' => 40, 'term' => 24, 'mrr' => 1800.0],
+            ['region' => 'EMEA', 'account' => 'Tailspin', 'seats' => 220, 'term' => 12, 'mrr' => 9900.0],
+            ['region' => 'EMEA', 'account' => 'Wingtip', 'seats' => 60, 'term' => 36, 'mrr' => 2700.0],
         ];
     }
 
@@ -33,22 +33,22 @@ final class DataTableRenderTest extends TestCase
 
         return DataTable::of($this->orders())
             ->column('account', 'Account')
-            ->column('seats', 'Seats', TextAlign::Right, ColumnWidth::fixed(60.0))
+            ->column('seats', 'Seats', TextAlign::Right, ColumnWidth::fixed(56.0))
+            ->column('term', 'Term', TextAlign::Right, ColumnWidth::fixed(56.0))
             ->column('mrr', 'MRR', TextAlign::Right, ColumnWidth::fixed(80.0), $money)
             ->groupBy('region')
             ->totals([
-                'account' => Total::label('Subtotal'),
                 'seats' => Total::sum(),
+                'term' => Total::avg(),
                 'mrr' => Total::sum(),
-            ])
-            ->headerBackground(Color::rgb(230, 236, 245));
+            ]);
     }
 
-    public function test_renders_group_headers_subtotals_and_a_grand_total(): void
+    public function test_renders_group_headers_subtotals_and_a_distinct_grand_total(): void
     {
         $pdf = Document::create()
             ->using(Pdf::deterministicRenderer())
-            ->page(fn ($p) => $p->add($this->table()->build()))
+            ->page(fn ($p) => $p->dataTable($this->table()))
             ->toString();
 
         $content = Pdf::contentText($pdf);
@@ -56,11 +56,14 @@ final class DataTableRenderTest extends TestCase
         self::assertStringContainsString('(Account) Tj', $content);
         self::assertStringContainsString('(Americas) Tj', $content);
         self::assertStringContainsString('(EMEA) Tj', $content);
-        // Two subtotals + one grand total => "Subtotal" three times.
-        self::assertSame(3, substr_count($content, '(Subtotal) Tj'));
+        // Two group subtotals, one grand total carrying a distinct label.
+        self::assertSame(2, substr_count($content, '(Subtotal) Tj'));
+        self::assertSame(1, substr_count($content, '(Total) Tj'));
         // Grand total: 120 + 40 + 220 + 60 = 440 seats, $19,800 MRR.
         self::assertStringContainsString('(440) Tj', $content);
         self::assertStringContainsString('($19,800) Tj', $content);
+        // avg term over the whole table: (12 + 24 + 12 + 36) / 4 = 21.
+        self::assertStringContainsString('(21) Tj', $content);
     }
 
     public function test_data_table_document_is_byte_stable(): void
@@ -70,7 +73,7 @@ final class DataTableRenderTest extends TestCase
             ->meta(fn ($m) => $m->title('Subscriptions by region'))
             ->page(function ($p): void {
                 $p->heading(1, 'Subscriptions by region');
-                $p->add($this->table()->build());
+                $p->dataTable($this->table());
             })
             ->toString();
 
