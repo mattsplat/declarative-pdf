@@ -93,6 +93,12 @@ final class PageBuilder
         return $this;
     }
 
+    /** The unit currently set for this page's absolute-placement coordinates. */
+    public function unit(): Unit
+    {
+        return $this->unit;
+    }
+
     public function size(PageSize $size): self
     {
         $this->size = $size;
@@ -448,6 +454,58 @@ final class PageBuilder
         $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new PdfPage($path, $page), $fit, $align);
 
         return $this;
+    }
+
+    /**
+     * The writable area — the page box inside the margins — in points, measured
+     * from the top edge. Pairs with {@see \Pdf\Layout\Grid::forPage()} to carve
+     * a sheet into regions without hand-computing offsets.
+     */
+    public function writableRectPt(): Rect
+    {
+        return (new PageMaster($this->size, $this->orientation, $this->marginsPt))
+            ->geometry()
+            ->contentBox();
+    }
+
+    /**
+     * A horizontal hairline `$length` long starting at `(x, y)` — a divider
+     * rule in an absolute layout. `$stroke` is the line thickness in points, or
+     * a {@see Border} whose widest edge and colour are used.
+     */
+    public function hline(float $x, float $y, float $length, Border|float $stroke = 0.5): self
+    {
+        [$thicknessPt, $color] = $this->strokeSpec($stroke);
+        $this->placements[] = new Placement(
+            new Rect($this->unit->toPoints($x), $this->unit->toPoints($y), $this->unit->toPoints($length), $thicknessPt),
+            new Frame(background: $color),
+        );
+
+        return $this;
+    }
+
+    /** A vertical hairline `$length` long starting at `(x, y)`. See {@see self::hline()}. */
+    public function vline(float $x, float $y, float $length, Border|float $stroke = 0.5): self
+    {
+        [$thicknessPt, $color] = $this->strokeSpec($stroke);
+        $this->placements[] = new Placement(
+            new Rect($this->unit->toPoints($x), $this->unit->toPoints($y), $thicknessPt, $this->unit->toPoints($length)),
+            new Frame(background: $color),
+        );
+
+        return $this;
+    }
+
+    /** @return array{0: float, 1: Color} thickness in points, and the line colour */
+    private function strokeSpec(Border|float $stroke): array
+    {
+        if ($stroke instanceof Border) {
+            $w = $stroke->widthPt;
+
+            return [max($w->top, $w->right, $w->bottom, $w->left), $stroke->color];
+        }
+
+        return [$stroke, new Color(0, 0, 0)];
     }
 
     /** Draw a bordered/filled rectangle at an absolute area (sheet borders, cells). */

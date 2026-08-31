@@ -200,6 +200,36 @@ final class AreaPlacementTest extends TestCase
         self::assertGreaterThanOrEqual(4, preg_match_all('/ re f Q/', $content));
     }
 
+    public function test_hline_and_vline_draw_hairline_rules(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->size(PageSize::a4())->units(Unit::Pt)->margin(0)
+                ->hline(20, 100, 200)
+                ->vline(20, 100, 300, 1.5))
+            ->toString();
+
+        $content = Pdf::contentText($pdf);
+        // hline: 200pt wide, 0.5pt tall at (20, 100); flipped y = 841.89 - 100.5 = 741.39.
+        self::assertMatchesRegularExpression('/20\.00 741\.39 200\.00 0\.50 re f/', $content);
+        // vline: 1.5pt wide, 300pt tall at (20, 100); flipped y = 841.89 - 400 = 441.89.
+        self::assertMatchesRegularExpression('/20\.00 441\.89 1\.50 300\.00 re f/', $content);
+    }
+
+    public function test_vline_honours_the_page_unit(): void
+    {
+        $pdf = Document::create()
+            ->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p
+                ->size(PageSize::a4())->units(Unit::In)->margin(0)
+                ->hline(1, 1, 2))
+            ->toString();
+
+        // 1in -> 72pt, 2in -> 144pt wide; flipped y = 841.89 - (72 + 0.5) = 769.39.
+        self::assertMatchesRegularExpression('/72\.00 769\.39 144\.00 0\.50 re f/', Pdf::contentText($pdf));
+    }
+
     public function test_sheet_layout_is_byte_stable(): void
     {
         $pdf = Document::create()
