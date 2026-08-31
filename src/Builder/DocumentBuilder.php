@@ -70,6 +70,23 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Prepend a cover page. `$configure` receives a {@see CoverBuilder} — a
+     * title, subtitle, logo, caption lines and one of the {@see CoverLayout}
+     * presets. The cover picks up the same page defaults (watermark, page
+     * numbers) as any other page.
+     *
+     * @param callable(CoverBuilder): mixed $configure
+     */
+    public function cover(callable $configure): self
+    {
+        $builder = new CoverBuilder();
+        $configure($builder);
+        array_unshift($this->pageSources, $builder->pageConfigurator());
+
+        return $this;
+    }
+
     public function addPage(Page $page): self
     {
         $this->pageSources[] = $page;
