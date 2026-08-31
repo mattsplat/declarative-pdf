@@ -34,6 +34,7 @@ use Pdf\Node\PageMaster;
 use Pdf\Layout\PageContext;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Path;
+use Pdf\Node\Transition;
 use Pdf\Node\Watermark;
 use Pdf\Node\Placement;
 use Pdf\Node\Placement\Blocks;
@@ -62,6 +63,8 @@ final class PageBuilder
     private ?\Closure $header = null;
     private ?\Closure $footer = null;
     private ?Watermark $watermark = null;
+    private ?Transition $transition = null;
+    private ?float $autoAdvanceSec = null;
 
     /** @var list<BlockNode> */
     private array $children = [];
@@ -173,6 +176,26 @@ final class PageBuilder
     public function watermark(string|Watermark $watermark): self
     {
         $this->watermark = $watermark instanceof Watermark ? $watermark : new Watermark($watermark);
+
+        return $this;
+    }
+
+    /**
+     * The transition a viewer plays when advancing to this page in
+     * presentation mode — see the {@see Transition} factories. Applies to every
+     * physical sheet the page flows across.
+     */
+    public function transition(Transition $transition): self
+    {
+        $this->transition = $transition;
+
+        return $this;
+    }
+
+    /** Auto-advance past this page after `$seconds` in presentation mode (`/Dur`). */
+    public function autoAdvance(float $seconds): self
+    {
+        $this->autoAdvanceSec = $seconds;
 
         return $this;
     }
@@ -483,6 +506,8 @@ final class PageBuilder
             $this->header,
             $this->footer,
             $this->watermark,
+            $this->transition,
+            $this->autoAdvanceSec,
         );
 
         return new Page($master, $this->children, placements: $this->placements);
