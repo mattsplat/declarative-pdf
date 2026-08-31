@@ -52,4 +52,38 @@ final class SourceTest extends TestCase
 
         Source::first(['file:///etc/hostname', 's3://bucket/key']);
     }
+
+    public function test_an_unreachable_url_degrades_to_the_next_candidate(): void
+    {
+        // `.invalid` never resolves (RFC 6761): get_headers() returns false and
+        // the resolver moves on rather than propagating the failure.
+        self::assertSame(
+            $this->file,
+            Source::first(['https://nonexistent.invalid/asset.png', $this->file]),
+        );
+    }
+
+    public function test_status_classification_of_a_head_response(): void
+    {
+        self::assertTrue(self::classify(['HTTP/1.1 200 OK']), 'plain 2xx');
+        self::assertTrue(self::classify(['HTTP/2 204']), 'reason phrase optional');
+        self::assertFalse(self::classify(['HTTP/1.1 404 Not Found']));
+        self::assertFalse(self::classify(['HTTP/1.1 500 Internal Server Error']));
+
+        // A redirected request yields a list of status lines; the last one wins.
+        self::assertTrue(self::classify([['HTTP/1.1 301 Moved Permanently', 'HTTP/1.1 200 OK']]));
+        self::assertFalse(self::classify([['HTTP/1.1 302 Found', 'HTTP/1.1 500 Error']]));
+
+        // false == timeout / DNS failure / allow_url_fopen disabled.
+        self::assertFalse(self::classify(false));
+        self::assertFalse(self::classify([]));
+    }
+
+    /**
+     * @param array<int|string, string|list<string>>|false $headers
+     */
+    private static function classify(array|false $headers): bool
+    {
+        return (new \ReflectionMethod(Source::class, 'statusIsSuccessful'))->invoke(null, $headers);
+    }
 }

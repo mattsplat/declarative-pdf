@@ -53,8 +53,24 @@ final class Source
     private static function urlAnswers(string $url, float $timeoutSeconds = 2.0): bool
     {
         $context = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => $timeoutSeconds]]);
-        $headers = @get_headers($url, true, $context);
-        $status = is_array($headers) ? ($headers[0] ?? '') : '';
+
+        return self::statusIsSuccessful(@get_headers($url, true, $context));
+    }
+
+    /**
+     * Whether a `get_headers()` result carries a 2xx status. A `false` result
+     * (timeout, DNS failure, `allow_url_fopen` disabled) is treated as "no".
+     * `$headers[0]` is a list of status lines when the request was redirected.
+     *
+     * @param array<int|string, string|list<string>>|false $headers
+     */
+    private static function statusIsSuccessful(array|false $headers): bool
+    {
+        if ($headers === false) {
+            return false;
+        }
+
+        $status = $headers[0] ?? '';
         if (is_array($status)) {
             $status = end($status);
         }
