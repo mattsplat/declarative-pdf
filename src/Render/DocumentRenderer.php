@@ -17,6 +17,7 @@ use Pdf\Layout\PhysicalPage;
 use Pdf\Layout\WidgetRect;
 use Pdf\Exception\PdfException;
 use Pdf\Node\Document;
+use Pdf\Node\Transition;
 use Pdf\Node\Watermark;
 use Pdf\Style\Stylesheet;
 use Pdf\Text\Encoding;
@@ -100,7 +101,7 @@ final class DocumentRenderer
         $namer = new ResourceNamer();
         /** @var list<ShadingResource> $shadings */
         $shadings = [];
-        /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, widgets: list<WidgetRect>}> $rendered */
+        /** @var list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, widgets: list<WidgetRect>, transition: ?Transition, dur: ?float}> $rendered */
         $rendered = [];
         foreach ($pages as $page) {
             $stream = new ContentStream($page->geometry, namer: $namer);
@@ -132,6 +133,8 @@ final class DocumentRenderer
                 'links' => $stream->collectedLinks(),
                 'anchors' => $stream->collectedAnchors(),
                 'widgets' => $stream->collectedWidgets(),
+                'transition' => $page->transition,
+                'dur' => $page->autoAdvanceSec,
             ];
         }
 
@@ -204,6 +207,12 @@ final class DocumentRenderer
             if ($annots !== []) {
                 $refs = implode(' ', array_map(static fn (int $n) => $n . ' 0 R', $annots));
                 $writer->line('/Annots [' . $refs . ']');
+            }
+            if ($r['transition'] !== null) {
+                $writer->line('/Trans ' . $r['transition']->dictionary());
+            }
+            if ($r['dur'] !== null) {
+                $writer->line('/Dur ' . self::formatNumber($r['dur']));
             }
             $writer->line('/Contents ' . $contentObjects[$index] . ' 0 R>>');
             $writer->endObject();
@@ -320,6 +329,10 @@ final class DocumentRenderer
         $writer->line('<<');
         $writer->line('/Type /Catalog');
         $writer->line('/Pages 1 0 R');
+        if ($document->presentation) {
+            $writer->line('/PageMode /FullScreen');
+            $writer->line('/PageLayout /SinglePage');
+        }
         if ($outlinesObject !== null) {
             $writer->line('/Outlines ' . $outlinesObject . ' 0 R');
         }
@@ -761,6 +774,14 @@ final class DocumentRenderer
     {
         return abs($a->widthPt() - $b->widthPt()) < 1e-6
             && abs($a->heightPt() - $b->heightPt()) < 1e-6;
+    }
+
+    /** A locale-independent, trimmed fixed-point number for the PDF body. */
+    private static function formatNumber(float $value): string
+    {
+        $formatted = rtrim(rtrim(sprintf('%.4F', $value), '0'), '.');
+
+        return $formatted === '' || $formatted === '-0' ? '0' : $formatted;
     }
 
     private function creationDate(): string
