@@ -6,6 +6,8 @@ namespace Pdf\Builder;
 
 use Pdf\Color\Color;
 use Pdf\Geometry\Edges;
+use Pdf\Geometry\Orientation;
+use Pdf\Geometry\PageSize;
 use Pdf\Geometry\Unit;
 use Pdf\Node\BlockNode;
 use Pdf\Node\Container;
@@ -21,14 +23,23 @@ use Pdf\Style\VerticalAlign;
 /**
  * Configures the cover page prepended by {@see DocumentBuilder::cover()}.
  *
- * Title, subtitle, an optional logo and any number of caption lines (date,
+ * A title, subtitle, optional logo and any number of caption lines (date,
  * author, reference) are arranged by one of three {@see CoverLayout} presets.
- * The presets are plain flow content — spacers and a container — so they hold
- * up at any page size; vertical placement is approximate, tuned for A4/Letter
- * portrait.
+ * The cover has its own page size (default A4 portrait — set it with
+ * {@see self::size()} / {@see self::landscape()} to match the rest of the
+ * document); the presets measure the actual content box and position their
+ * block vertically from it, so they adapt to any size and never spill onto a
+ * second sheet.
+ *
+ * By default the cover keeps a document-wide watermark but drops document-wide
+ * page numbers (a "1 / N" on a cover reads wrong); {@see self::bare()} drops
+ * both.
  */
 final class CoverBuilder
 {
+    /** Matches {@see PageBuilder}'s default margin. */
+    private const MARGIN_PT = 28.35;
+
     private const NAVY = [19, 33, 68];
 
     private ?string $title = null;
@@ -39,6 +50,14 @@ final class CoverBuilder
     private array $lines = [];
 
     private CoverLayout $layout = CoverLayout::Centered;
+    private PageSize $size;
+    private Orientation $orientation = Orientation::Portrait;
+    private bool $bare = false;
+
+    public function __construct()
+    {
+        $this->size = PageSize::a4();
+    }
 
     public function title(string $title): self
     {
@@ -78,14 +97,81 @@ final class CoverBuilder
         return $this;
     }
 
-    /** @return \Closure(PageBuilder): void */
-    public function pageConfigurator(): \Closure
+    public function size(PageSize $size): self
     {
-        return function (PageBuilder $page): void {
-            foreach ($this->blocks() as $block) {
-                $page->add($block);
-            }
+        $this->size = $size;
+
+        return $this;
+    }
+
+    public function orientation(Orientation $orientation): self
+    {
+        $this->orientation = $orientation;
+
+        return $this;
+    }
+
+    public function landscape(): self
+    {
+        $this->orientation = Orientation::Landscape;
+
+        return $this;
+    }
+
+    /** Drop both inherited page numbers and the inherited watermark from the cover. */
+    public function bare(bool $bare = true): self
+    {
+        $this->bare = $bare;
+
+        return $this;
+    }
+
+    /**
+     * Whether the cover opts into the document-level `$kind` furniture.
+     *
+     * @internal called by {@see DocumentBuilder}
+     */
+    public function wants(string $kind): bool
+    {
+        if ($this->bare) {
+            return false;
+        }
+
+        return $kind === 'watermark';
+    }
+
+    /**
+     * Lay the cover onto a fresh page.
+     *
+     * @internal called by {@see DocumentBuilder::cover()}
+     */
+    public function configure(PageBuilder $page): void
+    {
+        $page->size($this->size)->orientation($this->orientation)->units(Unit::Pt);
+
+        $resolved = $this->size->forOrientation($this->orientation);
+        $availPt = $resolved->heightPt - 2 * self::MARGIN_PT;
+        $widthPt = $resolved->widthPt - 2 * self::MARGIN_PT;
+
+        $blocks = $this->blocks();
+        $contentPt = $page->measureBlocks($blocks, $widthPt);
+
+        $page->add(new Spacer($this->leadingPt($availPt, $contentPt)));
+        foreach ($blocks as $block) {
+            $page->add($block);
+        }
+    }
+
+    private function leadingPt(float $availPt, float $contentPt): float
+    {
+        $slackPt = max(0.0, $availPt - $contentPt - 2.0);
+        $wantPt = match ($this->layout) {
+            CoverLayout::Centered => ($availPt - $contentPt) / 2.0,
+            CoverLayout::TopLeft => Unit::Mm->toPoints(6.0),
+            CoverLayout::BottomBand => $slackPt,
         };
+
+        return max(0.0, min($wantPt, $slackPt));
     }
 
     /** @return list<BlockNode> */
@@ -104,10 +190,10 @@ final class CoverBuilder
         $navy = Color::rgb(...self::NAVY);
         $muted = Color::gray(115);
 
-        $blocks = [$this->spacer(78.0)];
+        $blocks = [];
         if ($this->logoPath !== null) {
             $blocks[] = new ImageBlock($this->logoPath, heightPt: Unit::Mm->toPoints(24.0), align: TextAlign::Center);
-            $blocks[] = $this->spacer(12.0);
+            $blocks[] = new Spacer(Unit::Mm->toPoints(12.0));
         }
         if ($this->title !== null) {
             $blocks[] = new Heading(1, $this->title, new StylePatch(
@@ -138,10 +224,10 @@ final class CoverBuilder
         $navy = Color::rgb(...self::NAVY);
         $muted = Color::gray(115);
 
-        $blocks = [$this->spacer(40.0)];
+        $blocks = [];
         if ($this->logoPath !== null) {
             $blocks[] = new ImageBlock($this->logoPath, heightPt: Unit::Mm->toPoints(18.0));
-            $blocks[] = $this->spacer(10.0);
+            $blocks[] = new Spacer(Unit::Mm->toPoints(10.0));
         }
         if ($this->title !== null) {
             $blocks[] = new Heading(1, $this->title, new StylePatch(fontSizePt: 30.0, color: $navy, spaceAfterPt: 6.0));
@@ -196,7 +282,6 @@ final class CoverBuilder
         }
 
         return [
-            $this->spacer(205.0),
             new Container($inner, new StylePatch(
                 paddingPt: Edges::symmetric(18.0, 20.0),
                 background: $band,
@@ -221,10 +306,5 @@ final class CoverBuilder
                 spaceBeforePt: $spaceBeforePt,
             )),
         ];
-    }
-
-    private function spacer(float $millimetres): Spacer
-    {
-        return new Spacer(Unit::Mm->toPoints($millimetres));
     }
 }

@@ -29,7 +29,7 @@ final class DocumentBuilder
 {
     private Meta $meta;
 
-    /** @var list<Page|(callable(PageBuilder): mixed)> */
+    /** @var list<Page|CoverBuilder|(callable(PageBuilder): mixed)> */
     private array $pageSources = [];
 
     private ?Style $baseStyle = null;
@@ -44,7 +44,12 @@ final class DocumentBuilder
 
     private ?DocumentRenderer $renderer = null;
 
-    /** @var list<\Closure(PageBuilder): void> applied to every page before its configurator */
+    /**
+     * Furniture applied to every page before its configurator runs. A cover
+     * page opts in per `kind` via {@see CoverBuilder::wants()}.
+     *
+     * @var list<array{kind: string, apply: \Closure(PageBuilder): mixed}>
+     */
     private array $pageDefaults = [];
 
     public function __construct()
@@ -72,9 +77,9 @@ final class DocumentBuilder
 
     /**
      * Prepend a cover page. `$configure` receives a {@see CoverBuilder} — a
-     * title, subtitle, logo, caption lines and one of the {@see CoverLayout}
-     * presets. The cover picks up the same page defaults (watermark, page
-     * numbers) as any other page.
+     * title, subtitle, logo, caption lines, its own page size and one of the
+     * {@see CoverLayout} presets. The cover keeps an inherited watermark but
+     * drops inherited page numbers; {@see CoverBuilder::bare()} drops both.
      *
      * @param callable(CoverBuilder): mixed $configure
      */
@@ -82,7 +87,7 @@ final class DocumentBuilder
     {
         $builder = new CoverBuilder();
         $configure($builder);
-        array_unshift($this->pageSources, $builder->pageConfigurator());
+        array_unshift($this->pageSources, $builder);
 
         return $this;
     }
@@ -115,7 +120,10 @@ final class DocumentBuilder
      */
     public function watermark(string|Watermark $watermark): self
     {
-        $this->pageDefaults[] = static fn (PageBuilder $p) => $p->watermark($watermark);
+        $this->pageDefaults[] = [
+            'kind' => 'watermark',
+            'apply' => static fn (PageBuilder $p) => $p->watermark($watermark),
+        ];
 
         return $this;
     }
@@ -128,13 +136,16 @@ final class DocumentBuilder
         ?Color $color = null,
         bool $inHeader = false,
     ): self {
-        $this->pageDefaults[] = static fn (PageBuilder $p) => $p->pageNumbers(
-            $format,
-            $align,
-            $fontSizePt,
-            $color,
-            $inHeader,
-        );
+        $this->pageDefaults[] = [
+            'kind' => 'pageNumbers',
+            'apply' => static fn (PageBuilder $p) => $p->pageNumbers(
+                $format,
+                $align,
+                $fontSizePt,
+                $color,
+                $inHeader,
+            ),
+        ];
 
         return $this;
     }
@@ -219,13 +230,28 @@ final class DocumentBuilder
             }
 
             $builder = new PageBuilder($measurer, $baseStyle);
-            foreach ($this->pageDefaults as $applyDefault) {
-                $applyDefault($builder);
+
+            if ($source instanceof CoverBuilder) {
+                $this->applyPageDefaults($builder, $source);
+                $source->configure($builder);
+            } else {
+                $this->applyPageDefaults($builder, null);
+                $source($builder);
             }
-            $source($builder);
+
             $pages[] = $builder->build();
         }
 
         return $pages;
+    }
+
+    private function applyPageDefaults(PageBuilder $builder, ?CoverBuilder $cover): void
+    {
+        foreach ($this->pageDefaults as $default) {
+            if ($cover !== null && !$cover->wants($default['kind'])) {
+                continue;
+            }
+            ($default['apply'])($builder);
+        }
     }
 }
