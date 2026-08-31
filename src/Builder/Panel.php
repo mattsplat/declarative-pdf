@@ -24,15 +24,17 @@ use Pdf\Style\Border;
  *       ->showing($schedulePdf)
  *       ->drawOn($p);
  *
- * {@see self::at()} takes coordinates in the page builder's units;
- * {@see self::in()} takes a {@see Rect} in points (as produced by
- * {@see \Pdf\Layout\Grid}) and converts to the builder's units when drawn. The
- * border width is in points, as everywhere in {@see Border}. Every
- * configuration method returns a new instance, so a base panel can be shared
- * and specialised per region.
+ * {@see self::at()} takes coordinates — and an {@see self::inset()} gap — in the
+ * page builder's units. {@see self::in()} takes a {@see Rect} in points (as
+ * produced by {@see \Pdf\Layout\Grid}); its coordinates and inset are in points
+ * and are converted to the builder's units when drawn. The border width is in
+ * points, as everywhere in {@see Border}. Every configuration method returns a
+ * new instance, so a base panel can be shared and specialised per region.
  */
 final readonly class Panel
 {
+    private const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
+
     /**
      * @param iterable<BlockNode>|null $blocks
      */
@@ -46,7 +48,7 @@ final readonly class Panel
         private ?iterable $blocks = null,
         private float $inset = 3.0,
         private Fit $fit = Fit::Contain,
-        private BoxAlign $align = BoxAlign::Center,
+        private ?BoxAlign $align = null,
         private ?Border $border = null,
         private bool $pointSpace = false,
     ) {
@@ -88,7 +90,7 @@ final readonly class Panel
         );
     }
 
-    /** Gap between the frame and the placed content (same units as the panel, default 3). */
+    /** Gap between the frame and the placed content, in the panel's own units (default 3). */
     public function inset(float $gap): self
     {
         return new self(
@@ -98,13 +100,28 @@ final readonly class Panel
         );
     }
 
-    /** How an image or PDF source is fitted within the inset area (ignored for blocks). */
-    public function fitted(Fit $fit, BoxAlign $align = BoxAlign::Center): self
+    /**
+     * How an image or PDF source is fitted within the inset area (`$fit` has no
+     * effect on block content). A null `$align` keeps the per-content default:
+     * {@see BoxAlign::Center} for an image or PDF, {@see BoxAlign::TopLeft} for
+     * blocks.
+     */
+    public function fitted(Fit $fit, ?BoxAlign $align = null): self
     {
         return new self(
             $this->x, $this->y, $this->width, $this->height,
             $this->source, $this->page, $this->blocks,
-            $this->inset, $fit, $align, $this->border, $this->pointSpace,
+            $this->inset, $fit, $align ?? $this->align, $this->border, $this->pointSpace,
+        );
+    }
+
+    /** Align the content within the inset area, overriding the per-content default. */
+    public function aligned(BoxAlign $align): self
+    {
+        return new self(
+            $this->x, $this->y, $this->width, $this->height,
+            $this->source, $this->page, $this->blocks,
+            $this->inset, $this->fit, $align, $this->border, $this->pointSpace,
         );
     }
 
@@ -125,39 +142,76 @@ final readonly class Panel
             throw new \LogicException('Panel::showing() or ->containing() must be called before drawOn().');
         }
 
-        $unit = $p->unit();
-        $x = $this->pointSpace ? $unit->fromPoints($this->x) : $this->x;
-        $y = $this->pointSpace ? $unit->fromPoints($this->y) : $this->y;
-        $w = $this->pointSpace ? $unit->fromPoints($this->width) : $this->width;
-        $h = $this->pointSpace ? $unit->fromPoints($this->height) : $this->height;
+        $toUnit = $this->pointSpace
+            ? static fn (float $points): float => $p->unit()->fromPoints($points)
+            : static fn (float $value): float => $value;
+
+        $x = $toUnit($this->x);
+        $y = $toUnit($this->y);
+        $w = $toUnit($this->width);
+        $h = $toUnit($this->height);
+        $gap = $toUnit($this->inset);
 
         $p->frame($x, $y, $w, $h, $this->border ?? Border::uniform(0.75, Color::gray(30)));
 
-        $gap = $this->inset;
         $this->drawContent($p, $x + $gap, $y + $gap, $w - $gap * 2, $h - $gap * 2);
     }
 
     private function drawContent(PageBuilder $p, float $x, float $y, float $width, float $height): void
     {
         if ($this->blocks !== null) {
-            $p->place($x, $y, $width, $height, $this->blocks, $this->align);
+            $p->place($x, $y, $width, $height, $this->blocks, $this->align ?? BoxAlign::TopLeft);
 
             return;
         }
 
-        $extension = strtolower(pathinfo($this->source, PATHINFO_EXTENSION));
-        if ($extension === 'pdf') {
-            $p->placePdf($x, $y, $width, $height, $this->source, $this->page, $this->fit, $this->align);
+        if ($this->sourceIsPdf()) {
+            $p->placePdf($x, $y, $width, $height, $this->source, $this->page, $this->fit, $this->align ?? BoxAlign::Center);
 
             return;
         }
 
-        if (in_array($extension, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'], true)) {
-            $p->placeImage($x, $y, $width, $height, $this->source, $this->fit, $this->align);
+        if ($this->sourceIsImage()) {
+            $p->placeImage($x, $y, $width, $height, $this->source, $this->fit, $this->align ?? BoxAlign::Center);
 
             return;
         }
 
-        throw new \LogicException("Panel cannot place source with extension '{$extension}'; expected a PDF or an image.");
+        throw new \LogicException("Panel cannot place source '{$this->source}'; expected a PDF or an image.");
+    }
+
+    private function sourceIsPdf(): bool
+    {
+        if (str_starts_with($this->source, 'data:')) {
+            return str_starts_with($this->dataUriMediaType(), 'application/pdf');
+        }
+
+        return $this->sourceExtension() === 'pdf';
+    }
+
+    private function sourceIsImage(): bool
+    {
+        if (str_starts_with($this->source, 'data:')) {
+            return str_starts_with($this->dataUriMediaType(), 'image/');
+        }
+
+        return in_array($this->sourceExtension(), self::IMAGE_EXTENSIONS, true);
+    }
+
+    /** The lower-cased extension of the source, with any URL query/fragment stripped. */
+    private function sourceExtension(): string
+    {
+        $path = preg_replace('/[?#].*$/', '', $this->source) ?? $this->source;
+
+        return strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    }
+
+    /** The media type of a `data:` URI source, lower-cased — e.g. `image/png`. */
+    private function dataUriMediaType(): string
+    {
+        $comma = strpos($this->source, ',');
+        $header = $comma === false ? substr($this->source, 5) : substr($this->source, 5, $comma - 5);
+
+        return strtolower(trim(explode(';', $header, 2)[0]));
     }
 }
