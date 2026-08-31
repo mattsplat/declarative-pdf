@@ -10,7 +10,8 @@ namespace Pdf\Builder;
  *  - `sum()` / `avg()` reduce the column's RAW (pre-format) values. A value
  *    that is neither `int|float` nor a numeric string is skipped; `avg()` over
  *    no numeric values is `0`. The result is passed back through the column's
- *    own formatter, so a currency column totals in currency.
+ *    own formatter, so a currency column totals in currency — and, with no
+ *    formatter, `avg()` renders the bare quotient (add a formatter to round).
  *  - `count()` is the number of rows in the group (or the whole table).
  *  - `label(text)` is a fixed string — use it to title the row.
  *  - `of(fn)` calls `$fn(list<array<string, mixed>> $rows)` for the cell value.

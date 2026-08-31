@@ -17,15 +17,24 @@ use Pdf\Style\TextAlign;
 /**
  * Builds a {@see Table} from a row collection and a set of column specs:
  * a header row, per-column formatting and alignment, optional grouping with
- * group-header rows, and sum/avg/count total rows (a grand total for the whole
- * table, plus one subtotal per group when {@see self::groupBy()} is set).
+ * group-header rows, and sum/avg/count total rows.
  *
  * `DataTable` is a builder, not a node: call {@see self::build()} and add the
- * resulting {@see Table} to the page flow, a container, or a cell.
+ * resulting {@see Table} to the page flow, a container, or a cell — or hand the
+ * builder itself to {@see PageBuilder::dataTable()}.
  *
  * Rows are read in the order given — {@see self::groupBy()} groups *consecutive*
  * rows that share a key, so sort the collection first if you need that. Object
  * rows are read via their public properties.
+ *
+ * Total rows: {@see self::totals()} defines a per-group **subtotal** row (when
+ * grouping) and the whole-table **grand total** row. The first column of a total
+ * row is labelled automatically — `"Subtotal"` / `"Total"` — unless the spec
+ * gives that column its own {@see Total}. {@see self::grandTotals()} overrides
+ * the grand row's spec; without it the grand row reuses the `totals` spec with
+ * every {@see Total::label()} relabelled to `"Total"` so it never reads as one
+ * more subtotal. A grand total that would just repeat a lone subtotal (one
+ * group, no explicit `grandTotals`) is suppressed.
  *
  * @phpstan-type ColumnSpec array{
  *     key: string,
@@ -46,6 +55,9 @@ final class DataTable
 
     /** @var array<string, Total> */
     private array $totals = [];
+
+    /** @var array<string, Total>|null */
+    private ?array $grandTotals = null;
 
     private int $headerRows = 1;
 
@@ -99,7 +111,10 @@ final class DataTable
     /**
      * Emit a group-header row before each run of consecutive rows sharing
      * `$key`. `$header` maps the key value to the header text (default: the
-     * value cast to string).
+     * value cast to string). A missing key reads as `null`, i.e. one group.
+     *
+     * With grouping the first row (the column header) is the only repeating
+     * page header — see {@see self::headerRows()}.
      *
      * @param (callable(mixed): string)|null $header
      */
@@ -112,8 +127,10 @@ final class DataTable
     }
 
     /**
-     * Define the total rows, keyed by column key. Any column without an entry
-     * gets an empty cell in the total rows.
+     * Define the subtotal / grand-total rows, keyed by column key. A `sum` /
+     * `avg` skips any value that is not `int|float` and not a numeric string;
+     * see {@see Total}. A column with no entry gets an automatic label in its
+     * first column and an empty cell elsewhere.
      *
      * @param array<string, Total> $spec
      */
@@ -124,11 +141,28 @@ final class DataTable
         return $this;
     }
 
-    /** How many leading rows the {@see Table} treats as a repeating header (default 1). */
+    /**
+     * Override the whole-table grand-total row's spec (see {@see self::totals()}
+     * for the shape). Without this the grand row derives from `totals()`.
+     *
+     * @param array<string, Total> $spec
+     */
+    public function grandTotals(array $spec): self
+    {
+        $this->grandTotals = $spec;
+
+        return $this;
+    }
+
+    /**
+     * How many leading rows the {@see Table} repeats on every page it spans.
+     * The builder emits exactly one header row, so the only values are 1
+     * (repeat it, the default) and 0 (don't).
+     */
     public function headerRows(int $count): self
     {
-        if ($count < 0) {
-            throw new PdfException('headerRows cannot be negative.');
+        if ($count < 0 || $count > 1) {
+            throw new PdfException('A DataTable has a single header row: headerRows must be 0 or 1.');
         }
 
         $this->headerRows = $count;
@@ -170,34 +204,38 @@ final class DataTable
             throw new PdfException('A DataTable needs at least one column.');
         }
 
-        $columnKeys = array_column($this->columns, 'key');
-        foreach (array_keys($this->totals) as $key) {
-            if (!in_array($key, $columnKeys, true)) {
-                throw new PdfException(sprintf('totals() references unknown column "%s".', $key));
-            }
-        }
+        $this->assertKnownColumns('totals', $this->totals);
+        $this->assertKnownColumns('grandTotals', $this->grandTotals ?? []);
 
         $rows = $this->materialiseRows();
         $tableRows = [$this->headerRow()];
 
+        $hasSubtotals = $this->groupKey !== null && $this->totals !== [];
+        $hasGrand = $this->totals !== [] || $this->grandTotals !== null;
+
         if ($this->groupKey !== null) {
-            foreach ($this->groupRuns($rows) as [$groupValue, $groupRows]) {
+            $runs = $this->groupRuns($rows);
+            foreach ($runs as [$groupValue, $groupRows]) {
                 $tableRows[] = $this->groupHeaderRow($groupValue);
                 foreach ($groupRows as $row) {
                     $tableRows[] = $this->bodyRow($row);
                 }
-                if ($this->totals !== []) {
-                    $tableRows[] = $this->totalRow($groupRows);
+                if ($hasSubtotals) {
+                    $tableRows[] = $this->totalRow($this->totals, $groupRows, 'Subtotal');
                 }
+            }
+
+            $redundant = $hasSubtotals && count($runs) <= 1 && $this->grandTotals === null;
+            if ($hasGrand && !$redundant) {
+                $tableRows[] = $this->totalRow($this->grandSpec(), $rows, 'Total');
             }
         } else {
             foreach ($rows as $row) {
                 $tableRows[] = $this->bodyRow($row);
             }
-        }
-
-        if ($this->totals !== []) {
-            $tableRows[] = $this->totalRow($rows);
+            if ($hasGrand) {
+                $tableRows[] = $this->totalRow($this->grandSpec(), $rows, 'Total');
+            }
         }
 
         $widths = [];
@@ -214,6 +252,37 @@ final class DataTable
             cellPaddingPt: $this->cellPaddingPt,
             headerBackground: $this->headerBackground,
         );
+    }
+
+    /**
+     * The grand-total row's spec: the explicit {@see self::grandTotals()} one,
+     * or the `totals()` spec with every fixed label relabelled to `"Total"`.
+     *
+     * @return array<string, Total>
+     */
+    private function grandSpec(): array
+    {
+        if ($this->grandTotals !== null) {
+            return $this->grandTotals;
+        }
+
+        $spec = [];
+        foreach ($this->totals as $key => $total) {
+            $spec[$key] = $total->kind === Total::KIND_LABEL ? Total::label('Total') : $total;
+        }
+
+        return $spec;
+    }
+
+    /** @param array<string, Total> $spec */
+    private function assertKnownColumns(string $method, array $spec): void
+    {
+        $keys = array_column($this->columns, 'key');
+        foreach (array_keys($spec) as $key) {
+            if (!in_array($key, $keys, true)) {
+                throw new PdfException(sprintf('%s() references unknown column "%s".', $method, $key));
+            }
+        }
     }
 
     /** @return list<array<string, mixed>> */
@@ -289,17 +358,21 @@ final class DataTable
     }
 
     /**
+     * @param array<string, Total> $spec
      * @param list<array<string, mixed>> $rows
      */
-    private function totalRow(array $rows): TableRow
+    private function totalRow(array $spec, array $rows, string $defaultLabel): TableRow
     {
         $cells = [];
-        foreach ($this->columns as $column) {
-            $total = $this->totals[$column['key']] ?? null;
-            $cells[] = new TableCell(
-                $total === null ? '' : $this->aggregate($total, $column, $rows),
-                patch: new StylePatch(bold: true, align: $column['align']),
-            );
+        foreach ($this->columns as $index => $column) {
+            $total = $spec[$column['key']] ?? null;
+            if ($total === null) {
+                $text = $index === 0 ? $defaultLabel : '';
+            } else {
+                $text = $this->aggregate($total, $column, $rows);
+            }
+
+            $cells[] = new TableCell($text, patch: new StylePatch(bold: true, align: $column['align']));
         }
 
         return new TableRow($cells);
