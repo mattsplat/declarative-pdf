@@ -99,8 +99,10 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
   `FileAttachment` pin annotations.
 - **Page labels** — **S**: `/PageLabels` number tree (roman front matter, then
   arabic).
-- **Article threads, page transitions, viewer prefs** — **S each**:
-  `/PageLayout`, `/PageMode`, `/ViewerPreferences`, `/Trans`, `/Threads`.
+- **Article threads & viewer prefs** — **S each**: `/PageLayout`, `/PageMode`
+  (beyond the `/FullScreen` that `presentation()` sets), `/ViewerPreferences`,
+  `/Threads`. Page transitions (`/Trans`) and full-screen presentation mode
+  shipped in 0.2.0.
 
 ---
 
@@ -205,8 +207,10 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
 - **Floats & text wrap around images** — **L**: `float: left | right` with text
   flowing around the float; the line breaker would need a per-line available
   width that varies with y.
-- **CSS-grid / flex regions** — **L**: a real 2-D region layout beyond `Columns`
-  (named areas, spanning).
+- **CSS-grid / flex regions** — **L**: a real 2-D region layout *in flow*, beyond
+  `Columns` (named areas, spanning). `Pdf\Layout\Grid` (0.2.0) already carves an
+  *absolute* area into rectangles for `place()` / `Panel`; this is the flowing
+  equivalent.
 - **Bleed / trim / crop boxes** — **S**: `/BleedBox` / `/TrimBox` / `/ArtBox`
   plus crop-mark generation. Needed for professional print.
 - **Widow/orphan & keep across nested structures** — **M**: extend
@@ -217,11 +221,10 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
 
 ## Tables
 
-- **Data-driven table builder** — **M**: a `DataTable` fed a row collection plus
-  column specs (key, header, alignment, width, a value-formatting callback);
-  automatic totals / subtotals, grouping with group-header rows, and running
-  calculations. Emits the existing `Table` node, so layout is unchanged —
-  generalises the manual accumulate-and-append-a-bold-row pattern.
+The data-driven builder (`Pdf\Builder\DataTable` — column specs, value
+formatters, `groupBy` with subtotals, a grand total) shipped in 0.2.0. What is
+left is the layout-engine half:
+
 - **Adaptive table layout** — **M–L**: `rowspan` / `colspan`; a tall cell that
   splits across a page break instead of moving whole; a repeated ("sticky")
   first column, the way header rows already repeat; zebra striping and

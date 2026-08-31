@@ -36,6 +36,8 @@ immutable tree.
 |---|---|
 | `meta(callable(MetaBuilder))` | `title` / `author` / `subject` / `keywords` / `creator` — each `MetaBuilder` method returns `$this` |
 | `page(callable(PageBuilder))` | append a logical page; the closure runs at `build()` / `toString()` time, once fonts are known, so it can call the measurement helpers below |
+| `cover(callable(CoverBuilder))` | prepend a cover page; see [`Pdf\Builder\CoverBuilder`](#pdfbuildercoverbuilder) |
+| `presentation(?float $advanceSeconds = null)` | open the document full-screen; `$advanceSeconds` sets a default `/Dur` on every page. See [page transitions](#pdfnodetransition) |
 | `addPage(Pdf\Node\Page)` | append a pre-built page |
 | `baseStyle(Pdf\Style\Style)` | document-wide defaults (default `Style::default()`) |
 | `stylesheet(Pdf\Style\Stylesheet)` | per-node-type and named class rules |
@@ -61,6 +63,9 @@ immutable tree.
 | `margin(float $value, Unit = Mm)` | uniform margin |
 | `margins(Edges $marginsPt)` | per-edge, in points |
 | `units(Unit)` | the unit used by `place*()` / `frame()` coordinates (default `Mm`) |
+| `unit() : Unit` | read the current coordinate unit back |
+| `writableRectPt() : Rect` | the area inside the margins, in points (margins only — ignores any header/footer band; a snapshot of the current size/orientation/margin) |
+| `grid(float $gutterPt = 0.0) : Pdf\Layout\Grid` | a [`Grid`](#pdflayoutgrid) over `writableRectPt()` |
 
 ### Header / footer / page numbers / watermark
 
@@ -70,6 +75,8 @@ footer(Closure(PageContext): (BlockNode | iterable<BlockNode>))
 pageNumbers(string $format = 'Page {n} of {N}', TextAlign = Center,
             float $fontSizePt = 9, ?Color = null, bool $inHeader = false) : self
 watermark(string | Pdf\Node\Watermark) : self
+transition(Pdf\Node\Transition) : self          // page transition in presentation mode
+autoAdvance(float $seconds) : self              // this page's /Dur
 ```
 
 `Pdf\Layout\PageContext` — `int $pageNumber`, `int $pageCount`,
@@ -102,6 +109,7 @@ sheet, centred on the whole page and rotated; `opacity` below 1 emits an
 | `orderedList(iterable<ListItem\|string>, int $start = 1, StylePatch = new)` | `OrderedList` |
 | `columns(iterable<BlockNode>, int $count = 2, float $gutterPt = 14.0)` | `Columns` |
 | `table(iterable<TableRow>, ?ColumnWidth[] $columns = null, int $headerRows = 0, ?float $totalWidthPt = null)` | `Table` |
+| `dataTable(Pdf\Builder\DataTable)` | `Table` built from rows + column specs; see [`DataTable`](#pdfbuilderdatatable) |
 | `add(BlockNode)` | any node directly |
 
 ### Measurement
@@ -130,6 +138,88 @@ sheet** of the logical page, on top of the flow content.
 | `placeImageData(float $x, $y, $w, $h, string $bytes, Fit = Contain, BoxAlign = Center)` | a raster image already in memory (carried inline as a `data:` URI — use `placeImage` with a path for large images) |
 | `placePdf(float $x, $y, $w, $h, string $path, int $page = 1, Fit = Contain, BoxAlign = Center)` | one page of an external PDF as a vector Form XObject |
 | `frame(float $x, $y, $w, $h, Border = new, ?Color $background = null)` | a bordered / filled rectangle |
+| `hline(float $x, $y, $length, Border\|float $stroke = 0.5)` | horizontal hairline; `(x, y)` is the top edge (corner origin) |
+| `vline(float $x, $y, $length, Border\|float $stroke = 0.5)` | vertical hairline; `(x, y)` is the left edge |
+
+---
+
+## Absolute-layout helpers
+
+### `Pdf\Layout\Grid`
+
+```php
+Grid::inside(Rect $area, float $gutterPt = 0.0) : self       // also PageBuilder::grid()
+->rect() : Rect                                              // this slice's rectangle
+->gutter(float $gutterPt) : self                             // override the gutter for a sub-grid
+->rows(float ...$weights) : list<Grid>                       // split top-to-bottom by weight
+->columns(float ...$weights) : list<Grid>                    // split left-to-right by weight
+->rowTracks(list<Track> $tracks) : list<Grid>               // mix fixed + fractional
+->columnTracks(list<Track> $tracks) : list<Grid>
+```
+
+`Pdf\Layout\Track` — `Track::fr(float $weight = 1.0)` (share of the leftover) ·
+`Track::pt(float $points)` (fixed). Every returned slice is itself a `Grid`, so
+bands nest. Pure geometry, in points; an unsatisfiable split throws
+`LayoutException`.
+
+### `Pdf\Builder\Panel`
+
+```php
+Panel::at(float $x, $y, $w, $h) : self       // in the page's units()
+Panel::in(Rect $rect) : self                 // in points (as Grid produces)
+->showing(string $path, int $page = 1) : self   // .pdf -> placePdf, image ext -> placeImage
+->containing(iterable<BlockNode> $blocks) : self
+->inset(float $gap) : self                    // gap between frame and content (default 3)
+->fitted(Fit $fit, ?BoxAlign $align = null) : self
+->aligned(BoxAlign $align) : self             // blocks default TopLeft, images/PDF Center
+->framed(Border $border) : self               // default 0.75pt, 30% grey
+->drawOn(PageBuilder $p) : void
+```
+
+Immutable — every method returns a new instance.
+
+### `Pdf\Support\Source`
+
+```php
+Source::first(list<string> $candidates, ?callable(): string $fallback = null) : string
+```
+
+The first candidate that is a readable file or an `http(s)://` URL answering
+`2xx` (2 s HEAD timeout); else `$fallback()`, else `PdfException`.
+
+### `Pdf\Builder\CoverBuilder`
+
+```php
+->title(string)  ->subtitle(string)  ->logo(string $path)
+->line(string ...$lines)                       // caption lines (date, author, …)
+->layout(CoverLayout $layout)                  // Centered | TopLeft | BottomBand
+->size(PageSize)  ->orientation(Orientation)  ->landscape()
+->bare(bool $bare = true)                      // drop inherited watermark + page numbers
+```
+
+Used via `DocumentBuilder::cover(fn ($c) => …)`. The cover has its own page
+size (default A4 portrait); it keeps an inherited watermark but drops inherited
+page numbers unless `->bare()` says otherwise.
+
+### `Pdf\Builder\DataTable`
+
+```php
+DataTable::of(iterable<array<string,mixed>|object> $rows) : self
+->column(string $key, string $header, ?TextAlign $align = null,
+         ?ColumnWidth $width = null, ?callable(mixed): string $format = null) : self
+->groupBy(string $key, ?callable(mixed): string $header = null) : self
+->totals(array<string, Total> $spec) : self          // per-group subtotals + grand total
+->grandTotals(array<string, Total> $spec) : self     // a distinct spec for the grand row
+->headerRows(int)  ->borderWidthPt(float)  ->borderColor(Color)
+->cellPaddingPt(Edges)  ->headerBackground(Color)
+->build() : Table
+```
+
+`Pdf\Builder\Total` — `Total::sum()` · `Total::avg()` · `Total::count()` ·
+`Total::label(string)` · `Total::of(callable(list<array>): int|float|string)`.
+`sum` / `avg` operate on the raw value, then the column's formatter is applied;
+non-numeric values are skipped. Rows must arrive grouped — `groupBy` groups
+*consecutive* matches. Use via `PageBuilder::dataTable()` or `->build()`.
 
 ---
 
@@ -157,7 +247,14 @@ sheet** of the logical page, on top of the flow content.
 | `Table` | `(iterable<TableRow> $rows, ?ColumnWidth[] $columns = null, ?float $totalWidthPt = null, int $headerRows = 0, bool $repeatHeader = true, float $borderWidthPt = 0.5, Color $borderColor = black, Edges $cellPaddingPt = 3/4/3/4, ?Color $headerBackground = null, StylePatch)` |
 | `TableRow` | `(iterable<TableCell\|string\|InlineSequence> $cells)` |
 | `TableCell` | `(string\|InlineSequence\|iterable<BlockNode> $content, int $colspan = 1, VerticalAlign = Top, StylePatch, ?Color $background = null)` |
+| `DefinitionList` | `(iterable $items, ?ColumnWidth $termWidth = null, StylePatch $termStyle = bold, StylePatch $bodyStyle = new)` — `$items` is a `term => body` map or a list of `[term, body]` pairs; a body is a string, `InlineSequence`, or block list |
+| `Row` | `(iterable<BlockNode> $children, float $gapPt = 8, VerticalAlign $align = Middle, ?list<ColumnWidth\|null> $widths = null)` — children side by side; one `$widths` entry per child, `null` = size to content |
+| `Card` | `(iterable<BlockNode> $content, InlineSequence\|string\|null $title = null, bool $rule = true, ?Edges $paddingPt = null, ?Border $border = null, ?Color $background = null, StylePatch $titleStyle = …)` |
+| `Callout` | `(string\|InlineSequence\|iterable<BlockNode> $content, InlineSequence\|string\|null $title = null, Color $tint = rgb(244,247,252), Color $accent = rgb(64,120,200), Edge $accentEdge = Left, float $accentWidthPt = 3, ?Edges $paddingPt = null, StylePatch $titleStyle = …)` |
 | `Component` | `abstract` — subclass it; see below |
+
+`DefinitionList` / `Row` / `Card` / `Callout` are `Component`s — they expand to
+the nodes above and compose anywhere a block does.
 
 ### `Pdf\Node\Component`
 
@@ -283,14 +380,45 @@ area fill, log / dual axes and data labels are not implemented — see
 ### `Pdf\Node\Document`, `Page`, `PageMaster`, `Meta`
 
 ```php
-new Document(iterable<Page> $pages, Meta $meta = new, ?Style $baseStyle = null, ?Stylesheet $stylesheet = null, iterable<Bookmark> $bookmarks = [])
+new Document(iterable<Page> $pages, Meta $meta = new, ?Style $baseStyle = null, ?Stylesheet $stylesheet = null, iterable<Bookmark> $bookmarks = [], iterable<string,string> $scripts = [], bool $presentation = false, ?float $presentationAdvanceSec = null)
 new Bookmark(string $title, string $anchor, int $level = 0)   // outline entry; $anchor names an Pdf\Node\Anchor
 new Page(PageMaster $master = new, iterable<BlockNode> $children = [], StylePatch $patch = new, iterable<Placement> $placements = [])
-new PageMaster(PageSize $size = a4, Orientation = Portrait, Edges $marginsPt = 28.35, ?Closure $header = null, ?Closure $footer = null)
+new PageMaster(PageSize $size = a4, Orientation = Portrait, Edges $marginsPt = 28.35, ?Closure $header = null, ?Closure $footer = null, ?Watermark = null, ?Transition = null, ?float $autoAdvanceSec = null)
   PageMaster::of(PageSize, Orientation = Portrait, float $margin = 10, Unit $marginUnit = Mm)
-  $master->withHeader(Closure) : PageMaster    $master->withFooter(Closure) : PageMaster
+  $master->withHeader(Closure)  ->withFooter(Closure)  ->withWatermark(Watermark)  ->withTransition(Transition)  ->withAutoAdvance(float) : PageMaster
 new Meta(?string $title = null, ?author = null, ?subject = null, ?keywords = null, ?creator = null)
 ```
+
+### `Pdf\Node\Transition`
+
+```php
+Transition::split(TransitionAxis $axis = Horizontal, TransitionMotion $motion = In, float $durationSec = 1.0)
+Transition::blinds(TransitionAxis $axis = Horizontal, float $durationSec = 1.0)
+Transition::box(TransitionMotion $motion = In, float $durationSec = 1.0)
+Transition::wipe(WipeDirection $direction = Rightward, float $durationSec = 1.0)
+Transition::dissolve(float $durationSec = 1.0)
+Transition::glitter(GlitterDirection $direction = Rightward, float $durationSec = 1.0)
+Transition::fade(float $durationSec = 1.0)
+Transition::push(PushDirection $direction = Rightward, float $durationSec = 1.0)
+Transition::cover(PushDirection $direction = Rightward, float $durationSec = 1.0)
+Transition::uncover(PushDirection $direction = Rightward, float $durationSec = 1.0)
+Transition::fly(PushDirection $direction = Rightward, TransitionMotion $motion = In, float $durationSec = 1.0)
+```
+
+Direction is style-scoped — each enum exposes only the `/Di` angles its style
+allows:
+
+| enum | cases |
+|---|---|
+| `WipeDirection` | `Rightward` (0) · `Upward` (90) · `Leftward` (180) · `Downward` (270) |
+| `GlitterDirection` | `Rightward` (0) · `Downward` (270) · `Diagonal` (315) |
+| `PushDirection` | `Rightward` (0) · `Downward` (270) |
+
+`TransitionAxis` — `Horizontal` / `Vertical` (`/Dm`). `TransitionMotion` —
+`In` / `Out` (`/M`). Set a transition with `PageBuilder::transition()`; open the
+document full-screen with `DocumentBuilder::presentation()`. `Fly` behaves as
+`Push` (the `/B` and `/SS` entries are not modelled). The renderer emits
+`%PDF-1.5` only for a document that carries a 1.5-era transition.
 
 ---
 
@@ -461,6 +589,23 @@ new PageSize(float $widthPt, $heightPt)
 new Edges(float $top = 0, $right = 0, $bottom = 0, $left = 0)
 Edges::all(float)   Edges::symmetric(float $vertical, $horizontal)   Edges::zero()
 ```
+
+### `Pdf\Geometry\Edge`
+
+`Top` / `Right` / `Bottom` / `Left` — one box side. `$edge->only(float $widthPt)`
+returns an `Edges` with just that side set (used by `Callout`'s accent border).
+
+### `Pdf\Geometry\Rect`
+
+```php
+new Rect(float $x, $y, $width, $height)    // top-left origin, user space
+->right() : float   ->bottom() : float
+->origin() : Point  ->size() : Size
+->deflate(Edges $insets) : self   ->translate(float $dx, $dy) : self
+```
+
+Produced by `PageBuilder::writableRectPt()` and `Pdf\Layout\Grid` (in points);
+consumed by `Panel::in()`.
 
 ### `Pdf\Geometry\BoxAlign` · `Pdf\Geometry\Fit`
 
