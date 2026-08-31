@@ -9,6 +9,7 @@ use Pdf\Node\Card;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Rule;
 use Pdf\Style\Border;
+use Pdf\Text\InlineSequence;
 use PHPUnit\Framework\TestCase;
 
 final class CardTest extends TestCase
@@ -33,6 +34,15 @@ final class CardTest extends TestCase
     {
         self::assertCount(2, self::body(new Card([new Paragraph('b')], title: 'H', rule: false)));
         self::assertCount(1, self::body(new Card([new Paragraph('b')])));
+    }
+
+    public function test_an_inline_sequence_title_is_carried_onto_the_title_paragraph(): void
+    {
+        $title = InlineSequence::of('Q3 ')->withBold('summary');
+        $nodes = self::body(new Card([new Paragraph('b')], title: $title));
+
+        self::assertInstanceOf(Paragraph::class, $nodes[0]);
+        self::assertSame($title, $nodes[0]->content);
     }
 
     public function test_patch_carries_padding_border_and_background(): void

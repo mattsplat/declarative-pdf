@@ -22,14 +22,17 @@ final readonly class Card extends Component
     public array $content;
 
     /**
+     * `$border` defaults to a hairline frame; pass {@see Border::none()} to drop
+     * it. `$paddingPt` / `$background` fall back to a 12 pt inset and no fill.
+     *
      * @param iterable<BlockNode> $content
      */
     public function __construct(
         iterable $content,
         public InlineSequence|string|null $title = null,
         public bool $rule = true,
-        public Edges $paddingPt = new Edges(12.0, 12.0, 12.0, 12.0),
-        public ?Border $border = new Border(new Edges(0.75, 0.75, 0.75, 0.75)),
+        public ?Edges $paddingPt = null,
+        public ?Border $border = null,
         public ?Color $background = null,
         public StylePatch $titleStyle = new StylePatch(bold: true, fontSizePt: 13.0, spaceAfterPt: 4.0),
     ) {
@@ -54,8 +57,8 @@ final readonly class Card extends Component
     public function patch(): StylePatch
     {
         return new StylePatch(
-            paddingPt: $this->paddingPt,
-            border: $this->border,
+            paddingPt: $this->paddingPt ?? Edges::all(12.0),
+            border: $this->border ?? Border::uniform(0.75),
             background: $this->background,
         );
     }

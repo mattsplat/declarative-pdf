@@ -43,17 +43,40 @@ final class RowTest extends TestCase
         self::assertSame(VerticalAlign::Bottom, $row->rows[0]->cells[2]->verticalAlign);
     }
 
-    public function test_per_child_widths_apply_by_index_others_stay_auto(): void
+    public function test_positional_widths_land_on_the_right_table_column_across_the_gap_spacers(): void
     {
+        // child 0 -> column 0, gap -> column 1, child 1 -> column 2
         $row = (new Row(
             [new Paragraph('a'), new Paragraph('b')],
-            gapPt: 0.0,
-            widths: [1 => ColumnWidth::fraction(1.0)],
+            gapPt: 8.0,
+            widths: [null, ColumnWidth::fraction(1.0)],
         ))->body();
 
         self::assertInstanceOf(Table::class, $row);
         self::assertSame(ColumnWidth::KIND_AUTO, $row->columns[0]->kind);
-        self::assertTrue($row->columns[1]->isFraction());
+        self::assertTrue($row->columns[1]->isFixed());
+        self::assertSame(8.0, $row->columns[1]->value);
+        self::assertTrue($row->columns[2]->isFraction());
+    }
+
+    public function test_a_short_width_list_leaves_the_trailing_children_content_sized(): void
+    {
+        $row = (new Row(
+            [new Paragraph('a'), new Paragraph('b')],
+            gapPt: 0.0,
+            widths: [ColumnWidth::fixed(40.0)],
+        ))->body();
+
+        self::assertInstanceOf(Table::class, $row);
+        self::assertTrue($row->columns[0]->isFixed());
+        self::assertSame(ColumnWidth::KIND_AUTO, $row->columns[1]->kind);
+    }
+
+    public function test_more_widths_than_children_is_rejected(): void
+    {
+        $this->expectException(\Pdf\Exception\PdfException::class);
+
+        new Row([new Paragraph('a')], widths: [ColumnWidth::fixed(10.0), ColumnWidth::fixed(20.0)]);
     }
 
     public function test_an_empty_row_is_rejected(): void

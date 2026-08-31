@@ -64,6 +64,28 @@ final class DefinitionListTest extends TestCase
         self::assertSame(9.0, $row->rows[0]->cells[1]->patch->fontSizePt);
     }
 
+    public function test_a_generator_pair_body_is_materialised_into_block_children(): void
+    {
+        $generator = (static function () {
+            yield new Paragraph('a');
+            yield new Paragraph('b');
+        })();
+
+        $list = new DefinitionList([['Blocks', $generator]]);
+
+        $table = $list->body();
+        self::assertInstanceOf(Table::class, $table);
+        self::assertCount(2, $table->rows[0]->cells[1]->children);
+    }
+
+    public function test_a_map_form_block_body_is_rejected_with_a_clear_message(): void
+    {
+        $this->expectException(\Pdf\Exception\PdfException::class);
+        $this->expectExceptionMessage('pair form');
+
+        new DefinitionList(['Term' => [new Paragraph('x')]]);
+    }
+
     public function test_an_empty_definition_list_is_rejected(): void
     {
         $this->expectException(\Pdf\Exception\PdfException::class);

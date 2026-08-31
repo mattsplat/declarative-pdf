@@ -22,10 +22,13 @@ final readonly class DefinitionList extends Component
     public array $items;
 
     /**
-     * `$items` is either a `term => body` map or a list of `[term, body]`
-     * pairs; a body may be a string, an {@see InlineSequence} or block children.
+     * `$items` is either a `term => body` map — where each body must be a string
+     * or {@see InlineSequence} — or a list of `[term, body]` pairs, where a body
+     * may additionally be block children. The input is loosely typed because it
+     * is validated here: a map body that is neither a string nor an
+     * {@see InlineSequence} raises a {@see PdfException}.
      *
-     * @param array<string, string|InlineSequence>|iterable<array{0: string|InlineSequence, 1: string|InlineSequence|iterable<BlockNode>}> $items
+     * @param iterable<array-key, mixed> $items
      */
     public function __construct(
         iterable $items,
@@ -41,11 +44,26 @@ final readonly class DefinitionList extends Component
                 continue;
             }
 
+            if (
+                !is_array($value)
+                || !array_key_exists(0, $value)
+                || !array_key_exists(1, $value)
+                || (!is_string($value[0]) && !$value[0] instanceof InlineSequence)
+            ) {
+                throw new PdfException(
+                    'A map-form definition body must be a string or InlineSequence; '
+                    . 'use the [term, body] pair form for block content.',
+                );
+            }
+
+            $term = $value[0];
             $body = $value[1];
             if (!is_string($body) && !$body instanceof InlineSequence) {
-                $body = is_array($body) ? array_values($body) : iterator_to_array($body, false);
+                $body = is_iterable($body)
+                    ? $this->blocks($body)
+                    : throw new PdfException('A pair-form body must be a string, an InlineSequence or block children.');
             }
-            $normalised[] = [$value[0], $body];
+            $normalised[] = [$term, $body];
         }
 
         if ($normalised === []) {
@@ -53,6 +71,23 @@ final readonly class DefinitionList extends Component
         }
 
         $this->items = $normalised;
+    }
+
+    /**
+     * @param iterable<mixed> $nodes
+     * @return list<BlockNode>
+     */
+    private function blocks(iterable $nodes): array
+    {
+        $out = [];
+        foreach ($nodes as $node) {
+            if (!$node instanceof BlockNode) {
+                throw new PdfException('A pair-form block body must contain only block nodes.');
+            }
+            $out[] = $node;
+        }
+
+        return $out;
     }
 
     public function body(): BlockNode
