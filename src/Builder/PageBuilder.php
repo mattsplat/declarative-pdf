@@ -14,6 +14,7 @@ use Pdf\Geometry\Rect;
 use Pdf\Geometry\ShrinkMode;
 use Pdf\Geometry\Unit;
 use Pdf\Exception\LayoutException;
+use Pdf\Layout\Grid;
 use Pdf\Layout\Measurer;
 use Pdf\Node\Anchor;
 use Pdf\Node\BlockNode;
@@ -94,6 +95,12 @@ final class PageBuilder
         $this->unit = $unit;
 
         return $this;
+    }
+
+    /** The unit currently set for this page's absolute-placement coordinates. */
+    public function unit(): Unit
+    {
+        return $this->unit;
     }
 
     public function size(PageSize $size): self
@@ -481,6 +488,78 @@ final class PageBuilder
         $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new PdfPage($path, $page), $fit, $align);
 
         return $this;
+    }
+
+    /**
+     * The writable area — the page box inside the margins — in points, measured
+     * from the top edge.
+     *
+     * A snapshot of the current {@see self::size()} / {@see self::orientation()}
+     * / {@see self::margin()}: call it after those are set. It is margins-only —
+     * it does not subtract any {@see self::header()} / {@see self::footer()}
+     * band, so a grid built from it can overlap a header or footer. Absolute
+     * placements draw over the flow content regardless, so this is usually fine
+     * for a full-sheet layout; inset the rectangle yourself if you keep a band.
+     */
+    public function writableRectPt(): Rect
+    {
+        return (new PageMaster($this->size, $this->orientation, $this->marginsPt))
+            ->geometry()
+            ->contentBox();
+    }
+
+    /**
+     * A {@see \Pdf\Layout\Grid} over the writable area (see {@see
+     * self::writableRectPt()} for its caveats). `$gutterPt` is the gap left
+     * between sibling slices, in points.
+     */
+    public function grid(float $gutterPt = 0.0): Grid
+    {
+        return Grid::inside($this->writableRectPt(), $gutterPt);
+    }
+
+    /**
+     * A horizontal hairline `$length` long whose top edge starts at `(x, y)`
+     * (corner origin, not centreline) — a divider rule in an absolute layout.
+     * `$stroke` is the line thickness in points, or a {@see Border} whose widest
+     * edge and colour are used. `x`, `y` and `length` honour {@see self::units()}.
+     */
+    public function hline(float $x, float $y, float $length, Border|float $stroke = 0.5): self
+    {
+        [$thicknessPt, $color] = $this->strokeSpec($stroke);
+        $this->placements[] = new Placement(
+            new Rect($this->unit->toPoints($x), $this->unit->toPoints($y), $this->unit->toPoints($length), $thicknessPt),
+            new Frame(background: $color),
+        );
+
+        return $this;
+    }
+
+    /**
+     * A vertical hairline `$length` long whose left edge starts at `(x, y)`
+     * (corner origin, not centreline). See {@see self::hline()}.
+     */
+    public function vline(float $x, float $y, float $length, Border|float $stroke = 0.5): self
+    {
+        [$thicknessPt, $color] = $this->strokeSpec($stroke);
+        $this->placements[] = new Placement(
+            new Rect($this->unit->toPoints($x), $this->unit->toPoints($y), $thicknessPt, $this->unit->toPoints($length)),
+            new Frame(background: $color),
+        );
+
+        return $this;
+    }
+
+    /** @return array{0: float, 1: Color} thickness in points, and the line colour */
+    private function strokeSpec(Border|float $stroke): array
+    {
+        if ($stroke instanceof Border) {
+            $w = $stroke->widthPt;
+
+            return [max($w->top, $w->right, $w->bottom, $w->left), $stroke->color];
+        }
+
+        return [$stroke, new Color(0, 0, 0)];
     }
 
     /** Draw a bordered/filled rectangle at an absolute area (sheet borders, cells). */

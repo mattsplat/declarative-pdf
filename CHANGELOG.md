@@ -8,6 +8,23 @@ While the version is `0.x`, minor releases may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+- **Absolute-layout kit** — compose sheet layouts without hand-computed
+  coordinate arithmetic:
+  - `Pdf\Layout\Grid` (`$page->grid()` / `Grid::inside()`) splits a rectangle
+    into sub-rectangles by weight (`->rows()` / `->columns()`) or by a mix of
+    fixed and fractional `Pdf\Layout\Track`s (`->rowTracks()` /
+    `->columnTracks()`); every slice is itself a grid, so bands nest.
+  - `Pdf\Builder\Panel` — a bordered, inset region holding a PDF page, an image,
+    or block content (`->showing()` dispatches by source type, `->containing()`
+    takes blocks); `Panel::in()` accepts a grid rectangle directly.
+  - `PageBuilder::hline()` / `vline()` draw hairline divider rules;
+    `PageBuilder::writableRectPt()` exposes the area inside the margins in
+    points.
+  - `Pdf\Support\Source::first()` resolves the first usable asset from a list of
+    local paths and `http(s)://` URLs, with a fallback.
+
 ## [0.1.0] - 2026-08-29
 
 First tagged release. A from-scratch reimagining of FPDF 1.9 as a typed,
