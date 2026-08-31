@@ -1,0 +1,173 @@
+%PDF-1.5
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Trans <</Type /Trans /S /Fade /D 0.5>>
+/Dur 3
+/Contents 4 0 R>>
+endobj
+4 0 obj
+<</Length 108>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Title slide) Tj ET
+BT /F2 12.00 Tf 28.35 765.84 Td (First slide.) Tj ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Trans <</Type /Trans /S /Wipe /D 1 /Di 180>>
+/Dur 8
+/Contents 6 0 R>>
+endobj
+6 0 obj
+<</Length 120>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Second slide) Tj ET
+BT /F2 12.00 Tf 28.35 765.84 Td (Held for eight seconds.) Tj ET
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Trans <</Type /Trans /S /Push /D 0.75 /Di 270>>
+/Dur 3
+/Contents 8 0 R>>
+endobj
+8 0 obj
+<</Length 107>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Third slide) Tj ET
+BT /F2 12.00 Tf 28.35 765.84 Td (Last slide.) Tj ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R 7 0 R]
+/Count 3
+/MediaBox [0 0 595.28 841.89]
+>>
+endobj
+9 0 obj
+<</Length 675>>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo
+<</Registry (Adobe)
+/Ordering (UCS)
+/Supplement 0
+>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+6 beginbfrange
+<00> <7F> <0000>
+<86> <87> <2020>
+<91> <92> <2018>
+<93> <94> <201C>
+<96> <97> <2013>
+<A0> <FF> <00A0>
+endbfrange
+19 beginbfchar
+<80> <20AC>
+<82> <201A>
+<83> <0192>
+<84> <201E>
+<85> <2026>
+<88> <02C6>
+<89> <2030>
+<8A> <0160>
+<8B> <2039>
+<8C> <0152>
+<8E> <017D>
+<95> <2022>
+<98> <02DC>
+<99> <2122>
+<9A> <0161>
+<9B> <203A>
+<9C> <0153>
+<9E> <017E>
+<9F> <0178>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+10 0 obj
+<</Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 9 0 R
+>>
+endobj
+11 0 obj
+<</Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 9 0 R
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 10 0 R
+/F2 11 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+12 0 obj
+<<
+/Producer (fpdf/pdf-test)
+/CreationDate (D:20260826120000+00'00')
+>>
+endobj
+13 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/PageMode /FullScreen
+/PageLayout /SinglePage
+>>
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000881 00000 n 
+0000001936 00000 n 
+0000000009 00000 n 
+0000000134 00000 n 
+0000000291 00000 n 
+0000000422 00000 n 
+0000000591 00000 n 
+0000000725 00000 n 
+0000000979 00000 n 
+0000001703 00000 n 
+0000001822 00000 n 
+0000002052 00000 n 
+0000002140 00000 n 
+trailer
+<<
+/Size 14
+/Root 13 0 R
+/Info 12 0 R
+>>
+startxref
+2236
+%%EOF

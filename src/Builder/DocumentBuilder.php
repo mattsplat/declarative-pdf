@@ -44,6 +44,10 @@ final class DocumentBuilder
 
     private ?DocumentRenderer $renderer = null;
 
+    private bool $presentation = false;
+
+    private ?float $presentationAdvanceSec = null;
+
     /** @var list<\Closure(PageBuilder): void> applied to every page before its configurator */
     private array $pageDefaults = [];
 
@@ -146,6 +150,20 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Present the document as a slideshow: it opens full-screen
+     * (`/PageMode /FullScreen`, `/PageLayout /SinglePage`). When
+     * `$advanceSeconds` is given, every sheet auto-advances after that many
+     * seconds unless its page set its own {@see PageBuilder::autoAdvance()}.
+     */
+    public function presentation(?float $advanceSeconds = null): self
+    {
+        $this->presentation = true;
+        $this->presentationAdvanceSec = $advanceSeconds;
+
+        return $this;
+    }
+
     public function using(DocumentRenderer $renderer): self
     {
         $this->renderer = $renderer;
@@ -184,6 +202,8 @@ final class DocumentBuilder
             $this->stylesheet,
             $this->bookmarks,
             $this->scripts,
+            $this->presentation,
+            $this->presentationAdvanceSec,
         );
     }
 
