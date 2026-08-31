@@ -155,9 +155,21 @@ final class DocumentRenderer
             }
         }
 
+        $requiresPdf15 = false;
+        foreach ($pages as $page) {
+            if ($page->transition !== null && $page->transition->requiresPdf15()) {
+                $requiresPdf15 = true;
+                break;
+            }
+        }
+
         $registry = new ObjectRegistry(2);
         $writer = new PdfWriter($registry, $this->compress);
-        $writer->header($images->requiresPdf14() || !$imports->isEmpty() || $hasWidgets ? '1.4' : '1.3');
+        if ($requiresPdf15) {
+            $writer->header('1.5');
+        } else {
+            $writer->header($images->requiresPdf14() || !$imports->isEmpty() || $hasWidgets ? '1.4' : '1.3');
+        }
         $withAlpha = $images->hasAlpha();
 
         // --- Pre-allocate per-page object numbers, in FPDF's order ---
@@ -353,7 +365,7 @@ final class DocumentRenderer
     /**
      * @param array<string, array{0: int, 1: float}>                                                        $anchorMap
      * @param list<int>                                                                                     $pageObjects
-     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered
+     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, transition: ?Transition, dur: ?float}> $rendered
      */
     private function writeAnnotation(
         PdfWriter $writer,
@@ -400,7 +412,7 @@ final class DocumentRenderer
      * items so the destination syntax lives in one place.
      *
      * @param list<int>                                                                                           $pageObjects
-     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered
+     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, transition: ?Transition, dur: ?float}> $rendered
      */
     private function destination(int $pageIndex, float $yTopPt, array $pageObjects, array $rendered): string
     {
@@ -420,7 +432,7 @@ final class DocumentRenderer
      *
      * @param array<string, array{0: int, 1: float}>                                                              $anchorMap
      * @param list<int>                                                                                           $pageObjects
-     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>}> $rendered
+     * @param list<array{geometry: PageGeometry, content: string, links: list<LinkRect>, anchors: list<AnchorMark>, transition: ?Transition, dur: ?float}> $rendered
      */
     private function writeOutlines(
         PdfWriter $writer,

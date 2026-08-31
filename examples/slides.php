@@ -7,9 +7,10 @@ require __DIR__ . '/../vendor/autoload.php';
 use Pdf\Color\Color;
 use Pdf\Document;
 use Pdf\Geometry\Orientation;
+use Pdf\Node\PushDirection;
 use Pdf\Node\Transition;
 use Pdf\Node\TransitionAxis;
-use Pdf\Node\TransitionDirection;
+use Pdf\Node\WipeDirection;
 use Pdf\Style\StylePatch;
 use Pdf\Style\TextAlign;
 
@@ -19,7 +20,11 @@ use Pdf\Style\TextAlign;
  *   ->presentation(advanceSeconds: 4)   opens full-screen, auto-advancing
  *                                       every 4 s
  *   ->transition(...)                   the effect played when each slide
- *                                       appears — see the Transition factories
+ *                                       appears — see the Transition factories;
+ *                                       the direction argument is style-scoped
+ *                                       (WipeDirection / GlitterDirection /
+ *                                       PushDirection) so only spec-valid
+ *                                       angles compile
  *   ->autoAdvance(seconds)              a per-slide dwell time overriding the
  *                                       document default (slide 3 lingers)
  */
@@ -42,7 +47,7 @@ Document::create()
     })
     ->page(function ($p) use ($accent, $bullet): void {
         $p->orientation(Orientation::Landscape)
-            ->transition(Transition::wipe(TransitionDirection::Leftward, 0.4))
+            ->transition(Transition::wipe(WipeDirection::Leftward, 0.4))
             ->heading(2, 'What you get', new StylePatch(color: $accent))
             ->bulletList([
                 'Eleven /Trans styles, each with only the keys it uses',
@@ -59,7 +64,7 @@ Document::create()
     })
     ->page(function ($p) use ($title): void {
         $p->orientation(Orientation::Landscape)
-            ->transition(Transition::push(TransitionDirection::Leftward, 0.5))
+            ->transition(Transition::push(PushDirection::Downward, 0.5))
             ->paragraph('Thanks', $title);
     })
     ->save(__DIR__ . '/slides.pdf');

@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Pdf\Tests\Functional;
 
+use Pdf\Builder\DocumentBuilder;
 use Pdf\Document;
+use Pdf\Node\PushDirection;
 use Pdf\Node\Transition;
-use Pdf\Node\TransitionDirection;
+use Pdf\Node\WipeDirection;
 use Pdf\Tests\Support\Golden;
 use Pdf\Tests\Support\Pdf;
 use PHPUnit\Framework\TestCase;
 
 final class TransitionTest extends TestCase
 {
-    private function deck(): \Pdf\Builder\DocumentBuilder
+    private function deck(): DocumentBuilder
     {
         return Document::create()->using(Pdf::deterministicRenderer())
             ->presentation(advanceSeconds: 3.0)
@@ -22,12 +24,12 @@ final class TransitionTest extends TestCase
                 ->heading(1, 'Title slide')
                 ->paragraph('First slide.'))
             ->page(fn ($p) => $p
-                ->transition(Transition::wipe(TransitionDirection::Leftward))
+                ->transition(Transition::wipe(WipeDirection::Leftward))
                 ->autoAdvance(8.0)
                 ->heading(1, 'Second slide')
                 ->paragraph('Held for eight seconds.'))
             ->page(fn ($p) => $p
-                ->transition(Transition::push(TransitionDirection::Leftward, 0.75))
+                ->transition(Transition::push(PushDirection::Downward, 0.75))
                 ->heading(1, 'Third slide')
                 ->paragraph('Last slide.'));
     }
@@ -38,7 +40,12 @@ final class TransitionTest extends TestCase
 
         self::assertStringContainsString('/Trans <</Type /Trans /S /Fade /D 0.5>>', $pdf);
         self::assertStringContainsString('/Trans <</Type /Trans /S /Wipe /D 1 /Di 180>>', $pdf);
-        self::assertStringContainsString('/Trans <</Type /Trans /S /Push /D 0.75 /Di 180>>', $pdf);
+        self::assertStringContainsString('/Trans <</Type /Trans /S /Push /D 0.75 /Di 270>>', $pdf);
+    }
+
+    public function test_a_deck_with_15_era_styles_bumps_the_pdf_header(): void
+    {
+        self::assertStringStartsWith('%PDF-1.5', $this->deck()->toString());
     }
 
     public function test_presentation_sets_full_screen_and_single_page_in_the_catalog(): void
@@ -49,6 +56,29 @@ final class TransitionTest extends TestCase
             '#/Type /Catalog\n/Pages 1 0 R\n/PageMode /FullScreen\n/PageLayout /SinglePage#',
             $pdf,
         );
+    }
+
+    public function test_presentation_without_an_interval_emits_no_dur(): void
+    {
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->presentation()
+            ->page(fn ($p) => $p->paragraph('one'))
+            ->page(fn ($p) => $p->paragraph('two'))
+            ->toString();
+
+        self::assertStringContainsString('/PageMode /FullScreen', $pdf);
+        self::assertStringContainsString('/PageLayout /SinglePage', $pdf);
+        self::assertStringNotContainsString('/Dur ', $pdf);
+    }
+
+    public function test_auto_advance_without_presentation_emits_dur_but_not_full_screen(): void
+    {
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p->autoAdvance(5.0)->paragraph('one'))
+            ->toString();
+
+        self::assertStringContainsString('/Dur 5', $pdf);
+        self::assertStringNotContainsString('/PageMode', $pdf);
     }
 
     public function test_document_advance_applies_unless_a_page_overrides_it(): void
@@ -80,6 +110,7 @@ final class TransitionTest extends TestCase
         self::assertStringNotContainsString('/Trans <<', $pdf);
         self::assertStringNotContainsString('/Dur ', $pdf);
         self::assertStringNotContainsString('/PageMode', $pdf);
+        self::assertStringStartsWith('%PDF-1.3', $pdf);
     }
 
     public function test_transitions_golden(): void

@@ -9,10 +9,13 @@ namespace Pdf\Node;
  * when advancing to a page in full-screen (presentation) mode.
  *
  * Build one with a named constructor; each takes only the parameters its style
- * uses and {@see self::dictionary()} emits only the corresponding keys, so the
- * `/Trans` dict is always spec-shaped (PDF 2.0, Table 168).
+ * uses, and the direction argument is a style-scoped type
+ * ({@see WipeDirection} / {@see GlitterDirection} / {@see PushDirection}), so a
+ * style/direction pair the PDF spec disallows cannot be expressed.
+ * {@see self::dictionary()} then emits only the corresponding keys (PDF 2.0,
+ * Table 168).
  *
- *   $master = $master->withTransition(Transition::wipe(TransitionDirection::Leftward, 0.5));
+ *   $master = $master->withTransition(Transition::wipe(WipeDirection::Leftward, 0.5));
  */
 final readonly class Transition
 {
@@ -20,8 +23,8 @@ final readonly class Transition
         public TransitionStyle $style,
         public float $durationSec = 1.0,
         public ?TransitionAxis $axis = null,
-        public ?TransitionDirection $direction = null,
         public ?TransitionMotion $motion = null,
+        public ?TransitionDi $direction = null,
     ) {
     }
 
@@ -48,7 +51,7 @@ final readonly class Transition
     }
 
     public static function wipe(
-        TransitionDirection $direction = TransitionDirection::Rightward,
+        WipeDirection $direction = WipeDirection::Rightward,
         float $durationSec = 1.0,
     ): self {
         return new self(TransitionStyle::Wipe, $durationSec, direction: $direction);
@@ -60,7 +63,7 @@ final readonly class Transition
     }
 
     public static function glitter(
-        TransitionDirection $direction = TransitionDirection::Rightward,
+        GlitterDirection $direction = GlitterDirection::Rightward,
         float $durationSec = 1.0,
     ): self {
         return new self(TransitionStyle::Glitter, $durationSec, direction: $direction);
@@ -72,79 +75,79 @@ final readonly class Transition
     }
 
     public static function push(
-        TransitionDirection $direction = TransitionDirection::Rightward,
+        PushDirection $direction = PushDirection::Rightward,
         float $durationSec = 1.0,
     ): self {
         return new self(TransitionStyle::Push, $durationSec, direction: $direction);
     }
 
     public static function cover(
-        TransitionDirection $direction = TransitionDirection::Rightward,
+        PushDirection $direction = PushDirection::Rightward,
         float $durationSec = 1.0,
     ): self {
         return new self(TransitionStyle::Cover, $durationSec, direction: $direction);
     }
 
     public static function uncover(
-        TransitionDirection $direction = TransitionDirection::Rightward,
+        PushDirection $direction = PushDirection::Rightward,
         float $durationSec = 1.0,
     ): self {
         return new self(TransitionStyle::Uncover, $durationSec, direction: $direction);
     }
 
+    /**
+     * Fly always moves the incoming page as an opaque rectangle: without the
+     * PDF `/B` ("fly-in from transparent") or `/SS` (scale) entries — which this
+     * library does not model — `Fly` behaves as a Push. It is kept for viewers
+     * that special-case it.
+     */
     public static function fly(
-        TransitionDirection $direction = TransitionDirection::Rightward,
+        PushDirection $direction = PushDirection::Rightward,
         TransitionMotion $motion = TransitionMotion::In,
         float $durationSec = 1.0,
     ): self {
-        return new self(TransitionStyle::Fly, $durationSec, direction: $direction, motion: $motion);
+        return new self(TransitionStyle::Fly, $durationSec, motion: $motion, direction: $direction);
     }
 
     /**
-     * The `/Trans << … >>` dictionary body, keys in PDF-spec order (S, D, Dm,
-     * Di, M). Deterministic: the duration is formatted with a trimmed
-     * fixed-point representation so byte output never depends on locale or
-     * float noise.
+     * The `/Trans << … >>` dictionary body, keys in Table 168 order (S, D, Dm,
+     * M, Di). Only the keys the style set are present. Deterministic: the
+     * duration is a trimmed fixed-point string, locale-independent.
      */
     public function dictionary(): string
     {
         $parts = ['/Type /Trans', '/S /' . $this->style->pdfName(), '/D ' . self::number($this->durationSec)];
 
-        if ($this->emitsAxis() && $this->axis !== null) {
+        if ($this->axis !== null) {
             $parts[] = '/Dm /' . $this->axis->pdfName();
         }
-        if ($this->emitsDirection() && $this->direction !== null) {
-            $parts[] = '/Di ' . $this->direction->pdfValue();
-        }
-        if ($this->emitsMotion() && $this->motion !== null) {
+        if ($this->motion !== null) {
             $parts[] = '/M /' . $this->motion->pdfName();
+        }
+        if ($this->direction !== null) {
+            $parts[] = '/Di ' . $this->direction->pdfValue();
         }
 
         return '<<' . implode(' ', $parts) . '>>';
     }
 
-    private function emitsAxis(): bool
+    /**
+     * Whether this transition uses a construct introduced in PDF 1.5 — the
+     * `/Di` and `/M` entries, and the Fade / Push / Cover / Uncover / Fly
+     * styles. Blinds and Dissolve without motion are PDF 1.1.
+     */
+    public function requiresPdf15(): bool
     {
-        return $this->style === TransitionStyle::Split || $this->style === TransitionStyle::Blinds;
-    }
+        if ($this->direction !== null || $this->motion !== null) {
+            return true;
+        }
 
-    private function emitsDirection(): bool
-    {
         return match ($this->style) {
-            TransitionStyle::Wipe,
-            TransitionStyle::Glitter,
+            TransitionStyle::Fade,
             TransitionStyle::Push,
             TransitionStyle::Cover,
             TransitionStyle::Uncover,
             TransitionStyle::Fly => true,
-            default => false,
-        };
-    }
-
-    private function emitsMotion(): bool
-    {
-        return match ($this->style) {
-            TransitionStyle::Split, TransitionStyle::Box, TransitionStyle::Fly => true,
             default => false,
         };
     }

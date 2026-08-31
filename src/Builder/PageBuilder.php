@@ -192,7 +192,11 @@ final class PageBuilder
         return $this;
     }
 
-    /** Auto-advance past this page after `$seconds` in presentation mode (`/Dur`). */
+    /**
+     * Auto-advance past this page after `$seconds` (`/Dur`). Mainstream viewers
+     * only honour this in full-screen mode, so pair it with
+     * {@see DocumentBuilder::presentation()}.
+     */
     public function autoAdvance(float $seconds): self
     {
         $this->autoAdvanceSec = $seconds;
