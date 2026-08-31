@@ -1,0 +1,171 @@
+%PDF-1.3
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Contents 4 0 R>>
+endobj
+4 0 obj
+<</Length 330>>
+stream
+2 J
+q 0.075 0.129 0.267 rg 28.35 30.35 538.58 109.75 re f Q
+q 1.000 g BT /F1 28.00 Tf 48.35 96.90 Td (Flow components) Tj ET Q
+q 0.776 0.824 0.902 rg BT /F2 12.00 Tf 48.35 72.00 Td (Card, Callout, Row, DefinitionList) Tj ET Q
+q 0.659 0.722 0.831 rg BT /F2 9.00 Tf 48.35 50.83 Td (Reference build     ·     declarative-pdf) Tj ET Q
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/Contents 6 0 R>>
+endobj
+6 0 obj
+<</Length 1121>>
+stream
+2 J
+BT /F1 24.00 Tf 28.35 791.94 Td (Components) Tj ET
+q 0.973 0.976 0.984 rg 28.35 709.59 538.58 66.75 re f Q
+q 0.000 g 28.35 775.59 538.58 0.75 re f Q
+q 0.000 g 28.35 709.59 538.58 0.75 re f Q
+q 0.000 g 28.35 709.59 0.75 66.75 re f Q
+q 0.000 g 566.18 709.59 0.75 66.75 re f Q
+BT /F1 13.00 Tf 41.10 752.22 Td (Card title) Tj ET
+q 0.784 g 41.10 742.14 513.08 0.50 re f Q
+BT /F2 12.00 Tf 41.10 725.64 Td (framed body copy) Tj ET
+q 0.957 0.969 0.988 rg 28.35 658.99 538.58 50.60 re f Q
+q 0.251 0.471 0.784 rg 28.35 658.99 3.00 50.60 re f Q
+BT /F1 12.00 Tf 43.35 689.09 Td (Note) Tj ET
+BT /F2 12.00 Tf 43.35 672.29 Td (a tinted aside) Tj ET
+q 0.957 0.969 0.988 rg 28.35 622.19 538.58 36.80 re f Q
+q 0.251 0.471 0.784 rg 28.35 655.99 538.58 3.00 re f Q
+BT /F2 12.00 Tf 40.35 635.49 Td (accent on top) Tj ET
+BT /F2 12.00 Tf 28.35 611.69 Td (left) Tj ET
+BT /F2 12.00 Tf 54.36 611.69 Td (right) Tj ET
+BT /F1 12.00 Tf 28.35 596.39 Td (Engine) Tj ET
+BT /F2 12.00 Tf 76.36 596.39 Td (measure, paginate, render, serialise) Tj ET
+BT /F1 12.00 Tf 28.35 579.59 Td (Units) Tj ET
+BT /F2 12.00 Tf 76.36 579.59 Td (points internally) Tj ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R]
+/Count 2
+/MediaBox [0 0 595.28 841.89]
+>>
+endobj
+7 0 obj
+<</Length 675>>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo
+<</Registry (Adobe)
+/Ordering (UCS)
+/Supplement 0
+>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+6 beginbfrange
+<00> <7F> <0000>
+<86> <87> <2020>
+<91> <92> <2018>
+<93> <94> <201C>
+<96> <97> <2013>
+<A0> <FF> <00A0>
+endbfrange
+19 beginbfchar
+<80> <20AC>
+<82> <201A>
+<83> <0192>
+<84> <201E>
+<85> <2026>
+<88> <02C6>
+<89> <2030>
+<8A> <0160>
+<8B> <2039>
+<8C> <0152>
+<8E> <017D>
+<95> <2022>
+<98> <02DC>
+<99> <2122>
+<9A> <0161>
+<9B> <203A>
+<9C> <0153>
+<9E> <017E>
+<9F> <0178>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+8 0 obj
+<</Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 7 0 R
+>>
+endobj
+9 0 obj
+<</Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/ToUnicode 7 0 R
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 8 0 R
+/F2 9 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+10 0 obj
+<<
+/Producer (fpdf/pdf-test)
+/CreationDate (D:20260826120000+00'00')
+>>
+endobj
+11 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+>>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000001715 00000 n 
+0000002762 00000 n 
+0000000009 00000 n 
+0000000087 00000 n 
+0000000466 00000 n 
+0000000544 00000 n 
+0000001807 00000 n 
+0000002531 00000 n 
+0000002649 00000 n 
+0000002876 00000 n 
+0000002964 00000 n 
+trailer
+<<
+/Size 12
+/Root 11 0 R
+/Info 10 0 R
+>>
+startxref
+3014
+%%EOF
