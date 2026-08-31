@@ -6,13 +6,13 @@
 /Contents 4 0 R>>
 endobj
 4 0 obj
-<</Length 334>>
+<</Length 330>>
 stream
 2 J
-q 0.075 0.129 0.267 rg 28.35 122.69 538.58 109.75 re f Q
-q 1.000 g BT /F1 28.00 Tf 48.35 189.24 Td (Flow components) Tj ET Q
-q 0.776 0.824 0.902 rg BT /F2 12.00 Tf 48.35 164.34 Td (Card, Callout, Row, DefinitionList) Tj ET Q
-q 0.659 0.722 0.831 rg BT /F2 9.00 Tf 48.35 143.16 Td (Reference build     ·     declarative-pdf) Tj ET Q
+q 0.075 0.129 0.267 rg 28.35 30.35 538.58 109.75 re f Q
+q 1.000 g BT /F1 28.00 Tf 48.35 96.90 Td (Flow components) Tj ET Q
+q 0.776 0.824 0.902 rg BT /F2 12.00 Tf 48.35 72.00 Td (Card, Callout, Row, DefinitionList) Tj ET Q
+q 0.659 0.722 0.831 rg BT /F2 9.00 Tf 48.35 50.83 Td (Reference build     ·     declarative-pdf) Tj ET Q
 endstream
 endobj
 5 0 obj
@@ -149,17 +149,17 @@ endobj
 xref
 0 12
 0000000000 65535 f 
-0000001719 00000 n 
-0000002766 00000 n 
+0000001715 00000 n 
+0000002762 00000 n 
 0000000009 00000 n 
 0000000087 00000 n 
-0000000470 00000 n 
-0000000548 00000 n 
-0000001811 00000 n 
-0000002535 00000 n 
-0000002653 00000 n 
-0000002880 00000 n 
-0000002968 00000 n 
+0000000466 00000 n 
+0000000544 00000 n 
+0000001807 00000 n 
+0000002531 00000 n 
+0000002649 00000 n 
+0000002876 00000 n 
+0000002964 00000 n 
 trailer
 <<
 /Size 12
@@ -167,5 +167,5 @@ trailer
 /Info 10 0 R
 >>
 startxref
-3018
+3014
 %%EOF

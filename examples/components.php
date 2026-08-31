@@ -7,6 +7,7 @@ require __DIR__ . '/../vendor/autoload.php';
 use Pdf\Builder\CoverLayout;
 use Pdf\Color\Color;
 use Pdf\Document;
+use Pdf\Geometry\Edge;
 use Pdf\Geometry\Unit;
 use Pdf\Node\Callout;
 use Pdf\Node\Card;
@@ -15,7 +16,6 @@ use Pdf\Node\ImageBlock;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Row;
 use Pdf\Style\ColumnWidth;
-use Pdf\Style\Edge;
 use Pdf\Style\StylePatch;
 use Pdf\Style\TextAlign;
 use Pdf\Style\VerticalAlign;
@@ -77,7 +77,7 @@ $doc->page(function ($p) use ($navy, $muted, $fixtures): void {
         new ImageBlock("{$fixtures}/dot-rgba.png", heightPt: Unit::Mm->toPoints(12.0)),
         new Paragraph('A wordmark next to a mark: the image column sizes to the '
             . 'picture, the text column takes the rest.', new StylePatch(spaceAfterPt: 0.0)),
-    ], gapPt: 12.0, align: VerticalAlign::Middle, widths: [1 => ColumnWidth::fraction(1.0)]));
+    ], gapPt: 12.0, align: VerticalAlign::Middle, widths: [null, ColumnWidth::fraction(1.0)]));
 
     $p->heading(2, 'DefinitionList', new StylePatch(color: $navy, spaceBeforePt: 14.0));
     $p->component(new DefinitionList([

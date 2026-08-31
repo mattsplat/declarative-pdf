@@ -7,13 +7,13 @@ namespace Pdf\Tests\Functional;
 use Pdf\Builder\CoverLayout;
 use Pdf\Color\Color;
 use Pdf\Document;
+use Pdf\Geometry\Edge;
 use Pdf\Node\Callout;
 use Pdf\Node\Card;
 use Pdf\Node\DefinitionList;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Row;
 use Pdf\Style\ColumnWidth;
-use Pdf\Style\Edge;
 use Pdf\Style\StylePatch;
 use Pdf\Tests\Support\Golden;
 use Pdf\Tests\Support\Pdf;
@@ -41,7 +41,7 @@ final class FlowComponentsTest extends TestCase
                 ->component(new Row([
                     new Paragraph('left', new StylePatch(spaceAfterPt: 0.0)),
                     new Paragraph('right', new StylePatch(spaceAfterPt: 0.0)),
-                ], gapPt: 10.0, widths: [1 => ColumnWidth::fraction(1.0)]))
+                ], gapPt: 10.0, widths: [null, ColumnWidth::fraction(1.0)]))
                 ->component(new DefinitionList([
                     'Engine' => 'measure, paginate, render, serialise',
                     'Units' => 'points internally',
@@ -63,13 +63,29 @@ final class FlowComponentsTest extends TestCase
         }
     }
 
-    public function test_the_cover_is_its_own_first_page(): void
+    public function test_the_cover_is_its_own_first_page_and_skips_the_page_number(): void
     {
-        $doc = Document::create()->using(Pdf::deterministicRenderer())
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->pageNumbers('{n} / {N}')
+            ->watermark('DRAFT')
             ->cover(fn ($c) => $c->title('Cover'))
             ->page(fn ($p) => $p->paragraph('body'))
-            ->build();
+            ->toString();
 
-        self::assertCount(2, $doc->pages);
+        $text = Pdf::contentText($pdf);
+        self::assertStringContainsString('(2 / 2) Tj', $text, 'the body page still numbers itself 2 of 2');
+        self::assertStringNotContainsString('(1 / 2) Tj', $text, 'the cover prints no page number');
+        self::assertSame(2, substr_count($text, '(DRAFT) Tj'), 'the watermark still stamps both sheets');
+    }
+
+    public function test_a_bare_cover_also_drops_the_watermark(): void
+    {
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->watermark('DRAFT')
+            ->cover(fn ($c) => $c->title('Cover')->bare())
+            ->page(fn ($p) => $p->paragraph('body'))
+            ->toString();
+
+        self::assertSame(1, substr_count(Pdf::contentText($pdf), '(DRAFT) Tj'));
     }
 }
