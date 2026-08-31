@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pdf\Style;
-
-use Pdf\Geometry\Edges;
+namespace Pdf\Geometry;
 
 /**
  * One side of a box. Used to place a single-edge accent border.

@@ -6,9 +6,9 @@ namespace Pdf\Node;
 
 use Pdf\Color\Color;
 use Pdf\Exception\PdfException;
+use Pdf\Geometry\Edge;
 use Pdf\Geometry\Edges;
 use Pdf\Style\Border;
-use Pdf\Style\Edge;
 use Pdf\Style\StylePatch;
 use Pdf\Text\InlineSequence;
 
@@ -31,7 +31,7 @@ final readonly class Callout extends Component
         public Color $accent = new Color(64, 120, 200),
         public Edge $accentEdge = Edge::Left,
         public float $accentWidthPt = 3.0,
-        public Edges $paddingPt = new Edges(10.0, 12.0, 10.0, 12.0),
+        public ?Edges $paddingPt = null,
         public StylePatch $titleStyle = new StylePatch(bold: true, spaceAfterPt: 3.0),
     ) {
         if (is_string($content) || $content instanceof InlineSequence) {
@@ -57,7 +57,7 @@ final readonly class Callout extends Component
     public function patch(): StylePatch
     {
         return new StylePatch(
-            paddingPt: $this->paddingPt,
+            paddingPt: $this->paddingPt ?? Edges::symmetric(10.0, 12.0),
             border: new Border($this->accentEdge->only($this->accentWidthPt), $this->accent),
             background: $this->tint,
         );

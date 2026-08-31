@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Pdf\Tests\Unit;
 
 use Pdf\Color\Color;
+use Pdf\Geometry\Edge;
 use Pdf\Node\Callout;
 use Pdf\Node\Paragraph;
-use Pdf\Style\Edge;
+use Pdf\Text\InlineSequence;
 use PHPUnit\Framework\TestCase;
 
 final class CalloutTest extends TestCase
@@ -34,15 +35,29 @@ final class CalloutTest extends TestCase
         self::assertInstanceOf(Paragraph::class, $nodes[0]);
     }
 
-    public function test_patch_puts_the_accent_on_the_chosen_edge_only(): void
+    public function test_an_inline_sequence_title_is_carried_onto_the_title_paragraph(): void
     {
-        $patch = (new Callout('x', accent: Color::rgb(10, 20, 30), accentEdge: Edge::Left, accentWidthPt: 4.0))->patch();
+        $title = InlineSequence::of('Bold ')->withItalic('note');
+        $nodes = self::body(new Callout('body', title: $title));
 
-        self::assertNotNull($patch->border);
-        self::assertSame(4.0, $patch->border->widthPt->left);
-        self::assertSame(0.0, $patch->border->widthPt->right);
-        self::assertSame(0.0, $patch->border->widthPt->top);
-        self::assertEquals(Color::rgb(10, 20, 30), $patch->border->color);
+        self::assertInstanceOf(Paragraph::class, $nodes[0]);
+        self::assertSame($title, $nodes[0]->content);
+    }
+
+    public function test_the_accent_sits_on_the_chosen_edge_only_for_every_edge(): void
+    {
+        foreach (Edge::cases() as $edge) {
+            $widths = (new Callout('x', accentEdge: $edge, accentWidthPt: 4.0))->patch()->border?->widthPt;
+            self::assertNotNull($widths);
+
+            $expected = match ($edge) {
+                Edge::Top => [4.0, 0.0, 0.0, 0.0],
+                Edge::Right => [0.0, 4.0, 0.0, 0.0],
+                Edge::Bottom => [0.0, 0.0, 4.0, 0.0],
+                Edge::Left => [0.0, 0.0, 0.0, 4.0],
+            };
+            self::assertSame($expected, [$widths->top, $widths->right, $widths->bottom, $widths->left]);
+        }
     }
 
     public function test_the_tint_is_the_background(): void
