@@ -129,9 +129,9 @@ Run these — do not write throwaway verification scripts:
 
 ```
 composer check                     # stan + test (the full gate)
-composer test                      # vendor/bin/phpunit  — 306 tests
+composer test                      # vendor/bin/phpunit  — 336 tests
 composer stan                      # vendor/bin/phpstan analyse  — level 6
-for f in examples/*.php; do php "$f"; done   # render all 16 examples
+for f in examples/*.php; do php "$f"; done   # render all 17 examples
 UPDATE_GOLDENS=1 composer test     # regenerate goldens after an intended change
 ```
 

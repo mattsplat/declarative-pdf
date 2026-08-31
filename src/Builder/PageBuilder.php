@@ -304,6 +304,12 @@ final class PageBuilder
         return $this->add(new Table($rows, $columns, $totalWidthPt, $headerRows));
     }
 
+    /** Add the {@see Table} a configured {@see DataTable} builds. */
+    public function dataTable(DataTable $table): self
+    {
+        return $this->add($table->build());
+    }
+
     /**
      * @param iterable<ListItem|string> $items
      */
