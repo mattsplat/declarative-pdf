@@ -104,6 +104,22 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 
+## Navigation & cross-references
+
+- **Navigation furniture** — **M**: generated, hyperlinked page furniture on top
+  of the existing anchor / link system — a section menu or sidebar that links
+  every heading, "back to top" links, prev / next-section and prev / next-page
+  buttons, breadcrumbs. A component layer; each element is an internal-link
+  annotation over placed text, so it composes anywhere a block does.
+- **Cross-references** — **M**: `$ref('fig-1')` in inline text resolving after
+  layout to "Figure 1 on page 12" plus an internal link. Shares the
+  post-pagination marks pass with the TOC and running headers.
+- **Link styling** — **S**: a `link` style (colour, underline) and a
+  visible / invisible `/Border` on `/Link` annotations; today the author draws
+  the link's appearance by hand.
+
+---
+
 ## Interactive forms
 
 - **FDF / XFDF read + write** — **S each** (see the near-term list).
@@ -135,6 +151,14 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
   unlocks *reading* encrypted source PDFs in the importer (currently rejected).
   Public-key (certificate) encryption is a further **M**.
 - **Digital signatures** — **XL** (see [Interactive forms](#interactive-forms)).
+- **PDF security scan** — **M**: an importer-side audit that walks a source PDF
+  and reports risky constructs — JavaScript (`/JS`, `/JavaScript`, document /
+  field / bookmark actions), `/Launch` / `/URI` / `/GoToR` / `/SubmitForm`
+  actions, `/OpenAction` and `/AA` triggers, embedded files, `/RichMedia` and
+  `/Movie`, XFA, plus the encryption and permission state. Returns a structured
+  finding list; pairs with an opt-in "sanitised import" that strips them.
+  Reuses the parser that already walks xref / object streams and `/Prev`
+  chains.
 
 ---
 
@@ -188,6 +212,21 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
 - **Widow/orphan & keep across nested structures** — **M**: extend
   keep-together / keep-with-next to work reliably through arbitrarily nested
   containers, lists and table row groups.
+
+---
+
+## Tables
+
+- **Data-driven table builder** — **M**: a `DataTable` fed a row collection plus
+  column specs (key, header, alignment, width, a value-formatting callback);
+  automatic totals / subtotals, grouping with group-header rows, and running
+  calculations. Emits the existing `Table` node, so layout is unchanged —
+  generalises the manual accumulate-and-append-a-bold-row pattern.
+- **Adaptive table layout** — **M–L**: `rowspan` / `colspan`; a tall cell that
+  splits across a page break instead of moving whole; a repeated ("sticky")
+  first column, the way header rows already repeat; zebra striping and
+  per-row / per-cell conditional style; content-aware column auto-fit beyond
+  today's fixed / fraction / auto widths.
 
 ---
 
