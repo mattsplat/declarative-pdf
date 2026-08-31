@@ -104,6 +104,41 @@ new Table($rows, [
 
 Long tables split at row boundaries and repeat their header rows on every page.
 
+## Data-driven tables
+
+`DataTable` builds a `Table` from a row collection plus column specs — value
+formatters, grouping with group-header rows, per-group subtotals and a grand
+total.
+
+```php
+use Pdf\Builder\{DataTable, Total};
+use Pdf\Style\{ColumnWidth, TextAlign};
+
+$money = static fn (mixed $v): string => '$' . number_format((float) $v);
+
+$p->dataTable(
+    DataTable::of($invoiceLines)
+        ->column('item', 'Item')
+        ->column('region', 'Region')
+        ->column('qty', 'Qty', TextAlign::Right)
+        ->column('total', 'Total', TextAlign::Right, ColumnWidth::fixed(80), $money)
+        ->groupBy('region')
+        ->totals(['qty' => Total::sum(), 'total' => Total::sum()])
+);
+```
+
+Each `$invoiceLines` entry is an assoc array (or an object with public
+properties). `->groupBy('region')` emits a header row before each run of rows
+that share a region and a **`Subtotal`** row after it; a **`Total`** row closes
+the table. `sum` / `avg` run on the raw value and then through the column's
+formatter; `Total::count()`, `Total::label('…')` and `Total::of(fn ($rows) => …)`
+cover the rest. Pass a separate spec to `->grandTotals([...])` to make the grand
+row differ from the subtotals.
+
+Rows must arrive grouped — `groupBy` groups *consecutive* matches, it does not
+sort. The builder emits a plain `Table`, so pagination, column sizing and header
+repetition are exactly as above.
+
 ## Lists
 
 ```php
@@ -196,6 +231,32 @@ Document::create()
 
 A bookmark whose anchor is never placed throws `Pdf\Exception\PdfException`.
 All entries render open; auto-generation from headings is not yet available.
+
+## Cover pages
+
+`cover()` prepends a cover page configured through a small builder — a title,
+subtitle, logo, caption lines, its own page size, and one of three presets.
+
+```php
+use Pdf\Builder\CoverLayout;
+use Pdf\Geometry\PageSize;
+
+Document::create()
+    ->cover(fn ($c) => $c
+        ->title('Quarterly Review')
+        ->subtitle('Q3 2026')
+        ->logo('logo.png')
+        ->line('Prepared by Finance', date('F j, Y'))
+        ->layout(CoverLayout::BottomBand)
+        ->size(PageSize::letter()))
+    ->page(fn ($p) => $p->heading(1, 'Summary')->paragraph('…'))
+    ->save('review.pdf');
+```
+
+The cover carries its **own** page size (default A4 portrait) — a document has
+no single size, and the cover is built before any body page exists. It keeps an
+inherited `watermark()` but drops inherited `pageNumbers()`; `->bare()` drops
+both. Presets: `Centered`, `TopLeft`, `BottomBand`.
 
 ## Images
 
@@ -416,6 +477,60 @@ $p->place(28, 1, 6, 10, [
 `placeImage()` takes a `Fit` mode; `placePdf()` imports one page of an
 external PDF as a **vector Form XObject** (stays crisp at any zoom).
 
+## Grid layout and framed panels
+
+`$page->grid()` carves the writable area into rectangles so a multi-region sheet
+doesn't need hand-computed `$x + $w + $gutter` arithmetic. Each slice is itself a
+grid, so bands nest. `Panel` frames one region — a bordered, inset box holding a
+PDF page, an image, or block content.
+
+```php
+use Pdf\Builder\Panel;
+use Pdf\Geometry\{PageSize, Unit};
+use Pdf\Layout\Track;
+use Pdf\Node\Paragraph;
+use Pdf\Style\StylePatch;
+use Pdf\Support\Source;
+
+Document::create()->page(function ($p) {
+    $p->size(PageSize::letter())->landscape()->units(Unit::Pt)->margin(18);
+
+    // A fixed 120pt title band, the rest for the body, 6pt gutter.
+    [$titleRow, $body] = $p->grid(gutterPt: 6)->rowTracks([Track::pt(120), Track::fr(1)]);
+
+    // Split the body 2 : 1.
+    [$main, $side] = $body->columns(2, 1);
+
+    Panel::in($titleRow->rect())->showing('schedule.pdf')->drawOn($p);
+    Panel::in($main->rect())->showing('drawing.pdf')->drawOn($p);
+    Panel::in($side->rect())->containing([
+        new Paragraph('NOTES', new StylePatch(bold: true)),
+        new Paragraph('1. Do not scale from this drawing.'),
+    ])->inset(6)->drawOn($p);
+
+    // Rule the seam between the two body columns.
+    $seam = $main->rect();
+    $p->vline($seam->right() + 3, $seam->y, $seam->height);
+})->save('sheet.pdf');
+```
+
+`->rows()` / `->columns()` split by weight (`->columns(2, 1)` is a 2 : 1 split);
+`->rowTracks()` / `->columnTracks()` mix `Track::pt()` (fixed) and `Track::fr()`
+(a share of the leftover). Each slice is a `Grid`; `->rect()` is its rectangle
+(a `Pdf\Geometry\Rect`, in points).
+
+`Panel::in($rect)` takes a point rectangle, as the grid produces them;
+`Panel::at($x, $y, $w, $h)` takes the page's `units()`. Working the whole page
+in `Unit::Pt` keeps `grid()`, `Panel`, `hline()` / `vline()` and `place()` on
+one scale. `->showing()` dispatches by source: `.pdf` → `placePdf()`, an image
+extension → `placeImage()`. `->containing($blocks)` places block content,
+`->aligned()` sets its `BoxAlign` (blocks default to `TopLeft`, images to
+`Center`).
+
+`Source::first(['plan.pdf', 'https://cdn.example/plan.pdf'], fn () => 'placeholder.pdf')`
+returns the first candidate that is a readable file or a URL answering `2xx`,
+else the fallback — handy for an asset that may or may not be present locally.
+
 ## Measuring text and blocks for absolute layout
 
 `textWidth()` and `measureBlocks()` let a `page()` closure position content
@@ -587,11 +702,56 @@ wins over all of them. `class` is **block-level**: it does nothing on an inline
 run. `->class('lead', …)` and `->class('table', …)` share no namespace with the
 node-type rules, so a class name may safely match a node type.
 
+## Flow components
+
+Four ready-made `Component`s ship in `Pdf\Node`. They expand to existing nodes,
+so they compose anywhere a block does — page flow, a `Container`, a `TableCell`,
+a `place()` area.
+
+```php
+use Pdf\Node\{Callout, Card, DefinitionList, Paragraph, Row};
+use Pdf\Geometry\Edge;
+use Pdf\Style\{ColumnWidth, StylePatch};
+
+// Term/body pairs as a borderless two-column table.
+$p->add(new DefinitionList([
+    'Reference' => 'INV-2026-0417',
+    'Issued'    => 'April 17, 2026',
+    'Due'       => 'Net 30',
+]));
+
+// Children side by side: logo left, wordmark fills the rest.
+$p->add(new Row([
+    new \Pdf\Node\ImageBlock('logo.png', widthPt: 28),
+    new Paragraph('ACME SUPPLY CO', new StylePatch(bold: true, fontSizePt: 16)),
+], gapPt: 10, widths: [ColumnWidth::fixed(28), null]));
+
+// Titled, framed block with an under-rule.
+$p->add(new Card([
+    new Paragraph('Demolition, framing, and rough-in for the ground floor.'),
+], title: 'Scope of work'));
+
+// Tinted block with a single-edge accent.
+$p->add(new Callout('Payment received — thank you.',
+    title: 'Paid', accent: \Pdf\Color\Color::rgb(40, 140, 70), accentEdge: Edge::Left));
+```
+
+`DefinitionList` also takes `[term, body]` pairs, where a body may be an
+`InlineSequence` or a list of blocks. `Row`'s `widths` is one entry per child in
+order — a `null` (or a short list) sizes that child to content. `Card` and
+`Callout` take a `string`, an `InlineSequence`, or block content, and accept
+padding / border / background overrides.
+
 ## Reusable components
 
 Subclass `Component`: take your parameters in the constructor, return the tree
 from `body()`. A non-empty `patch()` frames the body like an implicit
 `Container` (padding, border, background, inherited style).
+
+> The illustrative `Callout` / `Card` classes below predate the built-in
+> `Pdf\Node\Callout` / `Pdf\Node\Card` (see [Flow components](#flow-components)).
+> They still show the pattern — write your own for anything the built-ins don't
+> cover.
 
 ```php
 use Pdf\Node\{Component, BlockNode, Paragraph, Rule};
@@ -658,3 +818,34 @@ $p->container([new Callout('Thanks!')], new StylePatch(spaceBeforePt: 20));
 `body()` is called more than once per render (intrinsic sizing, each pagination
 pass) — keep it pure. A component whose `body()` reaches itself raises a
 `LayoutException` instead of recursing forever.
+
+## Slide decks with page transitions
+
+`presentation()` opens the document full-screen; each page can carry a
+`Transition` and an auto-advance interval.
+
+```php
+use Pdf\Geometry\{PageSize, Unit};
+use Pdf\Node\{Transition, WipeDirection};
+use Pdf\Style\StylePatch;
+
+$deck = Document::create()->presentation(advanceSeconds: 6);
+
+foreach ($slides as $slide) {
+    $deck->page(fn ($p) => $p
+        ->size(PageSize::fromUnits(1280, 720, Unit::Pt))->units(Unit::Pt)->margin(48)
+        ->transition(Transition::wipe(WipeDirection::Leftward, 0.6))
+        ->heading(1, $slide['title'], new StylePatch(fontSizePt: 40))
+        ->paragraph($slide['body']));
+}
+
+$deck->save('deck.pdf');
+```
+
+Styles: `split`, `blinds`, `box`, `wipe`, `dissolve`, `glitter`, `fade`, `push`,
+`cover`, `uncover`, `fly`. Direction is a style-scoped enum — `WipeDirection`,
+`GlitterDirection`, `PushDirection` — so a viewer never sees an out-of-spec
+`/Di`. `presentation()` without an interval just sets the full-screen view;
+`PageBuilder::autoAdvance($seconds)` sets one page's `/Dur` (inert outside
+full-screen). Transitions and auto-advance are honoured by Acrobat, Preview and
+most desktop viewers in presentation mode; a plain page viewer ignores them.
