@@ -738,11 +738,25 @@ Pdf\Import\ImportedPage (readonly):
   array<int,mixed> $dependencies
   ->boxWidthPt() ->boxHeightPt()         // the box as authored
   ->widthPt() ->heightPt()               // after the page's own rotation
+  ->extractText() : string               // see TextExtractor below
 ```
 
 Placing an imported page (`$page->placePdf(...)`) emits it as a vector Form
 XObject with its fonts/images/resources copied and renumbered. Source
 annotations, links and form fields are not carried over.
+
+### `Pdf\Import\TextExtractor`
+
+Best-effort plain-text extraction — see [the cookbook recipe](cookbook.md#extracting-text)
+for what it does and does not cover.
+
+```php
+Pdf\Import\TextExtractor::fromFile(string $path) : self
+new TextExtractor(PdfImportDocument $document)
+->pages() : list<string>                       // one entry per page, in order
+->text() : string                              // pages joined by a blank line
+TextExtractor::extractPage(ImportedPage $page) : string   // static; what ->extractText() calls
+```
 
 ---
 

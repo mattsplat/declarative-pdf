@@ -83,6 +83,9 @@ walk with attribute inheritance, transitive resource collection).
 `Render\FormXObjectWriter` re-emits a page as a Form XObject with its
 dependency objects renumbered (`Render\PdfValueWriter` serialises values with a
 ref map). `Render\ImportRegistry` interns and deduplicates placed pages.
+`TextExtractor` runs the other direction: a small content-stream interpreter
+(state in `TextExtractorState`) that turns an `ImportedPage` back into plain
+text, decoding through `ToUnicodeCmapParser` or WinAnsi.
 
 ## Determinism
 

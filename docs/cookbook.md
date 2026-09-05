@@ -606,6 +606,29 @@ foreach (['cover.pdf', 'body.pdf', 'appendix.pdf'] as $path) {
 $merged->save('merged.pdf');
 ```
 
+### Extracting text
+
+```php
+use Pdf\Import\TextExtractor;
+
+$text = TextExtractor::fromFile('report.pdf')->text();     // whole document, pages joined by a blank line
+$pages = TextExtractor::fromFile('report.pdf')->pages();   // list<string>, one entry per page
+
+// Or from an already-open document:
+$doc->page(2)->extractText();
+```
+
+Best-effort: each shown string is decoded through its font's `/ToUnicode` CMap
+where present, WinAnsi otherwise, and glyph positions drive where a space or a
+line break belongs when the content stream doesn't spell it out (e.g. table
+cells drawn as separate runs). Not visited: content painted through a Form
+XObject (`Do`) — so a page **you've placed into another document** via
+`placePdf()` won't yield text; extract from the source PDF directly instead.
+Also approximate: `/Type0` composite fonts decode only when they carry a
+`/ToUnicode` CMap, `/Differences` custom encodings fall back to WinAnsi, and
+reading order is top-to-bottom as drawn, not column-aware. `examples/extract-text.php`
+is the runnable version.
+
 ## Custom (embedded) fonts
 
 Build a definition with the offline tool, then register and use it:
