@@ -8,6 +8,16 @@ While the version is `0.x`, minor releases may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+- **Text extraction** — `Pdf\Import\TextExtractor::fromFile($path)->text()` /
+  `->pages()`, and `ImportedPage::extractText()`. Best-effort: decodes through
+  each font's `/ToUnicode` CMap (new `Pdf\Import\ToUnicodeCmapParser`) or
+  WinAnsi otherwise, using glyph widths to place spaces and line breaks. Does
+  not descend into Form XObjects, so a page already placed into another
+  document via `placePdf()` won't yield text — extract from the source PDF
+  directly.
+
 ## [0.2.0] - 2026-08-31
 
 A component release: reusable blocks and builders that sit on top of the 0.1.0

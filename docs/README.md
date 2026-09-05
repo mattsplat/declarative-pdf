@@ -7,8 +7,8 @@
   links, bookmarks, images, large-format sheets, grid layout and framed panels,
   flow components (definition lists, rows, cards, callouts), cover pages, slide
   decks with page transitions, text/block measurement, reusable components, PDF
-  import, custom fonts, house styles with named class rules, charts, vector
-  drawing with gradient fills and path clipping.
+  import and text extraction, custom fonts, house styles with named class
+  rules, charts, vector drawing with gradient fills and path clipping.
 - **[API reference](reference.md)** — every builder method, node constructor,
   style option, enum, and the `Pdf\Import\*` reader API.
 - **[Interactive forms](forms.md)** — AcroForm field nodes, self-drawn

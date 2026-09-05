@@ -362,14 +362,7 @@ final class PdfParser
     private function parseKeyword(): bool|null
     {
         $start = $this->pos;
-        while ($this->pos < strlen($this->data)) {
-            $ch = $this->data[$this->pos];
-            if (str_contains(self::WHITESPACE, $ch) || str_contains(self::DELIMITERS, $ch)) {
-                break;
-            }
-            $this->pos++;
-        }
-        $word = substr($this->data, $start, $this->pos - $start);
+        $word = $this->readBareWord();
 
         return match ($word) {
             'true' => true,
@@ -377,6 +370,25 @@ final class PdfParser
             'null' => null,
             default => throw new PdfException("Unexpected token '{$word}' at offset {$start} in imported PDF."),
         };
+    }
+
+    /**
+     * Read a run of non-whitespace, non-delimiter bytes at the current
+     * position (a keyword, or — in a content stream, which this grammar also
+     * covers — an operator such as `Tj` or `'`).
+     */
+    public function readBareWord(): string
+    {
+        $start = $this->pos;
+        while ($this->pos < strlen($this->data)) {
+            $ch = $this->data[$this->pos];
+            if (str_contains(self::WHITESPACE, $ch) || str_contains(self::DELIMITERS, $ch)) {
+                break;
+            }
+            $this->pos++;
+        }
+
+        return substr($this->data, $start, $this->pos - $start);
     }
 
     /** Does `endstream` sit at $offset (allowing one optional EOL before it)? */

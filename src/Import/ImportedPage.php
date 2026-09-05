@@ -46,4 +46,10 @@ final readonly class ImportedPage
     {
         return $this->rotation % 180 === 0 ? $this->boxHeightPt() : $this->boxWidthPt();
     }
+
+    /** Best-effort plain text painted on this page. See {@see TextExtractor} for what that covers. */
+    public function extractText(): string
+    {
+        return TextExtractor::extractPage($this);
+    }
 }
