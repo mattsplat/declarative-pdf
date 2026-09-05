@@ -8,6 +8,11 @@ While the version is `0.x`, minor releases may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-04
+
+A single-feature release: reading text back out of a PDF. No engine or writer
+behaviour changed — every 0.2.0 golden is byte-identical.
+
 ### Added
 
 - **Text extraction** — `Pdf\Import\TextExtractor::fromFile($path)->text()` /
@@ -16,7 +21,12 @@ While the version is `0.x`, minor releases may contain breaking changes.
   WinAnsi otherwise, using glyph widths to place spaces and line breaks. Does
   not descend into Form XObjects, so a page already placed into another
   document via `placePdf()` won't yield text — extract from the source PDF
-  directly.
+  directly. `/Type0` composite fonts decode only via `/ToUnicode`,
+  `/Differences` encodings fall back to WinAnsi, and reading order is
+  top-to-bottom as drawn rather than column-aware.
+- `PdfParser::readBareWord()` — factored out of its existing keyword parser so
+  the new content-stream tokenizer reuses it.
+- Example: `extract-text.php`.
 
 ## [0.2.0] - 2026-08-31
 
@@ -117,6 +127,7 @@ declarative library: you describe a document as an immutable tree of nodes and a
 - **Determinism** — with a `FixedClock`, `compress: false` and a fixed producer
   string the output is byte-stable; golden-file tests depend on it.
 
-[Unreleased]: https://github.com/mattsplat/declarative-pdf/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mattsplat/declarative-pdf/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/mattsplat/declarative-pdf/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mattsplat/declarative-pdf/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mattsplat/declarative-pdf/releases/tag/v0.1.0
