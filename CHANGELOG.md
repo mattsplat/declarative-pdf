@@ -8,6 +8,13 @@ While the version is `0.x`, minor releases may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-06
+
+A vector release: SVG artwork is imported as real linework rather than
+rasterised. Every 0.3.0 golden is byte-identical — but note that a document of
+your own using a translucent watermark now declares PDF 1.4 instead of 1.3, a
+header change that corrects transparency a 1.3 reader was entitled to ignore.
+
 ### Added
 
 - **SVG import** — `$page->svg('logo.svg', width: 40)` and
@@ -33,6 +40,9 @@ While the version is `0.x`, minor releases may contain breaking changes.
   metadata in a foreign namespace) are skipped. The inline `style="…"`
   *attribute* is fully supported; only the `<style>` *element* is refused.
 - Example: `svg.php`.
+- Example: `long.php` — a 100-page pagination stress test: a cover, eight
+  chapters of flowing prose, then a ledger whose repeating header walks across
+  the rest of the document, all from one `page()` call.
 
 ### Changed
 
@@ -49,6 +59,13 @@ While the version is `0.x`, minor releases may contain breaking changes.
   builds); the HTTP transport shared by the image and SVG loaders moved to
   `Pdf\Support\RemoteBytes`. `ImageFactory` still raises `ImageException`
   exactly as before.
+
+### Fixed
+
+- `Dropdown` / `ListBox` built their `/DA` string with a fixed `0 Tf`
+  (auto-size) and no way to override it, so a multi-row list box overflowed in
+  Acrobat. A `fontSizePt` on the field's `StylePatch` now pins the size, and
+  auto-size remains the fallback.
 
 ## [0.3.0] - 2026-09-04
 
