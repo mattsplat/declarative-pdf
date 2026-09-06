@@ -97,11 +97,13 @@ Document::create()
         ));
         $p->field(new ListBox(
             name: 'applicant.interests',
-            label: 'Interests (select all that apply)',
             options: ['wood' => 'Woodwork', 'metal' => 'Metalwork', 'textile' => 'Textiles', 'electronics' => 'Electronics', 'print' => '3D printing'],
             selected: ['wood'],
-            multiSelect: true,
+            label: 'Interests (select all that apply)',
             heightPt: 66.0,
+            multiSelect: true,
+            sort: false,
+            patch: new StylePatch(fontSizePt: 8.5, lineHeight: 2.25, spaceBeforePt: 0.5, paddingPt: Edges::symmetric(1.4, 1.0)),
         ));
         $p->field(new Checkbox(
             name: 'applicant.newsletter',

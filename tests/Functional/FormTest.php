@@ -113,6 +113,32 @@ final class FormTest extends TestCase
         self::assertSame(1, substr_count($pdf, '/Subtype /Widget'));
     }
 
+    public function test_a_choice_field_pins_its_da_font_size_from_the_patch(): void
+    {
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p->add(new ListBox(
+                name: 'interests',
+                options: ['a' => 'A', 'b' => 'B', 'c' => 'C'],
+                heightPt: 120.0,
+                patch: new \Pdf\Style\StylePatch(fontSizePt: 8.5),
+            )))
+            ->toString();
+
+        self::assertMatchesRegularExpression('#/T \(interests\)\n[^>]*/DA \(/F\d 8\.5 Tf#', $pdf);
+    }
+
+    public function test_a_choice_field_without_a_patch_size_stays_auto_sized(): void
+    {
+        $pdf = Document::create()->using(Pdf::deterministicRenderer())
+            ->page(fn ($p) => $p->add(new Dropdown(
+                name: 'country',
+                options: ['us' => 'United States'],
+            )))
+            ->toString();
+
+        self::assertMatchesRegularExpression('#/T \(country\)\n[^>]*/DA \(/F\d 0 Tf#', $pdf);
+    }
+
     public function test_a_document_without_fields_has_no_acroform(): void
     {
         $pdf = Document::create()->using(Pdf::deterministicRenderer())

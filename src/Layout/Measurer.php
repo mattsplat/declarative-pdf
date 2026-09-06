@@ -230,8 +230,13 @@ final class Measurer
         $common = ($node->isRequired() ? FieldFlag::REQUIRED : 0)
             | ($node->isReadOnly() ? FieldFlag::READ_ONLY : 0);
 
-        $appearance = static fn (int $quad, ?Color $b, ?Color $bg, float $bw): FieldAppearance
-            => new FieldAppearance($font, 0.0, $style->color, $b, $bg, $bw, $quad);
+        $appearance = static fn (int $quad, ?Color $b, ?Color $bg, float $bw, float $sizePt = 0.0): FieldAppearance
+            => new FieldAppearance($font, $sizePt, $style->color, $b, $bg, $bw, $quad);
+
+        // Choice fields carry no first-class font-size argument; a `fontSizePt`
+        // in the patch is the only way to pin one. Without it Acrobat auto-sizes,
+        // which overflows a multi-row list box.
+        $choiceSize = $node->patch()->fontSizePt ?? 0.0;
 
         return match (true) {
             $node instanceof TextField => new FieldSpec(
@@ -277,7 +282,7 @@ final class Measurer
                 $common | FieldFlag::COMBO
                     | ($node->editable ? FieldFlag::EDIT : 0)
                     | ($node->sort ? FieldFlag::SORT : 0),
-                $appearance(0, $border, $subtleFill, 0.75),
+                $appearance(0, $border, $subtleFill, 0.75, $choiceSize),
                 $node->tooltip,
                 $node->value !== '' ? $node->value : null,
                 null,
@@ -290,7 +295,7 @@ final class Measurer
                 $common
                     | ($node->multiSelect ? FieldFlag::MULTI_SELECT : 0)
                     | ($node->sort ? FieldFlag::SORT : 0),
-                $appearance(0, $border, $subtleFill, 0.75),
+                $appearance(0, $border, $subtleFill, 0.75, $choiceSize),
                 $node->tooltip,
                 $node->selected[0] ?? null,
                 null,
