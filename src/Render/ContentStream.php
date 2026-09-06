@@ -37,6 +37,9 @@ final class ContentStream implements Canvas
     /** @var list<ShadingResource> */
     private array $shadings = [];
 
+    /** @var array<string, array{0: float, 1: float}> gs name => (fill alpha, stroke alpha) */
+    private array $alphas = [];
+
     /** @var list<WidgetRect> */
     private array $widgets = [];
 
@@ -164,7 +167,16 @@ final class ContentStream implements Canvas
         $fill = $paint->fill;
 
         if ($fill instanceof Gradient) {
-            $this->fillWithGradient($fill, $commandLines, $paint->fillRule, $xPt, $yTopPt, $boxWidthPt, $boxHeightPt);
+            $this->fillWithGradient(
+                $fill,
+                $commandLines,
+                $paint->fillRule,
+                $xPt,
+                $yTopPt,
+                $boxWidthPt,
+                $boxHeightPt,
+                $this->alphaState($paint),
+            );
             if ($paint->strokes()) {
                 $this->strokeOnly($paint, $commandLines);
             }
@@ -179,7 +191,7 @@ final class ContentStream implements Canvas
 
         $stroke = $paint->strokes() ? $paint->stroke : null;
 
-        $state = '';
+        $state = $this->alphaState($paint);
         if ($fill instanceof Color) {
             $state .= $fill->fillOp() . ' ';
         }
@@ -239,6 +251,7 @@ final class ContentStream implements Canvas
         float $yTopPt,
         float $boxWidthPt,
         float $boxHeightPt,
+        string $alphaState = '',
     ): void {
         $name = $this->namer->next('Sh');
         $place = fn (float $x, float $y): array => [$xPt + $x, $this->geometry->flipY($yTopPt + $y)];
@@ -252,7 +265,13 @@ final class ContentStream implements Canvas
             $gradient->spread->extendArray(),
         ));
 
-        $lines = ['q', ...$commandLines, 'W' . $fillRule->operatorSuffix() . ' n', '/' . $name . ' sh', 'Q'];
+        $lines = [
+            rtrim('q ' . $alphaState),
+            ...$commandLines,
+            'W' . $fillRule->operatorSuffix() . ' n',
+            '/' . $name . ' sh',
+            'Q',
+        ];
         $this->raw(implode("\n", $lines));
     }
 
@@ -269,7 +288,7 @@ final class ContentStream implements Canvas
             return;
         }
 
-        $state = sprintf(
+        $state = $this->alphaState($paint) . sprintf(
             '%s %.2F w %d J %d j',
             $stroke->strokeOp(),
             $paint->strokeWidthPt,
@@ -347,6 +366,47 @@ final class ContentStream implements Canvas
     public function anchor(string $name, float $yTopPt): void
     {
         $this->anchors[] = new AnchorMark($name, $yTopPt);
+    }
+
+    /**
+     * The `gs` operator putting a paint's translucency into effect, or an empty
+     * string when it is fully opaque — so an opaque path emits exactly the
+     * bytes it always has.
+     *
+     * The resource is named from the values themselves, never from insertion
+     * order, so the same document always serialises to the same bytes.
+     */
+    private function alphaState(Paint $paint): string
+    {
+        if ($paint->fillAlpha >= 1.0 && $paint->strokeAlpha >= 1.0) {
+            return '';
+        }
+
+        $name = self::alphaName($paint->fillAlpha, $paint->strokeAlpha);
+        $this->alphas[$name] = [$paint->fillAlpha, $paint->strokeAlpha];
+
+        return '/' . $name . ' gs ';
+    }
+
+    public static function alphaName(float $fillAlpha, float $strokeAlpha): string
+    {
+        return sprintf('GSa%d_%d', (int) round($fillAlpha * 1000), (int) round($strokeAlpha * 1000));
+    }
+
+    /**
+     * Adopt a translucency collected from a nested stream (e.g. a placed area).
+     *
+     * @param array{0: float, 1: float} $alpha fill and stroke
+     */
+    public function recordAlpha(string $name, array $alpha): void
+    {
+        $this->alphas[$name] = $alpha;
+    }
+
+    /** @return array<string, array{0: float, 1: float}> */
+    public function collectedAlphas(): array
+    {
+        return $this->alphas;
     }
 
     /** Adopt a shading collected from a nested stream (e.g. a placed area). */

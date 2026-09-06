@@ -10,7 +10,7 @@ block-layout engine. Instead of driving a cursor (`AddPage` / `SetFont` /
 `Cell` / `Ln`), you describe the document as an immutable tree of nodes and a
 `measure → paginate → render → serialise` pipeline places everything.
 
-Zero runtime dependencies beyond `ext-zlib` and `ext-mbstring`.
+Zero runtime dependencies beyond `ext-zlib`, `ext-mbstring` and `ext-dom`.
 
 ```php
 use Pdf\Document;
@@ -46,7 +46,8 @@ Rendered by the scripts in [`examples/`](examples/) — `php examples/<name>.php
 composer require mattsplat/declarative-pdf
 ```
 
-Requires **PHP 8.3+** with `ext-zlib` and `ext-mbstring`. `ext-gd` is needed to
+Requires **PHP 8.3+** with `ext-zlib`, `ext-mbstring` and `ext-dom` (the last
+for SVG import; it ships enabled in stock PHP builds). `ext-gd` is needed to
 decode GIF and WebP images; `ext-iconv` for font encodings other than
 Windows-1252.
 

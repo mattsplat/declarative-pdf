@@ -11,7 +11,8 @@ use Pdf\Color\Color;
  * {@see Gradient}), the stroke (a solid {@see Color}), or both.
  *
  * Dash arrays are deliberately absent — see the "Vector drawing" section of
- * `docs/roadmap.md`.
+ * `docs/roadmap.md`. Translucency is carried here but realised as graphics
+ * state (`/ca`, `/CA`), because a PDF colour operand has no alpha channel.
  */
 final readonly class Paint
 {
@@ -24,6 +25,10 @@ final readonly class Paint
         public FillRule $fillRule = FillRule::NonZero,
         public LineCap $lineCap = LineCap::Butt,
         public LineJoin $lineJoin = LineJoin::Miter,
+        /** Fill translucency, 0-1; below 1 emits an `/ExtGState`. */
+        public float $fillAlpha = 1.0,
+        /** Stroke translucency, 0-1; below 1 emits an `/ExtGState`. */
+        public float $strokeAlpha = 1.0,
     ) {
         // A paint with neither half would draw nothing, which is never what the
         // caller meant; an unpainted path defaults to a hairline black outline.
@@ -47,6 +52,24 @@ final readonly class Paint
         LineJoin $lineJoin = LineJoin::Miter,
     ): self {
         return new self(stroke: $color, strokeWidthPt: $widthPt, lineCap: $lineCap, lineJoin: $lineJoin);
+    }
+
+    /**
+     * The same paint at a different stroke width — how a scaled figure keeps
+     * its outline proportional.
+     */
+    public function withStrokeWidthPt(float $widthPt): self
+    {
+        return new self(
+            $this->fill,
+            $this->stroke,
+            $widthPt,
+            $this->fillRule,
+            $this->lineCap,
+            $this->lineJoin,
+            $this->fillAlpha,
+            $this->strokeAlpha,
+        );
     }
 
     public function fills(): bool

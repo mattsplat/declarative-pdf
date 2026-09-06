@@ -17,6 +17,7 @@ use Pdf\Layout\Box\FieldBox;
 use Pdf\Layout\Box\ListItemBox;
 use Pdf\Layout\Box\PageBreakBox;
 use Pdf\Layout\Box\PathBox;
+use Pdf\Layout\Box\SvgBox;
 use Pdf\Layout\Box\RuleBox;
 use Pdf\Layout\Box\SpacerBox;
 use Pdf\Layout\Box\StackBox;
@@ -43,6 +44,7 @@ use Pdf\Node\OrderedList;
 use Pdf\Node\PageBreak;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Path;
+use Pdf\Node\Svg;
 use Pdf\Node\PushButton;
 use Pdf\Node\RadioGroup;
 use Pdf\Node\Rule;
@@ -67,6 +69,7 @@ use Pdf\Style\StyleResolver;
 use Pdf\Style\StylePatch;
 use Pdf\Font\FontStyle;
 use Pdf\Text\Encoding;
+use Pdf\Svg\SvgFactory;
 use Pdf\Text\InlineSequence;
 
 /**
@@ -93,6 +96,7 @@ final class Measurer
         private readonly ImageFactory $images = new ImageFactory(),
         private readonly ImageRegistry $imageRegistry = new ImageRegistry(),
         private readonly ImportRegistry $importRegistry = new ImportRegistry(),
+        private readonly SvgFactory $svg = new SvgFactory(),
     ) {
     }
 
@@ -110,6 +114,7 @@ final class Measurer
             $this->images,
             $this->imageRegistry,
             $this->importRegistry,
+            $this->svg,
         );
     }
 
@@ -126,6 +131,11 @@ final class Measurer
     public function images(): ImageFactory
     {
         return $this->images;
+    }
+
+    public function svg(): SvgFactory
+    {
+        return $this->svg;
     }
 
     public function importRegistry(): ImportRegistry
@@ -154,6 +164,7 @@ final class Measurer
             $node instanceof PageBreak => new PageBreakBox(),
             $node instanceof Rule => $this->measureRule($node, $parentStyle),
             $node instanceof Path => $this->measurePath($node, $parentStyle),
+            $node instanceof Svg => $this->measureSvg($node, $widthPt, $parentStyle),
             $node instanceof Chart => $this->measureChart($node, $parentStyle),
             $node instanceof Clip => $this->measureClip($node, $parentStyle),
             $node instanceof Container => $this->measureContainer($node, $widthPt, $parentStyle),
@@ -703,6 +714,40 @@ final class Measurer
         }
 
         return new ImageBox($resolved->index, $w, $h, $node->align, $style);
+    }
+
+    /**
+     * Sizing mirrors {@see self::measureImage()}: the SVG's intrinsic size, one
+     * dimension derived from the other, and a down-scale to fit the content
+     * box.
+     */
+    private function measureSvg(Svg $node, float $widthPt, Style $parentStyle): SvgBox
+    {
+        $style = $this->styles->resolveBlock($node, $parentStyle);
+        $document = $this->svg->fromPath($node->source);
+
+        $aspect = $document->heightPt > 0.0 ? $document->widthPt / $document->heightPt : 1.0;
+
+        if ($node->widthPt !== null && $node->heightPt !== null) {
+            $w = $node->widthPt;
+            $h = $node->heightPt;
+        } elseif ($node->widthPt !== null) {
+            $w = $node->widthPt;
+            $h = $w / max($aspect, 1e-6);
+        } elseif ($node->heightPt !== null) {
+            $h = $node->heightPt;
+            $w = $h * $aspect;
+        } else {
+            $w = $document->widthPt;
+            $h = $document->heightPt;
+        }
+
+        if ($w > $widthPt && $w > 0.0) {
+            $h *= $widthPt / $w;
+            $w = $widthPt;
+        }
+
+        return new SvgBox($document->scaledTo($w, $h), $w, $h, $node->align, $style);
     }
 
     /** @return list<ResolvedRun> */

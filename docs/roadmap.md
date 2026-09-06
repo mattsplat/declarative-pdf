@@ -187,8 +187,13 @@ already ships is in [`CHANGELOG.md`](../CHANGELOG.md).
 - **ICC colour management** — **M**: `/ICCBased` colour spaces, embedded input
   profiles on images, `/OutputIntent`. Pairs with PDF/A / PDF/X.
 - **More image formats** — **S–M**: TIFF (LZW / PackBits / G4), BMP, AVIF /
-  JPEG 2000 (`/JPXDecode`); SVG → rasterise, or better → native vector via the
-  drawing primitives (**L**, needs an SVG path parser).
+  JPEG 2000 (`/JPXDecode`).
+- **SVG import** — *shipped*: parsed to native vector via the drawing
+  primitives (`Pdf\Svg\SvgParser`), never rasterised. Covers paths, basic
+  shapes, groups, transforms, `use` / `defs` / `symbol`, gradients and opacity.
+  Still open (**M** each, each refused with an `SvgException` today rather than
+  dropped): `<text>`, filters, masks, `clipPath`, patterns, markers, and
+  `<style>` stylesheets — the last needs a CSS selector engine.
 - **Image reuse & downsampling** — **S**: deduplicate identical images by hash
   (a repeating-header logo embedded once); an optional DPI ceiling that
   downsamples on the way in.

@@ -103,7 +103,8 @@ sheet, centred on the whole page and rotated; `opacity` below 1 emits an
 | `clip(Path $region, iterable<BlockNode>, FillRule = NonZero, StylePatch = new)` | `Clip` — children masked to `$region` |
 | `pageBreak()` | `PageBreak` |
 | `anchor(string $name)` | `Anchor` (internal-link target) |
-| `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI |
+| `image(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `ImageBlock` — `source` is a path, `http(s)://` URL, or `data:` URI. A `.svg` / `.svgz` source dispatches to `svg()` |
+| `svg(string $source, ?float $width = null, ?float $height = null, Unit = Mm, TextAlign = Left)` | `Svg` — vector import, not rasterised; same source forms as `image()`. `Svg::fromString()` takes markup already in memory |
 | `container(iterable<BlockNode>, StylePatch = new)` | `Container` — the patch adds padding/border/background *and* cascades its inheriting style (font, colour, alignment, …) to descendants |
 | `bulletList(iterable<ListItem\|string>, StylePatch = new)` | `BulletList` |
 | `orderedList(iterable<ListItem\|string>, int $start = 1, StylePatch = new)` | `OrderedList` |
@@ -134,7 +135,8 @@ sheet** of the logical page, on top of the flow content.
 | method | |
 |---|---|
 | `place(float $x, $y, $w, $h, iterable<BlockNode>, BoxAlign = TopLeft, ShrinkMode = Scale)` | block content; flows at width `w`, fitted to height `h` per `ShrinkMode` |
-| `placeImage(float $x, $y, $w, $h, string $source, Fit = Contain, BoxAlign = Center)` | a raster image; `source` is a path, an `http(s)://` URL, or a `data:` URI |
+| `placeImage(float $x, $y, $w, $h, string $source, Fit = Contain, BoxAlign = Center)` | a raster image; `source` is a path, an `http(s)://` URL, or a `data:` URI. A `.svg` / `.svgz` source dispatches to `placeSvg()` |
+| `placeSvg(float $x, $y, $w, $h, string $source, Fit = Contain, BoxAlign = Center)` | an SVG as vector linework |
 | `placeImageData(float $x, $y, $w, $h, string $bytes, Fit = Contain, BoxAlign = Center)` | a raster image already in memory (carried inline as a `data:` URI — use `placeImage` with a path for large images) |
 | `placePdf(float $x, $y, $w, $h, string $path, int $page = 1, Fit = Contain, BoxAlign = Center)` | one page of an external PDF as a vector Form XObject |
 | `frame(float $x, $y, $w, $h, Border = new, ?Color $background = null)` | a bordered / filled rectangle |

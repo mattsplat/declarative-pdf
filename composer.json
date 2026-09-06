@@ -18,7 +18,8 @@
     "require": {
         "php": ">=8.3",
         "ext-zlib": "*",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "ext-dom": "*"
     },
     "suggest": {
         "ext-gd": "Needed to decode GIF and WebP images",
