@@ -11,6 +11,7 @@ use Pdf\Geometry\Rect;
 use Pdf\Import\ImportedPage;
 use Pdf\Layout\Box\StackBox;
 use Pdf\Style\Border;
+use Pdf\Svg\SvgShape;
 
 /**
  * An absolutely-positioned area, resolved and ready to render: its rectangle
@@ -33,6 +34,8 @@ final readonly class PlacedArea
         public ?Color $frameBackground = null,
         public ?int $importIndex = null,
         public ?ImportedPage $importPage = null,
+        /** @var list<SvgShape>|null At the source's intrinsic size; the renderer scales to fit. */
+        public ?array $vectorShapes = null,
     ) {
     }
 
@@ -63,6 +66,30 @@ final readonly class PlacedArea
             imageIndex: $imageIndex,
             sourceWidthPt: $sourceWidthPt,
             sourceHeightPt: $sourceHeightPt,
+        );
+    }
+
+    /**
+     * Vector linework from an SVG. The shapes arrive at intrinsic size, so the
+     * renderer resolves the fit exactly as it does for a raster image.
+     *
+     * @param list<SvgShape> $shapes
+     */
+    public static function forVector(
+        Rect $rect,
+        Fit $fit,
+        BoxAlign $align,
+        array $shapes,
+        float $sourceWidthPt,
+        float $sourceHeightPt,
+    ): self {
+        return new self(
+            $rect,
+            $fit,
+            $align,
+            sourceWidthPt: $sourceWidthPt,
+            sourceHeightPt: $sourceHeightPt,
+            vectorShapes: $shapes,
         );
     }
 

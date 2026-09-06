@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>A rosette badge</title>
+  <defs>
+    <radialGradient id="disc" cx="0.35" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </radialGradient>
+  </defs>
+  <path d="M32 4 L38 10 L46 8 L48 16 L56 20 L52 28 L56 36 L48 40 L46 48 L38 46 L32 52
+           L26 46 L18 48 L16 40 L8 36 L12 28 L8 20 L16 16 L18 8 L26 10 Z"
+        fill="#b45309" fill-opacity="0.35"/>
+  <circle cx="32" cy="28" r="18" fill="url(#disc)" stroke="#92400e" stroke-width="1.5"/>
+  <path d="M32 18 l3.1 6.9 7.4.9-5.5 5.1 1.5 7.4-6.5-3.8-6.5 3.8 1.5-7.4-5.5-5.1 7.4-.9Z"
+        fill="#7c2d12"/>
+</svg>

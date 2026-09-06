@@ -35,6 +35,7 @@ use Pdf\Node\PageMaster;
 use Pdf\Layout\PageContext;
 use Pdf\Node\Paragraph;
 use Pdf\Node\Path;
+use Pdf\Node\Svg;
 use Pdf\Node\Transition;
 use Pdf\Node\Watermark;
 use Pdf\Node\Placement;
@@ -42,6 +43,7 @@ use Pdf\Node\Placement\Blocks;
 use Pdf\Node\Placement\Frame;
 use Pdf\Node\Placement\PdfPage;
 use Pdf\Node\Placement\Picture;
+use Pdf\Node\Placement\Vector;
 use Pdf\Style\Border;
 use Pdf\Node\Rule;
 use Pdf\Node\Spacer;
@@ -300,7 +302,25 @@ final class PageBuilder
         Unit $unit = Unit::Mm,
         TextAlign $align = TextAlign::Left,
     ): self {
+        if (self::isSvg($path)) {
+            return $this->svg($path, $width, $height, $unit, $align);
+        }
+
         return $this->add(ImageBlock::of($path, $width, $height, $unit, $align));
+    }
+
+    /**
+     * Add an SVG, drawn as vector linework so it stays sharp at any zoom. The
+     * source may be a filesystem path, an `http(s)://` URL, or a `data:` URI.
+     */
+    public function svg(
+        string $source,
+        ?float $width = null,
+        ?float $height = null,
+        Unit $unit = Unit::Mm,
+        TextAlign $align = TextAlign::Left,
+    ): self {
+        return $this->add(Svg::of($source, $width, $height, $unit, $align));
     }
 
     /**
@@ -441,9 +461,48 @@ final class PageBuilder
         Fit $fit = Fit::Contain,
         BoxAlign $align = BoxAlign::Center,
     ): self {
+        if (self::isSvg($source)) {
+            return $this->placeSvg($x, $y, $width, $height, $source, $fit, $align);
+        }
+
         $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new Picture($source), $fit, $align);
 
         return $this;
+    }
+
+    /**
+     * Place an SVG in an absolute rectangle with a fit mode, as vector
+     * linework.
+     */
+    public function placeSvg(
+        float $x,
+        float $y,
+        float $width,
+        float $height,
+        string $source,
+        Fit $fit = Fit::Contain,
+        BoxAlign $align = BoxAlign::Center,
+    ): self {
+        $this->placements[] = new Placement($this->rect($x, $y, $width, $height), new Vector($source), $fit, $align);
+
+        return $this;
+    }
+
+    /**
+     * Whether a source should take the vector path. Dispatch is by extension
+     * and `data:` media type only — never by sniffing content — so which of
+     * the two very different render paths runs stays predictable.
+     */
+    private static function isSvg(string $source): bool
+    {
+        if (str_starts_with($source, 'data:')) {
+            return str_starts_with($source, 'data:image/svg+xml');
+        }
+
+        $path = (string) parse_url($source, PHP_URL_PATH);
+        $extension = strtolower(pathinfo($path === '' ? $source : $path, PATHINFO_EXTENSION));
+
+        return $extension === 'svg' || $extension === 'svgz';
     }
 
     /**

@@ -86,6 +86,8 @@ final class DocumentRenderer
         // --- Watermarks: intern their fonts, tally distinct translucencies ---
         /** @var array<string, int> $watermarkGs  gs resource name => opacity in permille */
         $watermarkGs = [];
+        /** @var array<string, array{0: float, 1: float}> $pathAlphas  gs name => (fill, stroke) alpha */
+        $pathAlphas = [];
         foreach ($pages as $page) {
             if ($page->watermark === null) {
                 continue;
@@ -125,6 +127,10 @@ final class DocumentRenderer
 
             foreach ($stream->collectedShadings() as $shading) {
                 $shadings[] = $shading;
+            }
+
+            foreach ($stream->collectedAlphas() as $name => $alpha) {
+                $pathAlphas[$name] = $alpha;
             }
 
             $rendered[] = [
@@ -168,7 +174,14 @@ final class DocumentRenderer
         if ($requiresPdf15) {
             $writer->header('1.5');
         } else {
-            $writer->header($images->requiresPdf14() || !$imports->isEmpty() || $hasWidgets ? '1.4' : '1.3');
+            // `/ExtGState` transparency is a PDF 1.4 feature: a 1.3 consumer is
+            // entitled to ignore it and paint translucent artwork opaque.
+            $hasTransparency = $watermarkGs !== [] || $pathAlphas !== [];
+            $writer->header(
+                $images->requiresPdf14() || !$imports->isEmpty() || $hasWidgets || $hasTransparency
+                    ? '1.4'
+                    : '1.3',
+            );
         }
         $withAlpha = $images->hasAlpha();
 
@@ -271,12 +284,24 @@ final class DocumentRenderer
         // Document-level JavaScript name tree.
         $namesObject = $this->writeNames($writer, $document);
 
-        // ExtGState objects for translucent watermarks.
+        // ExtGState objects for every distinct translucency: watermarks first,
+        // then translucent paths, sorted by name so the bytes never depend on
+        // the order pages happened to collect them in.
+        /** @var array<string, array{0: float, 1: float}> $gsAlphas */
+        $gsAlphas = [];
+        foreach ($watermarkGs as $name => $permille) {
+            $gsAlphas[$name] = [$permille / 1000, $permille / 1000];
+        }
+        ksort($pathAlphas);
+        foreach ($pathAlphas as $name => $alpha) {
+            $gsAlphas[$name] ??= $alpha;
+        }
+
         /** @var array<string, int> $gsObjects  gs name => object number */
         $gsObjects = [];
-        foreach ($watermarkGs as $name => $permille) {
+        foreach ($gsAlphas as $name => [$fillAlpha, $strokeAlpha]) {
             $object = $writer->beginObject();
-            $writer->line(sprintf('<</Type /ExtGState /ca %.3F /CA %.3F>>', $permille / 1000, $permille / 1000));
+            $writer->line(sprintf('<</Type /ExtGState /ca %.3F /CA %.3F>>', $fillAlpha, $strokeAlpha));
             $writer->endObject();
             $gsObjects[$name] = $object;
         }
@@ -571,6 +596,11 @@ final class DocumentRenderer
             return;
         }
 
+        if ($area->vectorShapes !== null) {
+            $this->renderVectorArea($stream, $area);
+            return;
+        }
+
         if ($area->imageIndex === null) {
             return;
         }
@@ -588,6 +618,41 @@ final class DocumentRenderer
             });
         } else {
             $stream->image($index, $x, $y, $drawnW, $drawnH);
+        }
+    }
+
+    /**
+     * Draw a placed SVG. The shapes are scaled into the fitted rectangle here
+     * rather than through a `cm`, so the gradient boxes each shape carries stay
+     * in the same space as its geometry.
+     */
+    private function renderVectorArea(ContentStream $stream, \Pdf\Layout\PlacedArea $area): void
+    {
+        $shapes = $area->vectorShapes;
+        if ($shapes === null || $shapes === []) {
+            return;
+        }
+
+        $rect = $area->rectPt;
+        $rw = $rect->width;
+        $rh = $rect->height;
+        [$sx, $sy] = $area->fit->scale($area->sourceWidthPt, $area->sourceHeightPt, $rw, $rh);
+        $drawnW = $sx * $area->sourceWidthPt;
+        $drawnH = $sy * $area->sourceHeightPt;
+        $x = $rect->x + $area->align->horizontalFraction() * ($rw - $drawnW);
+        $y = $rect->y + $area->align->verticalFraction() * ($rh - $drawnH);
+
+        $draw = static function () use ($stream, $shapes, $sx, $sy, $x, $y, $drawnW, $drawnH): void {
+            foreach ($shapes as $shape) {
+                $scaled = $shape->scaled($sx, $sy);
+                $stream->path($scaled->commands, $x, $y, $scaled->paint, $drawnW, $drawnH);
+            }
+        };
+
+        if ($area->fit->clips()) {
+            $stream->withClip($rect->x, $rect->y, $rw, $rh, $draw);
+        } else {
+            $draw();
         }
     }
 
@@ -718,6 +783,9 @@ final class DocumentRenderer
         }
         foreach ($sub->collectedShadings() as $shading) {
             $stream->recordShading($shading);
+        }
+        foreach ($sub->collectedAlphas() as $name => $alpha) {
+            $stream->recordAlpha($name, $alpha);
         }
         foreach ($sub->collectedWidgets() as $widget) {
             $stream->widget($widget->scaled($scale, $originX, $originYTop));

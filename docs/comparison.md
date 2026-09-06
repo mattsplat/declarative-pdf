@@ -41,7 +41,7 @@ The PHP libraries (FPDF / TCPDF / tc-lib-pdf) are the direct lineage.
 | Digital signatures | ✗ | ✓ | ✓ | ✗ |
 | Encryption (RC4 / AES) | ✗ | ✓ | ✓ | ✗ |
 | Barcodes (1D / 2D) | script | ✓ | ✓ | ✗ |
-| SVG | ✗ | ✓ | partial | ✗ |
+| SVG | ✗ | ✓ | partial | vector import (no text / filters) |
 | Tagged PDF / PDF-A / PDF-UA | ✗ | ✓ | partial | ✗ |
 | PDF import / merge | FPDI (separate) | ✓ | ✗ | 1 page → vector Form XObject |
 | UTF-8 input | ✗ (tFPDF fork) | ✓ | ✓ | ✓ |

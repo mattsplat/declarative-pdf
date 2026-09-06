@@ -22,7 +22,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, zlib, gd, iconv
+          extensions: mbstring, zlib, dom, gd, iconv
           coverage: none
           tools: composer:v2
 
@@ -54,7 +54,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, zlib, gd, iconv
+          extensions: mbstring, zlib, dom, gd, iconv
           coverage: none
           tools: composer:v2
 

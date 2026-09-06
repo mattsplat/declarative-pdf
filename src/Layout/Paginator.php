@@ -16,6 +16,7 @@ use Pdf\Node\Placement\Blocks;
 use Pdf\Node\Placement\Frame;
 use Pdf\Node\Placement\PdfPage;
 use Pdf\Node\Placement\Picture;
+use Pdf\Node\Placement\Vector;
 use Pdf\Style\Style;
 use Pdf\Style\StylePatch;
 
@@ -247,6 +248,19 @@ final class Paginator
                     $resolved->index,
                     $resource->widthPx * 72.0 / 96.0,
                     $resource->heightPx * 72.0 / 96.0,
+                );
+                continue;
+            }
+
+            if ($content instanceof Vector) {
+                $document = $this->measurer->svg()->fromPath($content->source);
+                $areas[] = PlacedArea::forVector(
+                    $rect,
+                    $placement->fit,
+                    $placement->align,
+                    $document->shapes,
+                    $document->widthPt,
+                    $document->heightPt,
                 );
                 continue;
             }

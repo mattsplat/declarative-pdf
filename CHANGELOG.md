@@ -8,6 +8,48 @@ While the version is `0.x`, minor releases may contain breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+- **SVG import** — `$page->svg('logo.svg', width: 40)` and
+  `$page->placeSvg($x, $y, $w, $h, $source, Fit)`, plus `Pdf\Node\Svg` and
+  `Svg::fromString()` for markup already in memory. Parsed to native vector
+  linework through the existing drawing primitives (new `Pdf\Svg\SvgParser`),
+  never rasterised, so artwork stays sharp at any zoom and needs no `ext-gd`.
+  Covers `path` (the whole `d` grammar, including arcs and the packed arc-flag
+  form), `rect` / `circle` / `ellipse` / `line` / `polyline` / `polygon`,
+  `g` / `a` / `defs` / `symbol` / `use`, the full `transform` syntax,
+  `viewBox` + `preserveAspectRatio`, solid fills and strokes with caps, joins
+  and fill rule, `linearGradient` / `radialGradient` (including
+  `gradientTransform` and `href` stop inheritance), and opacity in all its
+  spellings. Sources may be a path, an `http(s)://` URL, a `data:` URI, or a
+  gzipped `.svgz`; `image()` / `placeImage()` dispatch a `.svg` source here
+  automatically. Results are cached per source, so a logo repeated on every
+  page is parsed once.
+- Anything that would paint but has no equivalent in the writer — `text`,
+  filters, masks, `clipPath`, patterns, markers, nested viewports, `<style>`
+  stylesheets, dashed strokes, gradient strokes, per-stop opacity — raises an
+  `SvgException` naming the feature and the file, rather than being silently
+  dropped. Elements that paint nothing (`title`, `desc`, `metadata`, editor
+  metadata in a foreign namespace) are skipped. The inline `style="…"`
+  *attribute* is fully supported; only the `<style>` *element* is refused.
+- Example: `svg.php`.
+
+### Changed
+
+- `Pdf\Style\Paint` carries `fillAlpha` / `strokeAlpha`, and the `/ExtGState`
+  machinery that was hard-wired to translucent watermarks is now general, so
+  the public `Path` node gains translucency too. Graphics-state resources are
+  named from their alpha values, never from insertion order, keeping output
+  byte-stable.
+- A document containing any `/ExtGState` transparency is now written as
+  PDF 1.4 rather than 1.3, which a conforming 1.3 reader was entitled to
+  ignore and paint opaque. This also corrects the pre-existing translucent
+  watermark case.
+- `ext-dom` is now a runtime requirement (it ships enabled in stock PHP
+  builds); the HTTP transport shared by the image and SVG loaders moved to
+  `Pdf\Support\RemoteBytes`. `ImageFactory` still raises `ImageException`
+  exactly as before.
+
 ## [0.3.0] - 2026-09-04
 
 A single-feature release: reading text back out of a PDF. No engine or writer

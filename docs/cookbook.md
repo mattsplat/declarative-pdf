@@ -263,6 +263,7 @@ both. Presets: `Centered`, `TopLeft`, `BottomBand`.
 ```php
 $p->image('logo.png', width: 40);                 // block image, flows in the stack
 $p->image('photo.jpg');                            // natural size at 96 dpi
+$p->svg('logo.svg', width: 40);                    // vector import, sharp at any zoom
 
 // inline, on the text baseline
 $p->paragraph(\Pdf\Text\InlineSequence::of('See the icon ')
