@@ -12,9 +12,9 @@ guidelines, adapted for a standalone typed PHP library.
   low-level PDF writer, font metrics/embedding and image decoders were ported
   from that release.
 - **No framework.** Plain PHP, PSR-4 (`Pdf\` → `src/`), zero runtime
-  dependencies beyond `ext-zlib` + `ext-mbstring` (`ext-gd`/`ext-iconv`
-  optional). Keeping it dependency-free is a feature — do not add packages
-  without asking.
+  dependencies beyond `ext-zlib` + `ext-mbstring` + `ext-dom`
+  (`ext-gd`/`ext-iconv` optional). Keeping it dependency-free is a feature —
+  do not add packages without asking.
 - **Toolchain:** PHP 8.3+ (CI also runs 8.4) · PHPUnit 11 · PHPStan 2 at
   **level 6**. No Pint/CS-Fixer config today — match the surrounding style by
   hand.
@@ -46,6 +46,7 @@ guidelines, adapted for a standalone typed PHP library.
 | `Render/` | `DocumentRenderer` (the pipeline entry) + the byte-level PDF writer, ported from FPDF |
 | `Interactive/` | the AcroForm field model — `FieldType`, `FieldFlag`, `FieldSpec`, `FieldAppearance`, the self-drawn `AppearanceStream` builder, and the `Js` / `FieldActions` JavaScript layer |
 | `Font/` `Image/` `Import/` | font loading/embedding · image decoders · the pure-PHP PDF-page importer |
+| `Svg/` | SVG import — `SvgParser` (markup → shapes), `PathData` (the `d` grammar), `Matrix` (affine transforms), `SvgStyle`/`SvgColor`/`SvgLength`, `SvgFactory`; rendered by `Layout/Box/SvgBox` |
 | `Chart/` | the thin chart layer — `Series`, `Scale` (nice-number axis), `Plot` (data → points), `Palette`, enums; rendered by `Layout/Box/ChartBox` |
 | `Geometry/` `Color/` `Text/` | value objects, colour, inline text / encoding / inline HTML |
 | `Output/` `Support/` `Exception/` | output destinations · `Clock` · the exception hierarchy |
@@ -129,9 +130,9 @@ Run these — do not write throwaway verification scripts:
 
 ```
 composer check                     # stan + test (the full gate)
-composer test                      # vendor/bin/phpunit  — 438 tests
+composer test                      # vendor/bin/phpunit  — 547 tests
 composer stan                      # vendor/bin/phpstan analyse  — level 6
-for f in examples/*.php; do php "$f"; done   # render all 21 examples
+for f in examples/*.php; do php "$f"; done   # render all 23 examples
 UPDATE_GOLDENS=1 composer test     # regenerate goldens after an intended change
 ```
 
