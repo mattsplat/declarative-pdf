@@ -8,7 +8,7 @@ While the version is `0.x`, minor releases may contain breaking changes.
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-09-06
+## [0.4.0] - 2026-09-14
 
 A vector release: SVG artwork is imported as real linework rather than
 rasterised. Every 0.3.0 golden is byte-identical — but note that a document of
@@ -43,6 +43,17 @@ header change that corrects transparency a 1.3 reader was entitled to ignore.
 - Example: `long.php` — a 100-page pagination stress test: a cover, eight
   chapters of flowing prose, then a ledger whose repeating header walks across
   the rest of the document, all from one `page()` call.
+- **Rounded corners** — `Border::uniform($width, $color, radiusPt: 6.0)` (or
+  `->withRadius()`) draws a combined fill + stroke rounded-rect path for any
+  bordered block (`Container`, and anything else that resolves a `Style`
+  border/background) instead of the straight `fillRect()` / `strokeEdges()`
+  pair. A radius of `0.0` — the default — is untouched: every existing golden
+  renders byte-identical. New `Pdf\Geometry\RoundedRect::commands()` builds
+  the corner Bézier path, one quarter-circle approximation per corner so each
+  can round independently; a box split across a page break keeps the corners
+  on its suppressed edge square. A mixed-width `Border` strokes uniformly at
+  its top-edge width once rounded, since a curved corner has no seam to blend
+  separate edge widths across.
 
 ### Changed
 
