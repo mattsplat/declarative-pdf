@@ -95,8 +95,12 @@ final class PdfStream
     /** @param array<string, mixed>|null $parms */
     private function unpredict(string $data, ?array $parms): string
     {
+        if ($parms === null) {
+            return $data;
+        }
+
         $predictor = is_int($parms['Predictor'] ?? null) ? $parms['Predictor'] : 1;
-        if ($predictor <= 1 || $parms === null) {
+        if ($predictor <= 1) {
             return $data;
         }
 
