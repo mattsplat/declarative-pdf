@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Pdf\Layout\Box;
 
 use Pdf\Geometry\Edges;
+use Pdf\Geometry\RoundedRect;
 use Pdf\Layout\Canvas;
 use Pdf\Style\Border;
+use Pdf\Style\Paint;
 use Pdf\Style\Style;
 
 /**
@@ -150,14 +152,17 @@ final class ContainerBox extends AbstractBox
     public function render(Canvas $canvas, float $xPt, float $yTopPt, float $widthPt): void
     {
         $height = $this->contentHeightPt();
-
-        if ($this->background !== null) {
-            $canvas->fillRect($xPt, $yTopPt, $widthPt, $height, $this->background);
-        }
-
         $effectiveBorder = $this->effectiveBorder();
-        if ($effectiveBorder->isVisible()) {
-            $canvas->strokeEdges($xPt, $yTopPt, $widthPt, $height, $effectiveBorder->widthPt, $effectiveBorder->color);
+
+        if ($effectiveBorder->isRounded() && ($this->background !== null || $effectiveBorder->isVisible())) {
+            $this->renderRounded($canvas, $xPt, $yTopPt, $widthPt, $height, $effectiveBorder);
+        } else {
+            if ($this->background !== null) {
+                $canvas->fillRect($xPt, $yTopPt, $widthPt, $height, $this->background);
+            }
+            if ($effectiveBorder->isVisible()) {
+                $canvas->strokeEdges($xPt, $yTopPt, $widthPt, $height, $effectiveBorder->widthPt, $effectiveBorder->color);
+            }
         }
 
         $this->inner->render(
@@ -166,6 +171,33 @@ final class ContainerBox extends AbstractBox
             $yTopPt + $this->topInsetPt(),
             $widthPt - $this->horizontalInsetPt(),
         );
+    }
+
+    /**
+     * A combined fill + stroke rounded-rect path, in place of the straight
+     * `fillRect()` / `strokeEdges()` pair. The stroke is centred on the path
+     * like any other {@see \Pdf\Node\Path}, so the rect is inset by half its
+     * width first to keep the ink inside the box's own allocated area; a
+     * mixed-width {@see Border} strokes uniformly at its top-edge width, since
+     * a rounded corner has no separate widths to blend between edges.
+     */
+    private function renderRounded(Canvas $canvas, float $xPt, float $yTopPt, float $widthPt, float $heightPt, Border $border): void
+    {
+        $strokeWidthPt = $border->isVisible() ? $border->widthPt->top : 0.0;
+        $inset = $strokeWidthPt / 2;
+        $boxWidthPt = max(0.0, $widthPt - $strokeWidthPt);
+        $boxHeightPt = max(0.0, $heightPt - $strokeWidthPt);
+
+        [$tl, $tr, $br, $bl] = $border->cornerRadiiPt($this->suppressTopEdge, $this->suppressBottomEdge);
+        $commands = RoundedRect::commands($boxWidthPt, $boxHeightPt, $tl, $tr, $br, $bl);
+
+        $paint = new Paint(
+            fill: $this->background,
+            stroke: $border->isVisible() ? $border->color : null,
+            strokeWidthPt: $strokeWidthPt,
+        );
+
+        $canvas->path($commands, $xPt + $inset, $yTopPt + $inset, $paint, $boxWidthPt, $boxHeightPt);
     }
 
     public function minIntrinsicWidthPt(): float
